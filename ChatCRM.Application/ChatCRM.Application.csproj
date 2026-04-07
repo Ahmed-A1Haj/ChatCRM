@@ -11,4 +11,8 @@
     <ProjectReference Include="..\ChatCRM.Domain\ChatCRM.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Users\" />
+  </ItemGroup>
+
 </Project>
