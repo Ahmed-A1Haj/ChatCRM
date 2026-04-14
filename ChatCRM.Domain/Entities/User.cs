@@ -1,14 +1,14 @@
 ﻿using ChatCRM.Domain.Common;
-using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace ChatCRM.Domain.Entities
 {
-    public class User : IdentityUser
+    public class User : BaseEntityId
     {
-      
-
+        public string UserName { get; set; } = null!;
+        public string Password { get; set; } = null!;
+        public int RoleId { get; set; }
     }
 }
