@@ -1,8 +1,36 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@{
+    ViewData["Title"] = "Welcome";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="hero-panel">
+    <div class="hero-copy">
+        <span class="eyebrow">Secure customer conversations</span>
+        <h1>ChatCRM now starts with a safer, smoother sign-in experience.</h1>
+        <p class="lead">Register with email verification, sign in with account lockout protection, and recover access with guided password reset flows.</p>
+        <div class="hero-actions">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a class="btn btn-accent" asp-controller="Home" asp-action="Privacy">Continue to the app</a>
+            }
+            else
+            {
+                <a class="btn btn-accent" asp-controller="Account" asp-action="Register">Create account</a>
+                <a class="btn btn-outline-light" asp-controller="Account" asp-action="Login">Sign in</a>
+            }
+        </div>
+    </div>
+    <div class="hero-card">
+        <div class="mini-stat">
+            <span class="mini-stat-label">Protection</span>
+            <strong>Email confirmation + lockout</strong>
+        </div>
+        <div class="mini-stat">
+            <span class="mini-stat-label">Recovery</span>
+            <strong>Self-service password reset</strong>
+        </div>
+        <div class="mini-stat">
+            <span class="mini-stat-label">Experience</span>
+            <strong>Clear validation and friendlier guidance</strong>
+        </div>
+    </div>
+</section>

@@ -1,14 +1,13 @@
-﻿using ChatCRM.Domain.Common;
 using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ChatCRM.Domain.Entities
 {
     public class User : IdentityUser
     {
-      
+        public string? FirstName { get; set; }
 
+        public string? LastName { get; set; }
+
+        public string? ProfileImagePath { get; set; }
     }
 }

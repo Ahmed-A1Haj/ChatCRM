@@ -1,0 +1,122 @@
+@model UpdateProfileDto
+
+@{
+    ViewData["Title"] = "Your profile";
+    var displayName = string.Join(" ", new[] { Model.FirstName, Model.LastName }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    if (string.IsNullOrWhiteSpace(displayName))
+    {
+        displayName = Model.Email;
+    }
+
+    var initialsSource = !string.IsNullOrWhiteSpace(displayName) ? displayName : "U";
+    var initials = string.Concat(initialsSource
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Take(2)
+        .Select(part => char.ToUpperInvariant(part[0])));
+
+    if (string.IsNullOrWhiteSpace(initials))
+    {
+        initials = "U";
+    }
+}
+
+<section class="profile-page">
+    <div class="profile-shell">
+        <aside class="profile-hero-card">
+            <div class="profile-avatar-wrap" data-profile-preview-container>
+                @if (!string.IsNullOrWhiteSpace(Model.ProfileImagePath))
+                {
+                    <img src="@Model.ProfileImagePath" alt="@displayName" class="profile-avatar-image" data-profile-preview-image />
+                    <span class="profile-avatar-fallback d-none" data-profile-preview-fallback>@initials</span>
+                }
+                else
+                {
+                    <img src="" alt="" class="profile-avatar-image d-none" data-profile-preview-image />
+                    <span class="profile-avatar-fallback" data-profile-preview-fallback>@initials</span>
+                }
+            </div>
+
+            <div class="profile-hero-copy">
+                <span class="eyebrow">Account profile</span>
+                <h1>@displayName</h1>
+                <p>Update your contact details and choose a profile image that appears across the app.</p>
+            </div>
+
+            <div class="profile-status-list">
+                <div class="mini-stat">
+                    <span class="mini-stat-label">Email status</span>
+                    <strong>@(Model.EmailConfirmed ? "Verified" : "Verification pending")</strong>
+                </div>
+                <div class="mini-stat">
+                    <span class="mini-stat-label">Photo rules</span>
+                    <strong>JPG, PNG, or WEBP up to 2 MB</strong>
+                </div>
+            </div>
+        </aside>
+
+        <div class="profile-form-card">
+            <div class="profile-form-header">
+                <h2>Edit profile</h2>
+                <p>Changes are saved to your current account only. If you change your email, we'll ask you to verify the new address.</p>
+            </div>
+
+            <form asp-action="Profile" method="post" enctype="multipart/form-data" novalidate data-loading-form>
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="validation-summary text-danger"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="FirstName" class="form-label"></label>
+                        <input asp-for="FirstName" class="form-control form-control-lg" autocomplete="given-name" placeholder="First name" />
+                        <span asp-validation-for="FirstName" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="LastName" class="form-label"></label>
+                        <input asp-for="LastName" class="form-control form-control-lg" autocomplete="family-name" placeholder="Last name" />
+                        <span asp-validation-for="LastName" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" class="form-control form-control-lg" autocomplete="email" placeholder="name@company.com" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="PhoneNumber" class="form-label"></label>
+                        <input asp-for="PhoneNumber" class="form-control form-control-lg" autocomplete="tel" placeholder="+20 100 000 0000" />
+                        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="profile-upload-card mt-4">
+                    <div class="profile-upload-copy">
+                        <h3>Profile photo</h3>
+                        <p>Upload a clear square-friendly photo. Unsupported files, empty files, and large images will be rejected.</p>
+                    </div>
+                    <div>
+                        <label for="profileImage" class="form-label">Upload image</label>
+                        <input id="profileImage" name="profileImage" type="file" class="form-control form-control-lg" accept=".jpg,.jpeg,.png,.webp" data-profile-image-input />
+                        <div class="form-hint">Accepted formats: JPG, PNG, WEBP. Maximum file size: 2 MB.</div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.ProfileImagePath))
+                    {
+                        <div class="form-check mt-3">
+                            <input asp-for="RemoveProfileImage" class="form-check-input" />
+                            <label asp-for="RemoveProfileImage" class="form-check-label">Remove my current profile photo</label>
+                        </div>
+                    }
+                </div>
+
+                <div class="profile-actions">
+                    <button type="submit" class="btn btn-accent btn-lg" data-loading-text="Saving...">Save changes</button>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary btn-lg">Back to home</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

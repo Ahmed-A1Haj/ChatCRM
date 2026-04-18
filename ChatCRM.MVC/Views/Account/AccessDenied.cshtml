@@ -1,0 +1,18 @@
+@{
+    ViewData["Title"] = "Access denied";
+}
+
+<section class="auth-page">
+    <div class="auth-card text-center">
+        <div class="auth-copy">
+            <span class="eyebrow">Permission required</span>
+            <h1>Access denied</h1>
+            <p>You do not have permission to view this page with the current account.</p>
+        </div>
+
+        <div class="hero-actions justify-content-center">
+            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary">Back to home</a>
+            <a asp-action="Login" class="btn btn-accent">Sign in with another account</a>
+        </div>
+    </div>
+</section>

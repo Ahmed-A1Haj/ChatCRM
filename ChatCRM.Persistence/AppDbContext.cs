@@ -1,33 +1,36 @@
-﻿using ChatCRM.Application.Interfaces;
+using ChatCRM.Application.Interfaces;
 using ChatCRM.Domain.Entities;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ChatCRM.Persistence
 {
-    public class AppDbContext : DbContext,IAppDbContext
+    public class AppDbContext : IdentityDbContext<User>, IAppDbContext
     {
-
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options)
         {
-            
         }
-
-        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
-
             base.OnModelCreating(modelBuilder);
 
+            modelBuilder.Entity<User>(builder =>
+            {
+                builder.Property(x => x.FirstName)
+                    .HasMaxLength(100);
+
+                builder.Property(x => x.LastName)
+                    .HasMaxLength(100);
+
+                builder.Property(x => x.ProfileImagePath)
+                    .HasMaxLength(260);
+            });
         }
 
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-          
             return base.SaveChangesAsync(cancellationToken);
         }
     }

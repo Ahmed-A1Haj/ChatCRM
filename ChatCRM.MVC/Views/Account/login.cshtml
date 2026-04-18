@@ -1,47 +1,54 @@
-﻿@using ChatCRM.Application.Users.DTOS
-
-
 @model LoginDto
 
-
 @{
-    ViewData["Title"] = "Login";
+    ViewData["Title"] = "Sign in";
 }
 
-<div class="container d-flex justify-content-center align-items-center vh-100">
-    <div class="card shadow-lg p-4" style="width: 400px;">
-        <h3 class="text-center mb-4">Login</h3>
+<section class="auth-page">
+    <div class="auth-card">
+        <div class="auth-copy">
+            <span class="eyebrow">Welcome back</span>
+            <h1>Sign in to ChatCRM</h1>
+            <p>Use your verified email address and password to continue.</p>
+        </div>
 
-        <form asp-action="Login" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <form asp-action="Login" method="post" novalidate>
+            @Html.AntiForgeryToken()
+            <input asp-for="ReturnUrl" type="hidden" />
 
-            <!-- Email -->
-            <div class="form-group mb-3">
+            <div asp-validation-summary="ModelOnly" class="validation-summary text-danger"></div>
+
+            <div class="mb-3">
                 <label asp-for="Email" class="form-label"></label>
-                <input asp-for="Email" class="form-control" placeholder="Enter your email" />
+                <input asp-for="Email" class="form-control form-control-lg" autocomplete="email" placeholder="name@company.com" />
                 <span asp-validation-for="Email" class="text-danger"></span>
             </div>
 
-            <!-- Password -->
-            <div class="form-group mb-3">
-                <label asp-for="Password" class="form-label"></label>
-                <input asp-for="Password" type="password" class="form-control" placeholder="Enter your password" />
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <label asp-for="Password" class="form-label mb-0"></label>
+                    <a asp-action="ForgotPassword" class="auth-link">Forgot password?</a>
+                </div>
+                <div class="password-field">
+                    <input asp-for="Password" class="form-control form-control-lg" autocomplete="current-password" placeholder="Enter your password" />
+                    <button type="button" class="password-toggle" data-password-toggle aria-label="Show password" aria-pressed="false">
+                        <span class="password-toggle-text">Show</span>
+                    </button>
+                </div>
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
 
-           
-
-            <!-- Submit -->
-            <button type="submit" class="btn btn-primary w-100">Login</button>
-
-            <!-- Extra Links -->
-            <div class="text-center mt-3">
-                <a asp-action="Register">Create Account</a> |
-                <a asp-action="ForgotPassword">Forgot Password?</a>
+            <div class="form-check mb-4">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label">Keep me signed in on this device</label>
             </div>
+
+            <button type="submit" class="btn btn-accent w-100 btn-lg">Sign in</button>
         </form>
+
+        <p class="auth-footer">Need an account? <a asp-action="Register" class="auth-link">Create one here</a>.</p>
     </div>
-</div>
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

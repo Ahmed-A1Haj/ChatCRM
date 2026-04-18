@@ -2,23 +2,26 @@ using FluentValidation;
 
 namespace ChatCRM.Application.Users.DTOS
 {
-    public class RegisterDtoValidator : AbstractValidator<RegisterDto>
+    public class ResetPasswordDtoValidator : AbstractValidator<ResetPasswordDto>
     {
-        public RegisterDtoValidator()
+        public ResetPasswordDtoValidator()
         {
             RuleFor(x => x.Email)
-                .NotEmpty().WithMessage("Enter your email address.")
+                .NotEmpty().WithMessage("Email is required.")
                 .EmailAddress().WithMessage("Enter a valid email address.");
 
+            RuleFor(x => x.Token)
+                .NotEmpty().WithMessage("This reset link is invalid or incomplete.");
+
             RuleFor(x => x.Password)
-                .NotEmpty().WithMessage("Create a password.")
+                .NotEmpty().WithMessage("Create a new password.")
                 .MinimumLength(10).WithMessage("Use at least 10 characters.")
                 .Must(ContainUppercase).WithMessage("Include at least one uppercase letter.")
                 .Must(ContainLowercase).WithMessage("Include at least one lowercase letter.")
                 .Must(ContainDigit).WithMessage("Include at least one number.");
 
             RuleFor(x => x.ConfirmPassword)
-                .NotEmpty().WithMessage("Confirm your password.")
+                .NotEmpty().WithMessage("Confirm your new password.")
                 .Equal(x => x.Password)
                 .WithMessage("The password confirmation does not match.");
         }

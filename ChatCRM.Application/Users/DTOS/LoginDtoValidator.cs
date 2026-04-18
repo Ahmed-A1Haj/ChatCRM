@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 
 namespace ChatCRM.Application.Users.DTOS
 {
@@ -7,12 +7,12 @@ namespace ChatCRM.Application.Users.DTOS
         public LoginDtoValidator()
         {
             RuleFor(x => x.Email)
-                .NotEmpty().WithMessage("Email is required")
-                .EmailAddress().WithMessage("Invalid email format");
+                .NotEmpty().WithMessage("Enter your email address.")
+                .EmailAddress().WithMessage("Enter a valid email address.");
 
             RuleFor(x => x.Password)
-                .NotEmpty().WithMessage("Password is required")
-                .MinimumLength(4).WithMessage("Password must be at least 4 characters");
+                .NotEmpty().WithMessage("Enter your password.")
+                .MinimumLength(8).WithMessage("Password must be at least 8 characters.");
         }
     }
 }

@@ -1,0 +1,36 @@
+@model ResendConfirmationEmailDto
+
+@{
+    ViewData["Title"] = "Verify your email";
+}
+
+<section class="auth-page">
+    <div class="auth-card">
+        <div class="auth-copy">
+            <span class="eyebrow">One more step</span>
+            <h1>Verify your email address</h1>
+            <p>We sent a confirmation link to <strong>@Model.Email</strong>. Open the link to activate your account before signing in.</p>
+            <p class="form-hint mb-0">Development emails are written to <code>App_Data/emails</code>.</p>
+        </div>
+
+        <form asp-action="ResendConfirmationEmail" method="post" novalidate>
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="validation-summary text-danger"></div>
+
+            <div class="mb-4">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control form-control-lg" autocomplete="email" placeholder="name@company.com" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-outline-primary w-100 btn-lg">Resend verification email</button>
+        </form>
+
+        <p class="auth-footer">Already verified? <a asp-action="Login" class="auth-link">Sign in</a>.</p>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
