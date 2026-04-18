@@ -12,7 +12,6 @@ namespace ChatCRM.MVC.Controllers
     public class AccountController : Controller
     {
         private const string GenericSignInError = "We couldn't sign you in with those details.";
-        private const string DevelopmentEmailNotice = "In development, emails are saved under App_Data/emails.";
 
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
@@ -63,9 +62,11 @@ namespace ChatCRM.MVC.Controllers
             {
                 if (!await _userManager.IsEmailConfirmedAsync(existingUser))
                 {
-                    await SendConfirmationEmailAsync(existingUser);
-                    TempData["StatusMessage"] = $"Your account already exists but the email address is still unverified. We sent a fresh confirmation link. {DevelopmentEmailNotice}";
-                    TempData["StatusType"] = "warning";
+                    var confirmationResent = await TrySendConfirmationEmailAsync(existingUser);
+                    TempData["StatusMessage"] = confirmationResent
+                        ? "Your account already exists but the email address is still unverified. We sent a fresh confirmation link."
+                        : "Your account already exists but the email address is still unverified. We couldn't send the confirmation email right now, so please try again in a moment.";
+                    TempData["StatusType"] = confirmationResent ? "warning" : "danger";
                     return RedirectToAction(nameof(VerifyEmail), new { email });
                 }
 
@@ -88,10 +89,11 @@ namespace ChatCRM.MVC.Controllers
                 return View(model);
             }
 
-            await SendConfirmationEmailAsync(user);
-
-            TempData["StatusMessage"] = $"Your account has been created. Check your email to confirm it before signing in. {DevelopmentEmailNotice}";
-            TempData["StatusType"] = "success";
+            var confirmationSent = await TrySendConfirmationEmailAsync(user);
+            TempData["StatusMessage"] = confirmationSent
+                ? "Your account has been created. Check your email to confirm it before signing in."
+                : "Your account was created, but we couldn't send the confirmation email right now. Please try resending verification from the next screen.";
+            TempData["StatusType"] = confirmationSent ? "success" : "warning";
             return RedirectToAction(nameof(VerifyEmail), new { email });
         }
 
@@ -150,9 +152,11 @@ namespace ChatCRM.MVC.Controllers
 
             if (result.IsNotAllowed)
             {
-                await SendConfirmationEmailAsync(user);
-                TempData["StatusMessage"] = $"Please confirm your email before signing in. We sent a fresh verification link. {DevelopmentEmailNotice}";
-                TempData["StatusType"] = "warning";
+                var confirmationSent = await TrySendConfirmationEmailAsync(user);
+                TempData["StatusMessage"] = confirmationSent
+                    ? "Please confirm your email before signing in. We sent a fresh verification link."
+                    : "Please confirm your email before signing in. We couldn't send a fresh verification email right now.";
+                TempData["StatusType"] = confirmationSent ? "warning" : "danger";
                 return RedirectToAction(nameof(VerifyEmail), new { email });
             }
 
@@ -259,9 +263,11 @@ namespace ChatCRM.MVC.Controllers
 
             if (emailChanged)
             {
-                await SendConfirmationEmailAsync(user);
-                TempData["StatusMessage"] = $"Your profile was updated. Please confirm your new email address. {DevelopmentEmailNotice}";
-                TempData["StatusType"] = "warning";
+                var confirmationSent = await TrySendConfirmationEmailAsync(user);
+                TempData["StatusMessage"] = confirmationSent
+                    ? "Your profile was updated. Please confirm your new email address."
+                    : "Your profile was updated, but we couldn't send the confirmation email for the new address right now.";
+                TempData["StatusType"] = confirmationSent ? "warning" : "danger";
             }
             else
             {
@@ -310,10 +316,10 @@ namespace ChatCRM.MVC.Controllers
 
             if (user is not null && !await _userManager.IsEmailConfirmedAsync(user))
             {
-                await SendConfirmationEmailAsync(user);
+                await TrySendConfirmationEmailAsync(user);
             }
 
-            TempData["StatusMessage"] = $"If an account exists and still needs verification, we sent a fresh confirmation link. {DevelopmentEmailNotice}";
+            TempData["StatusMessage"] = "If an account exists and still needs verification, we sent a fresh confirmation link if delivery was available.";
             TempData["StatusType"] = "info";
             return RedirectToAction(nameof(VerifyEmail), new { email });
         }
@@ -374,10 +380,15 @@ namespace ChatCRM.MVC.Controllers
 
             if (user is not null && await _userManager.IsEmailConfirmedAsync(user))
             {
-                await SendPasswordResetEmailAsync(user);
+                var resetSent = await TrySendPasswordResetEmailAsync(user);
+                if (!resetSent)
+                {
+                    ModelState.AddModelError(string.Empty, "We couldn't send the password reset email right now. Please try again in a moment.");
+                    return View(model);
+                }
             }
 
-            TempData["StatusMessage"] = $"If an eligible account exists for that email, we sent password reset instructions. {DevelopmentEmailNotice}";
+            TempData["StatusMessage"] = "If an eligible account exists for that email, we sent password reset instructions.";
             TempData["StatusType"] = "info";
             return RedirectToAction(nameof(Login));
         }
@@ -478,6 +489,20 @@ namespace ChatCRM.MVC.Controllers
             }
         }
 
+        private async Task<bool> TrySendConfirmationEmailAsync(User user)
+        {
+            try
+            {
+                await SendConfirmationEmailAsync(user);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send confirmation email to user {UserId}", user.Id);
+                return false;
+            }
+        }
+
         private async Task SendPasswordResetEmailAsync(User user)
         {
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
@@ -494,6 +519,20 @@ namespace ChatCRM.MVC.Controllers
             if (callbackUrl is not null && user.Email is not null)
             {
                 await _emailSender.SendPasswordResetLinkAsync(user, user.Email, callbackUrl);
+            }
+        }
+
+        private async Task<bool> TrySendPasswordResetEmailAsync(User user)
+        {
+            try
+            {
+                await SendPasswordResetEmailAsync(user);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send password reset email to user {UserId}", user.Id);
+                return false;
             }
         }
 

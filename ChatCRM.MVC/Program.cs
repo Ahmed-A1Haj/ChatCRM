@@ -7,6 +7,10 @@ using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+DotEnvLoader.Load(
+    Path.Combine(Directory.GetCurrentDirectory(), ".env"),
+    Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"));
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -47,8 +51,9 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddFluentValidationClientsideAdapters();
 
+builder.Services.Configure<SmtpEmailOptions>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
-builder.Services.AddScoped<IEmailSender<User>, FileEmailSender>();
+builder.Services.AddScoped<IEmailSender<User>, SmtpEmailSender>();
 builder.Services.AddScoped<IProfileImageStorageService, ProfileImageStorageService>();
 
 var app = builder.Build();
