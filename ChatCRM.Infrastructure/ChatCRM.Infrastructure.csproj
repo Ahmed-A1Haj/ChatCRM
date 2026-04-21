@@ -7,7 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ChatCRM.Application\ChatCRM.Application.csproj" />
+    <ProjectReference Include="..\ChatCRM.Persistence\ChatCRM.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

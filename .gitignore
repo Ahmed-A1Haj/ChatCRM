@@ -363,3 +363,15 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Local dev secrets — never commit real API keys
+ChatCRM.MVC/appsettings.Development.json
+
+# Docker runtime artifacts (only commit docker-compose.yml)
+docker/*.log
+docker/*.json
+docker/*.png
+docker/*.txt
+
+# ngrok config
+ngrok.yml

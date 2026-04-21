@@ -1,0 +1,164 @@
+@model List<ChatCRM.Application.Chats.DTOs.ConversationDto>
+@{
+    ViewData["Title"] = "Chats";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chats — ChatCRM</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/chat.css" asp-append-version="true" />
+</head>
+<body class="chat-shell">
+
+<!-- TOP NAVBAR -->
+<header class="chat-navbar">
+    <a class="chat-navbar-brand" asp-controller="Home" asp-action="Index">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <rect width="28" height="28" rx="8" fill="#25d366"/>
+            <path d="M14 5C9.03 5 5 9.03 5 14c0 1.6.42 3.1 1.15 4.4L5 23l4.72-1.14A9 9 0 1014 5z" fill="white"/>
+        </svg>
+        ChatCRM
+    </a>
+    <div class="chat-navbar-actions">
+        <a asp-controller="Account" asp-action="Profile" class="chat-nav-icon" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        </a>
+        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="chat-nav-icon" title="Sign out">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+        </form>
+    </div>
+</header>
+
+<div class="chat-layout">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="chat-sidebar" id="chatSidebar">
+        <div class="sidebar-header">
+            <h2 class="sidebar-title">Conversations</h2>
+            <span class="sidebar-count" id="totalBadge">@Model.Count</span>
+        </div>
+        <div class="sidebar-search">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="searchInput" class="sidebar-search-input" placeholder="Search conversations…" />
+        </div>
+
+        <div class="conversation-list" id="conversationList">
+            @if (!Model.Any())
+            {
+                <div class="empty-sidebar">
+                    <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="30" stroke="#e0e0e0" stroke-width="2"/><path d="M20 28h24M20 36h16" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"/></svg>
+                    <p>No conversations yet</p>
+                    <span>Messages from WhatsApp will appear here</span>
+                </div>
+            }
+            else
+            {
+                @foreach (var conv in Model)
+                {
+                    <div class="conv-item" data-id="@conv.Id" data-phone="@conv.PhoneNumber" onclick="selectConversation(@conv.Id)">
+                        <div class="conv-avatar">
+                            @if (!string.IsNullOrWhiteSpace(conv.AvatarUrl))
+                            {
+                                <img src="@conv.AvatarUrl" alt="avatar" />
+                            }
+                            else
+                            {
+                                <span>@((conv.DisplayName ?? conv.PhoneNumber)[..1].ToUpperInvariant())</span>
+                            }
+                        </div>
+                        <div class="conv-info">
+                            <div class="conv-top">
+                                <span class="conv-name">@(conv.DisplayName ?? conv.PhoneNumber)</span>
+                                <span class="conv-time">@FormatTime(conv.LastMessageAt)</span>
+                            </div>
+                            <div class="conv-bottom">
+                                <span class="conv-preview">@TruncatePreview(conv.LastMessage)</span>
+                                @if (conv.UnreadCount > 0)
+                                {
+                                    <span class="unread-badge" id="badge-@conv.Id">@conv.UnreadCount</span>
+                                }
+                                else
+                                {
+                                    <span class="unread-badge d-none" id="badge-@conv.Id">0</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </aside>
+
+    <!-- MAIN CHAT PANEL -->
+    <main class="chat-main" id="chatMain">
+
+        <!-- Empty state -->
+        <div class="chat-empty" id="chatEmpty">
+            <div class="chat-empty-inner">
+                <svg viewBox="0 0 80 80" fill="none" width="80" height="80">
+                    <circle cx="40" cy="40" r="38" stroke="#e8f5e9" stroke-width="3" fill="#f0faf2"/>
+                    <path d="M24 34h32M24 44h20" stroke="#25d366" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                <h3>Select a conversation</h3>
+                <p>Click any chat on the left to open it</p>
+            </div>
+        </div>
+
+        <!-- Active chat window -->
+        <div class="chat-window d-none" id="chatWindow">
+            <div class="chat-header" id="chatHeader">
+                <div class="chat-header-avatar" id="chatHeaderAvatar"></div>
+                <div class="chat-header-info">
+                    <strong id="chatHeaderName"></strong>
+                    <span id="chatHeaderPhone"></span>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="messages-loading" id="messagesLoading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <form class="chat-input-bar" id="chatForm" onsubmit="sendMessage(event)">
+                @Html.AntiForgeryToken()
+                <input type="text" id="messageInput" class="chat-input" placeholder="Type a message…" autocomplete="off" maxlength="4096" />
+                <button type="submit" class="send-btn" id="sendBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+            </form>
+        </div>
+
+    </main>
+</div>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<script src="~/js/chat.js" asp-append-version="true"></script>
+
+</body>
+</html>
+
+@functions {
+    static string FormatTime(DateTime dt)
+    {
+        var now = DateTime.UtcNow;
+        var diff = now - dt;
+        if (diff.TotalMinutes < 1) return "now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m";
+        if (diff.TotalDays < 1) return dt.ToLocalTime().ToString("HH:mm");
+        if (diff.TotalDays < 7) return dt.ToLocalTime().ToString("ddd");
+        return dt.ToLocalTime().ToString("dd/MM");
+    }
+
+    static string TruncatePreview(string text) =>
+        text.Length > 55 ? text[..55] + "…" : text;
+}
