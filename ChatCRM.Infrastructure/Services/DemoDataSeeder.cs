@@ -15,6 +15,17 @@ namespace ChatCRM.Infrastructure.Services
                 return;
             }
 
+            var defaultInstance = await db.WhatsAppInstances
+                .OrderBy(i => i.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (defaultInstance is null)
+            {
+                logger.LogWarning("[SEED] No WhatsApp instance found; cannot seed demo conversations.");
+                return;
+            }
+
+            var instanceId = defaultInstance.Id;
             var now = DateTime.UtcNow;
 
             var alice = new WhatsAppContact
@@ -42,7 +53,7 @@ namespace ChatCRM.Infrastructure.Services
             await db.SaveChangesAsync(cancellationToken);
 
             // Alice: a back-and-forth from yesterday, one unread
-            var aliceConv = new Conversation { ContactId = alice.Id, CreatedAt = now.AddDays(-1), LastMessageAt = now.AddMinutes(-6), UnreadCount = 1 };
+            var aliceConv = new Conversation { ContactId = alice.Id, WhatsAppInstanceId = instanceId, CreatedAt = now.AddDays(-1), LastMessageAt = now.AddMinutes(-6), UnreadCount = 1 };
             db.Conversations.Add(aliceConv);
             await db.SaveChangesAsync(cancellationToken);
 
@@ -55,7 +66,7 @@ namespace ChatCRM.Infrastructure.Services
             );
 
             // Bob: read thread from 2 hours ago
-            var bobConv = new Conversation { ContactId = bob.Id, CreatedAt = now.AddHours(-5), LastMessageAt = now.AddHours(-2), UnreadCount = 0 };
+            var bobConv = new Conversation { ContactId = bob.Id, WhatsAppInstanceId = instanceId, CreatedAt = now.AddHours(-5), LastMessageAt = now.AddHours(-2), UnreadCount = 0 };
             db.Conversations.Add(bobConv);
             await db.SaveChangesAsync(cancellationToken);
 
@@ -67,7 +78,7 @@ namespace ChatCRM.Infrastructure.Services
             );
 
             // Carol: brand new, 3 unread
-            var carolConv = new Conversation { ContactId = carol.Id, CreatedAt = now.AddMinutes(-30), LastMessageAt = now.AddMinutes(-2), UnreadCount = 3 };
+            var carolConv = new Conversation { ContactId = carol.Id, WhatsAppInstanceId = instanceId, CreatedAt = now.AddMinutes(-30), LastMessageAt = now.AddMinutes(-2), UnreadCount = 3 };
             db.Conversations.Add(carolConv);
             await db.SaveChangesAsync(cancellationToken);
 

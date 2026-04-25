@@ -1,7 +1,9 @@
-@model List<ChatCRM.Application.Chats.DTOs.ConversationDto>
+@model ChatCRM.Application.Chats.DTOs.ChatsPageViewModel
+@using ChatCRM.Domain.Entities
 @{
     ViewData["Title"] = "Chats";
     Layout = null;
+    var active = Model.Instances.FirstOrDefault(i => i.Id == Model.ActiveInstanceId);
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -11,10 +13,10 @@
     <title>Chats — ChatCRM</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/chat.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
 </head>
 <body class="chat-shell">
 
-<!-- TOP NAVBAR -->
 <header class="chat-navbar">
     <a class="chat-navbar-brand" asp-controller="Home" asp-action="Index">
         <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -23,6 +25,10 @@
         </svg>
         ChatCRM
     </a>
+    <nav class="chat-subnav">
+        <a href="/dashboard/chats" class="chat-subnav-link active">💬 Chats</a>
+        <a href="/dashboard/whatsapp" class="chat-subnav-link">📱 Numbers</a>
+    </nav>
     <div class="chat-navbar-actions">
         <a asp-controller="Account" asp-action="Profile" class="chat-nav-icon" title="Profile">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
@@ -39,18 +45,57 @@
 <div class="chat-layout">
 
     <!-- LEFT SIDEBAR -->
-    <aside class="chat-sidebar" id="chatSidebar">
-        <div class="sidebar-header">
-            <h2 class="sidebar-title">Conversations</h2>
-            <span class="sidebar-count" id="totalBadge">@Model.Count</span>
+    <aside class="chat-sidebar" id="chatSidebar" data-active-instance="@Model.ActiveInstanceId">
+
+        <!-- Instance selector dropdown -->
+        <div class="instance-select-wrapper">
+            <button class="instance-select-btn" id="instanceSelectBtn" onclick="toggleInstanceMenu()">
+                <span class="status-dot status-@(active?.Status.ToString().ToLowerInvariant() ?? "disconnected")"></span>
+                <div class="instance-select-body">
+                    <strong id="activeInstanceName">@(active?.DisplayName ?? "Select a number")</strong>
+                    <small id="activeInstancePhone">
+                        @(string.IsNullOrWhiteSpace(active?.PhoneNumber) ? "—" : "+" + active.PhoneNumber)
+                    </small>
+                </div>
+                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+
+            <div class="instance-menu d-none" id="instanceMenu">
+                @foreach (var inst in Model.Instances)
+                {
+                    <a href="/dashboard/chats?instance=@inst.Id"
+                       class="instance-menu-item @(inst.Id == Model.ActiveInstanceId ? "active" : "")">
+                        <span class="status-dot status-@inst.Status.ToString().ToLowerInvariant()"></span>
+                        <div class="instance-menu-body">
+                            <strong>@inst.DisplayName</strong>
+                            <small>
+                                @(string.IsNullOrWhiteSpace(inst.PhoneNumber) ? "—" : "+" + inst.PhoneNumber)
+                                · @inst.ConversationCount chats@(inst.UnreadCount > 0 ? $", {inst.UnreadCount} unread" : "")
+                            </small>
+                        </div>
+                        @if (inst.Id == Model.ActiveInstanceId)
+                        {
+                            <span class="check-mark">✓</span>
+                        }
+                    </a>
+                }
+                <a href="/dashboard/whatsapp" class="instance-menu-item instance-menu-manage">
+                    <span class="manage-icon">⚙</span>
+                    <div class="instance-menu-body">
+                        <strong>Manage numbers</strong>
+                        <small>Add, disconnect, configure</small>
+                    </div>
+                </a>
+            </div>
         </div>
+
         <div class="sidebar-search">
             <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="search" id="searchInput" class="sidebar-search-input" placeholder="Search conversations…" />
         </div>
 
         <div class="conversation-list" id="conversationList">
-            @if (!Model.Any())
+            @if (!Model.Conversations.Any())
             {
                 <div class="empty-sidebar">
                     <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="30" stroke="#e0e0e0" stroke-width="2"/><path d="M20 28h24M20 36h16" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"/></svg>
@@ -60,18 +105,14 @@
             }
             else
             {
-                @foreach (var conv in Model)
+                @foreach (var conv in Model.Conversations)
                 {
                     <div class="conv-item" data-id="@conv.Id" data-phone="@conv.PhoneNumber" onclick="selectConversation(@conv.Id)">
                         <div class="conv-avatar">
                             @if (!string.IsNullOrWhiteSpace(conv.AvatarUrl))
-                            {
-                                <img src="@conv.AvatarUrl" alt="avatar" />
-                            }
+                            { <img src="@conv.AvatarUrl" alt="avatar" /> }
                             else
-                            {
-                                <span>@((conv.DisplayName ?? conv.PhoneNumber)[..1].ToUpperInvariant())</span>
-                            }
+                            { <span>@((conv.DisplayName ?? conv.PhoneNumber)[..1].ToUpperInvariant())</span> }
                         </div>
                         <div class="conv-info">
                             <div class="conv-top">
@@ -81,13 +122,9 @@
                             <div class="conv-bottom">
                                 <span class="conv-preview">@TruncatePreview(conv.LastMessage)</span>
                                 @if (conv.UnreadCount > 0)
-                                {
-                                    <span class="unread-badge" id="badge-@conv.Id">@conv.UnreadCount</span>
-                                }
+                                { <span class="unread-badge" id="badge-@conv.Id">@conv.UnreadCount</span> }
                                 else
-                                {
-                                    <span class="unread-badge d-none" id="badge-@conv.Id">0</span>
-                                }
+                                { <span class="unread-badge d-none" id="badge-@conv.Id">0</span> }
                             </div>
                         </div>
                     </div>
@@ -98,8 +135,6 @@
 
     <!-- MAIN CHAT PANEL -->
     <main class="chat-main" id="chatMain">
-
-        <!-- Empty state -->
         <div class="chat-empty" id="chatEmpty">
             <div class="chat-empty-inner">
                 <svg viewBox="0 0 80 80" fill="none" width="80" height="80">
@@ -111,7 +146,6 @@
             </div>
         </div>
 
-        <!-- Active chat window -->
         <div class="chat-window d-none" id="chatWindow">
             <div class="chat-header" id="chatHeader">
                 <div class="chat-header-avatar" id="chatHeaderAvatar"></div>
@@ -135,7 +169,6 @@
                 </button>
             </form>
         </div>
-
     </main>
 </div>
 

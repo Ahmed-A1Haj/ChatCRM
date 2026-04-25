@@ -1,6 +1,7 @@
 /* ─── State ─────────────────────────────────────────────────────────── */
 let activeConversationId = null;
 let atBottom = true;
+const activeInstanceId = parseInt(document.getElementById('chatSidebar')?.dataset.activeInstance || '0', 10);
 
 /* ─── SignalR ───────────────────────────────────────────────────────── */
 const connection = new signalR.HubConnectionBuilder()
@@ -9,30 +10,60 @@ const connection = new signalR.HubConnectionBuilder()
     .build();
 
 connection.on('ReceiveMessage', (data) => {
-    const { conversationId, message, unreadCount } = data;
+    const { conversationId, instanceId, message, unreadCount } = data;
+
+    // Messages for other instances — ignore (server groups should already filter, this is a belt-and-suspenders check)
+    if (instanceId && activeInstanceId && instanceId !== activeInstanceId) return;
 
     const exists = document.querySelector(`.conv-item[data-id="${conversationId}"]`);
     if (!exists) {
-        // Brand new conversation — easiest reliable path is to refresh so the server-rendered sidebar picks it up
+        // Brand new conversation within this instance — refresh so the server-rendered sidebar picks it up
         location.reload();
         return;
     }
 
-    // Update sidebar badge + preview
     updateSidebarRow(conversationId, message, unreadCount);
 
-    // If the incoming message belongs to the open chat, render it
     if (conversationId === activeConversationId) {
         appendMessage(message);
         if (atBottom) scrollToBottom();
-
-        // Mark read immediately — we are looking at it
         fetch(`/dashboard/chats/${conversationId}/messages`);
         updateBadge(conversationId, 0);
     }
 });
 
-connection.start().catch(err => console.error('SignalR error:', err));
+// Reload on disconnect event so status/UI stays honest.
+connection.on('InstanceStatusChanged', ({ id, status }) => {
+    if (id === activeInstanceId) {
+        // Gentle refresh of sidebar header; full reload keeps dropdown in sync.
+        location.reload();
+    }
+});
+
+connection.start().then(async () => {
+    if (activeInstanceId > 0) {
+        try { await connection.invoke('JoinInstance', activeInstanceId); }
+        catch (err) { console.error('JoinInstance failed:', err); }
+    }
+}).catch(err => console.error('SignalR error:', err));
+
+connection.onreconnected(async () => {
+    if (activeInstanceId > 0) {
+        try { await connection.invoke('JoinInstance', activeInstanceId); } catch { /* ignore */ }
+    }
+});
+
+/* ─── Instance dropdown (sidebar) ────────────────────────────────── */
+function toggleInstanceMenu() {
+    document.getElementById('instanceMenu').classList.toggle('d-none');
+}
+
+document.addEventListener('click', (e) => {
+    const wrapper = document.querySelector('.instance-select-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('instanceMenu')?.classList.add('d-none');
+    }
+});
 
 /* ─── Conversation selection ────────────────────────────────────────── */
 function selectConversation(id) {

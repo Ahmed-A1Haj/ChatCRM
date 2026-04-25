@@ -7,6 +7,9 @@ namespace ChatCRM.Application.Chats.DTOs
         [JsonPropertyName("event")]
         public string Event { get; set; } = string.Empty;
 
+        [JsonPropertyName("instance")]
+        public string? Instance { get; set; }
+
         [JsonPropertyName("data")]
         public WebhookMessageData? Data { get; set; }
     }

@@ -17,9 +17,9 @@ namespace ChatCRM.Infrastructure.Services
             _logger = logger;
         }
 
-        public Task<bool> SendMessageAsync(string phone, string message, CancellationToken cancellationToken = default)
+        public Task<bool> SendMessageAsync(string instanceName, string phone, string message, CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("[MOCK] Would send to {Phone}: {Message}", phone, message);
+            _logger.LogInformation("[MOCK] Would send via {Instance} to {Phone}: {Message}", instanceName, phone, message);
             return Task.FromResult(true);
         }
 

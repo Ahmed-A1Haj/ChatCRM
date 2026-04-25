@@ -77,6 +77,7 @@ else
     builder.Services.AddScoped<IEvolutionService, EvolutionService>();
 }
 builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IWhatsAppInstanceService, WhatsAppInstanceService>();
 
 builder.Services.Configure<SmtpEmailOptions>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
@@ -95,6 +96,11 @@ using (var scope = app.Services.CreateScope())
         var dbContext = services.GetRequiredService<AppDbContext>();
         dbContext.Database.Migrate();
         logger.LogInformation("Database migrations applied successfully.");
+
+        await InstanceSeeder.SeedDefaultIfEmptyAsync(
+            dbContext,
+            builder.Configuration["Evolution:InstanceName"],
+            logger);
 
         if (useMockEvolution)
         {

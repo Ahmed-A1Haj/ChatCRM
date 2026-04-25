@@ -13,6 +13,7 @@ namespace ChatCRM.Persistence
         }
 
         public DbSet<WhatsAppContact> WhatsAppContacts => Set<WhatsAppContact>();
+        public DbSet<WhatsAppInstance> WhatsAppInstances => Set<WhatsAppInstance>();
         public DbSet<Conversation> Conversations => Set<Conversation>();
         public DbSet<Message> Messages => Set<Message>();
 
@@ -35,6 +36,20 @@ namespace ChatCRM.Persistence
                 builder.Property(x => x.AvatarUrl).HasMaxLength(260);
             });
 
+            modelBuilder.Entity<WhatsAppInstance>(builder =>
+            {
+                builder.Property(x => x.InstanceName).HasMaxLength(100).IsRequired();
+                builder.HasIndex(x => x.InstanceName).IsUnique();
+                builder.Property(x => x.DisplayName).HasMaxLength(100).IsRequired();
+                builder.Property(x => x.PhoneNumber).HasMaxLength(30);
+                builder.Property(x => x.OwnerJid).HasMaxLength(100);
+
+                builder.HasOne(x => x.CreatedByUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
             modelBuilder.Entity<Conversation>(builder =>
             {
                 builder.HasOne(x => x.Contact)
@@ -42,12 +57,19 @@ namespace ChatCRM.Persistence
                     .HasForeignKey(x => x.ContactId)
                     .OnDelete(DeleteBehavior.Cascade);
 
+                builder.HasOne(x => x.Instance)
+                    .WithMany(x => x.Conversations)
+                    .HasForeignKey(x => x.WhatsAppInstanceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 builder.HasOne(x => x.AssignedUser)
                     .WithMany()
                     .HasForeignKey(x => x.AssignedUserId)
                     .OnDelete(DeleteBehavior.SetNull);
 
                 builder.HasIndex(x => x.LastMessageAt);
+                builder.HasIndex(x => new { x.WhatsAppInstanceId, x.LastMessageAt });
+                builder.HasIndex(x => new { x.ContactId, x.WhatsAppInstanceId }).IsUnique();
             });
 
             modelBuilder.Entity<Message>(builder =>

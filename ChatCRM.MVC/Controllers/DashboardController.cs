@@ -9,19 +9,48 @@ namespace ChatCRM.MVC.Controllers
     public class DashboardController : Controller
     {
         private readonly IChatService _chatService;
+        private readonly IWhatsAppInstanceService _instanceService;
         private readonly ILogger<DashboardController> _logger;
 
-        public DashboardController(IChatService chatService, ILogger<DashboardController> logger)
+        public DashboardController(
+            IChatService chatService,
+            IWhatsAppInstanceService instanceService,
+            ILogger<DashboardController> logger)
         {
             _chatService = chatService;
+            _instanceService = instanceService;
             _logger = logger;
         }
 
         [HttpGet("/dashboard/chats")]
-        public async Task<IActionResult> Chats(CancellationToken cancellationToken)
+        public async Task<IActionResult> Chats([FromQuery] int? instance, CancellationToken cancellationToken)
         {
-            var conversations = await _chatService.GetConversationsAsync(cancellationToken);
-            return View(conversations);
+            var instances = await _instanceService.GetAllAsync(cancellationToken);
+
+            if (instances.Count == 0)
+            {
+                return RedirectToAction(nameof(WhatsApp));
+            }
+
+            var activeId = instance ?? instances.First().Id;
+            if (!instances.Any(i => i.Id == activeId))
+                activeId = instances.First().Id;
+
+            var conversations = await _chatService.GetConversationsAsync(activeId, cancellationToken);
+
+            return View(new ChatsPageViewModel
+            {
+                Instances = instances,
+                ActiveInstanceId = activeId,
+                Conversations = conversations
+            });
+        }
+
+        [HttpGet("/dashboard/whatsapp")]
+        public async Task<IActionResult> WhatsApp(CancellationToken cancellationToken)
+        {
+            var instances = await _instanceService.GetAllAsync(cancellationToken);
+            return View(instances);
         }
 
         [HttpGet("/dashboard/chats/{id:int}/messages")]
@@ -30,6 +59,13 @@ namespace ChatCRM.MVC.Controllers
             var messages = await _chatService.GetMessagesAsync(id, cancellationToken);
             await _chatService.MarkAsReadAsync(id, cancellationToken);
             return Json(messages);
+        }
+
+        [HttpGet("/dashboard/chats/list")]
+        public async Task<IActionResult> ConversationsList([FromQuery] int? instance, CancellationToken cancellationToken)
+        {
+            var items = await _chatService.GetConversationsAsync(instance, cancellationToken);
+            return Json(items);
         }
 
         [HttpPost("/dashboard/chats/send")]

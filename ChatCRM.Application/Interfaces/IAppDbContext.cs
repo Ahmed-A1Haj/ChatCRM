@@ -7,6 +7,7 @@ namespace ChatCRM.Application.Interfaces
     {
         DbSet<User> Users { get; }
         DbSet<WhatsAppContact> WhatsAppContacts { get; }
+        DbSet<WhatsAppInstance> WhatsAppInstances { get; }
         DbSet<Conversation> Conversations { get; }
         DbSet<Message> Messages { get; }
 

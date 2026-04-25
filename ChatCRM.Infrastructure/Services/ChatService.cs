@@ -27,14 +27,19 @@ namespace ChatCRM.Infrastructure.Services
             _logger = logger;
         }
 
-        public async Task<List<ConversationDto>> GetConversationsAsync(CancellationToken cancellationToken = default)
+        public async Task<List<ConversationDto>> GetConversationsAsync(int? instanceId = null, CancellationToken cancellationToken = default)
         {
-            return await _db.Conversations
-                .Where(c => !c.IsArchived)
+            var query = _db.Conversations.Where(c => !c.IsArchived);
+
+            if (instanceId.HasValue)
+                query = query.Where(c => c.WhatsAppInstanceId == instanceId.Value);
+
+            return await query
                 .OrderByDescending(c => c.LastMessageAt)
                 .Select(c => new ConversationDto
                 {
                     Id = c.Id,
+                    InstanceId = c.WhatsAppInstanceId,
                     PhoneNumber = c.Contact.PhoneNumber,
                     DisplayName = c.Contact.DisplayName,
                     AvatarUrl = c.Contact.AvatarUrl,
@@ -69,6 +74,7 @@ namespace ChatCRM.Infrastructure.Services
         {
             var conversation = await _db.Conversations
                 .Include(c => c.Contact)
+                .Include(c => c.Instance)
                 .FirstOrDefaultAsync(c => c.Id == dto.ConversationId, cancellationToken)
                 ?? throw new InvalidOperationException($"Conversation {dto.ConversationId} not found.");
 
@@ -85,24 +91,33 @@ namespace ChatCRM.Infrastructure.Services
             conversation.LastMessageAt = message.SentAt;
             await _db.SaveChangesAsync(cancellationToken);
 
-            var sent = await _evolutionService.SendMessageAsync(conversation.Contact.PhoneNumber, dto.Body, cancellationToken);
+            var sent = await _evolutionService.SendMessageAsync(
+                conversation.Instance.InstanceName,
+                conversation.Contact.PhoneNumber,
+                dto.Body,
+                cancellationToken);
 
             if (!sent)
-                _logger.LogWarning("Evolution API failed to deliver message {MessageId} to {Phone}", message.Id, conversation.Contact.PhoneNumber);
+                _logger.LogWarning("Evolution API failed to deliver message {MessageId} via {Instance} to {Phone}",
+                    message.Id, conversation.Instance.InstanceName, conversation.Contact.PhoneNumber);
 
-            // Notify all connected agents about the outgoing message
-            await _hub.Clients.All.SendAsync("ReceiveMessage", new
-            {
-                conversationId = conversation.Id,
-                message = new
+            // Broadcast only to clients viewing this instance.
+            await _hub.Clients.Group(ChatHub.InstanceGroupName(conversation.WhatsAppInstanceId))
+                .SendAsync("ReceiveMessage", new
                 {
-                    id = message.Id,
-                    body = message.Body,
-                    direction = (int)message.Direction,
-                    sentAt = message.SentAt
-                },
-                unreadCount = conversation.UnreadCount
-            }, cancellationToken);
+                    instanceId = conversation.WhatsAppInstanceId,
+                    conversationId = conversation.Id,
+                    contactPhone = conversation.Contact.PhoneNumber,
+                    contactName = conversation.Contact.DisplayName,
+                    message = new
+                    {
+                        id = message.Id,
+                        body = message.Body,
+                        direction = (int)message.Direction,
+                        sentAt = message.SentAt
+                    },
+                    unreadCount = conversation.UnreadCount
+                }, cancellationToken);
 
             return new MessageDto
             {
@@ -116,11 +131,8 @@ namespace ChatCRM.Infrastructure.Services
 
         public async Task MarkAsReadAsync(int conversationId, CancellationToken cancellationToken = default)
         {
-            var conversation = await _db.Conversations
-                .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
-
-            if (conversation is null)
-                return;
+            var conversation = await _db.Conversations.FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
+            if (conversation is null) return;
 
             conversation.UnreadCount = 0;
             await _db.SaveChangesAsync(cancellationToken);

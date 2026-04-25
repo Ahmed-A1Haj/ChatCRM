@@ -1,0 +1,241 @@
+@model List<ChatCRM.Application.Chats.DTOs.InstanceDto>
+@using ChatCRM.Domain.Entities
+@{
+    ViewData["Title"] = "WhatsApp Numbers";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WhatsApp Numbers — ChatCRM</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/chat.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
+</head>
+<body class="chat-shell">
+
+<header class="chat-navbar">
+    <a class="chat-navbar-brand" asp-controller="Home" asp-action="Index">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <rect width="28" height="28" rx="8" fill="#25d366"/>
+            <path d="M14 5C9.03 5 5 9.03 5 14c0 1.6.42 3.1 1.15 4.4L5 23l4.72-1.14A9 9 0 1014 5z" fill="white"/>
+        </svg>
+        ChatCRM
+    </a>
+    <nav class="chat-subnav">
+        <a href="/dashboard/chats" class="chat-subnav-link">💬 Chats</a>
+        <a href="/dashboard/whatsapp" class="chat-subnav-link active">📱 Numbers</a>
+    </nav>
+    <div class="chat-navbar-actions">
+        <a asp-controller="Account" asp-action="Profile" class="chat-nav-icon" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        </a>
+        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="chat-nav-icon" title="Sign out">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+        </form>
+    </div>
+</header>
+
+<main class="instances-page">
+
+    <div class="instances-header">
+        <div>
+            <h1 class="instances-title">📱 WhatsApp Numbers</h1>
+            <p class="instances-sub">Connect and manage all your linked WhatsApp lines.</p>
+        </div>
+        <button class="btn-primary-round" onclick="openAddModal()">+ Add Number</button>
+    </div>
+
+    <div class="instances-grid" id="instancesGrid">
+        @foreach (var inst in Model)
+        {
+            <div class="instance-card" data-id="@inst.Id">
+                <div class="instance-card-head">
+                    <span class="status-dot status-@inst.Status.ToString().ToLowerInvariant()" title="@inst.Status"></span>
+                    <h3 class="instance-name">@inst.DisplayName</h3>
+                </div>
+                <div class="instance-phone">
+                    @(string.IsNullOrWhiteSpace(inst.PhoneNumber) ? "—" : "+" + inst.PhoneNumber)
+                </div>
+                <div class="instance-meta">
+                    <span class="meta-pill status-pill-@inst.Status.ToString().ToLowerInvariant()">@FormatStatus(inst.Status)</span>
+                    <span class="meta-dim">
+                        @if (inst.LastConnectedAt.HasValue)
+                        { @($"Connected {Relative(inst.LastConnectedAt.Value)}") }
+                        else
+                        { @("Never connected") }
+                    </span>
+                </div>
+                <div class="instance-stats">
+                    <div><strong>@inst.ConversationCount</strong> <span>chats</span></div>
+                    <div><strong>@inst.UnreadCount</strong> <span>unread</span></div>
+                </div>
+                <div class="instance-actions">
+                    @if (inst.Status == InstanceStatus.Connected)
+                    {
+                        <a href="/dashboard/chats?instance=@inst.Id" class="btn-ghost">Open inbox</a>
+                        <button class="btn-ghost btn-danger" onclick="openDisconnect(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">Disconnect</button>
+                    }
+                    else if (inst.Status == InstanceStatus.Pending || inst.Status == InstanceStatus.Connecting)
+                    {
+                        <button class="btn-ghost" onclick="openQr(@inst.Id)">📷 Show QR</button>
+                        <button class="btn-ghost btn-danger" onclick="openDisconnect(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">Cancel</button>
+                    }
+                    else
+                    {
+                        <button class="btn-ghost" onclick="openQr(@inst.Id)">🔄 Reconnect</button>
+                    }
+                    <button class="btn-ghost btn-danger" title="Delete permanently" onclick="openDelete(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">🗑</button>
+                </div>
+            </div>
+        }
+
+        <div class="instance-card instance-card-add" onclick="openAddModal()">
+            <div class="add-card-plus">＋</div>
+            <div class="add-card-label">Add New Number</div>
+        </div>
+    </div>
+</main>
+
+<!-- ─── Add Number modal ───────────────────────────────────────────── -->
+<div class="modal-backdrop d-none" id="addModal" onclick="if(event.target===this) closeAddModal()">
+    <div class="modal-panel">
+        <div class="modal-header">
+            <h3 id="modalTitle">Add WhatsApp Number</h3>
+            <button class="modal-close" onclick="closeAddModal()">✕</button>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="modal-step" id="step1">
+            <label class="form-label" for="displayNameInput">Display name</label>
+            <input type="text" id="displayNameInput" class="form-input" placeholder="e.g. Sales Line" maxlength="100" autocomplete="off" />
+            <p class="form-hint">Shown in your dashboard sidebar.</p>
+
+            <div class="form-error d-none" id="createError" role="alert"></div>
+
+            <div class="modal-actions">
+                <button class="btn-ghost" onclick="closeAddModal()" id="cancelCreateBtn">Cancel</button>
+                <button class="btn-primary-round" onclick="submitCreate()" id="submitCreateBtn">
+                    <span class="btn-label">Next →</span>
+                    <span class="btn-spinner d-none" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="modal-step d-none" id="step2">
+            <div class="qr-container">
+                <div class="qr-box" id="qrBox">
+                    <div class="spinner"></div>
+                </div>
+                <div class="qr-instructions">
+                    <ol>
+                        <li>Open <b>WhatsApp</b> on your phone</li>
+                        <li>Tap <b>⋮ / Settings → Linked Devices</b></li>
+                        <li>Tap <b>Link a Device</b></li>
+                        <li>Scan the code on the left</li>
+                    </ol>
+                    <div class="waiting-indicator" id="waitingIndicator">
+                        <span class="dot-pulse"></span> Waiting for scan…
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-ghost" onclick="refreshQr()">🔄 Refresh QR</button>
+                <button class="btn-ghost" onclick="closeAddModal()">Close</button>
+            </div>
+        </div>
+
+        <!-- Step 3: success -->
+        <div class="modal-step d-none" id="step3">
+            <div class="success-card">
+                <div class="success-icon">✓</div>
+                <h3>Connected!</h3>
+                <p id="successDetails">Your WhatsApp number is now linked.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-primary-round" onclick="location.reload()">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Disconnect confirmation ────────────────────────────────────── -->
+<div class="modal-backdrop d-none" id="disconnectModal" onclick="if(event.target===this) closeDisconnect()">
+    <div class="modal-panel modal-panel-small">
+        <div class="modal-header">
+            <h3>Disconnect <span id="disconnectName"></span>?</h3>
+            <button class="modal-close" onclick="closeDisconnect()">✕</button>
+        </div>
+        <div class="modal-body">
+            <ul class="disconnect-bullets">
+                <li>The number will be unlinked from WhatsApp</li>
+                <li>Conversation history stays saved</li>
+                <li>No new messages will be received</li>
+            </ul>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-ghost" onclick="closeDisconnect()">Cancel</button>
+            <button class="btn-ghost btn-danger" onclick="confirmDisconnect()">Disconnect</button>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Delete confirmation (permanent) ────────────────────────────── -->
+<div class="modal-backdrop d-none" id="deleteModal" onclick="if(event.target===this) closeDelete()">
+    <div class="modal-panel modal-panel-small">
+        <div class="modal-header">
+            <h3>Delete <span id="deleteName"></span> permanently?</h3>
+            <button class="modal-close" onclick="closeDelete()">✕</button>
+        </div>
+        <div class="modal-body">
+            <ul class="disconnect-bullets">
+                <li><strong>All conversations and messages</strong> for this number will be deleted</li>
+                <li>The number will be unlinked from WhatsApp</li>
+                <li>The Evolution API instance will be deleted</li>
+                <li class="text-danger"><strong>This cannot be undone.</strong></li>
+            </ul>
+            <label class="form-label" style="margin-top:14px;">Type <code>DELETE</code> to confirm:</label>
+            <input type="text" id="deleteConfirmInput" class="form-input" oninput="updateDeleteButton()" autocomplete="off" />
+        </div>
+        <div class="modal-actions">
+            <button class="btn-ghost" onclick="closeDelete()">Cancel</button>
+            <button class="btn-ghost btn-danger" id="deleteConfirmBtn" onclick="confirmDelete()" disabled>Delete forever</button>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<script src="~/js/instances.js" asp-append-version="true"></script>
+
+</body>
+</html>
+
+@functions {
+    static string FormatStatus(InstanceStatus s) => s switch
+    {
+        InstanceStatus.Connected => "Connected",
+        InstanceStatus.Connecting => "Connecting",
+        InstanceStatus.Pending => "Awaiting QR scan",
+        InstanceStatus.Disconnected => "Disconnected",
+        _ => s.ToString()
+    };
+
+    static string Relative(DateTime dt)
+    {
+        var diff = DateTime.UtcNow - dt;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes} min ago";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours} hr ago";
+        return $"{(int)diff.TotalDays} days ago";
+    }
+}

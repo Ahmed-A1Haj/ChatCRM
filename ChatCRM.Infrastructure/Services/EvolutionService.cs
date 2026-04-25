@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using ChatCRM.Application.Chats.DTOs;
@@ -8,7 +7,6 @@ using ChatCRM.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace ChatCRM.Infrastructure.Services
 {
@@ -16,47 +14,41 @@ namespace ChatCRM.Infrastructure.Services
     {
         private readonly AppDbContext _db;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly EvolutionOptions _options;
         private readonly IHubContext<ChatHub> _hub;
         private readonly ILogger<EvolutionService> _logger;
 
         public EvolutionService(
             AppDbContext db,
             IHttpClientFactory httpClientFactory,
-            IOptions<EvolutionOptions> options,
             IHubContext<ChatHub> hub,
             ILogger<EvolutionService> logger)
         {
             _db = db;
             _httpClientFactory = httpClientFactory;
-            _options = options.Value;
             _hub = hub;
             _logger = logger;
         }
 
-        public async Task<bool> SendMessageAsync(string phone, string message, CancellationToken cancellationToken = default)
+        public async Task<bool> SendMessageAsync(string instanceName, string phone, string message, CancellationToken cancellationToken = default)
         {
+            if (string.IsNullOrWhiteSpace(instanceName))
+            {
+                _logger.LogError("SendMessageAsync called with empty instanceName.");
+                return false;
+            }
+
             try
             {
                 var client = _httpClientFactory.CreateClient("Evolution");
-                var payload = new
-                {
-                    number = phone,
-                    text = message
-                };
+                var payload = new { number = phone, text = message };
+                var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-                var json = JsonSerializer.Serialize(payload);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync(
-                    $"/message/sendText/{_options.InstanceName}",
-                    content,
-                    cancellationToken);
+                var response = await client.PostAsync($"/message/sendText/{instanceName}", content, cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     var error = await response.Content.ReadAsStringAsync(cancellationToken);
-                    _logger.LogError("Evolution API error {Status}: {Body}", response.StatusCode, error);
+                    _logger.LogError("Evolution API error {Status} for {Instance}: {Body}", response.StatusCode, instanceName, error);
                     return false;
                 }
 
@@ -64,7 +56,7 @@ namespace ChatCRM.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send WhatsApp message to {Phone}", phone);
+                _logger.LogError(ex, "Failed to send WhatsApp message to {Phone} via {Instance}", phone, instanceName);
                 return false;
             }
         }
@@ -74,9 +66,24 @@ namespace ChatCRM.Infrastructure.Services
             if (payload.Data?.Key is null || payload.Data.Message is null)
                 return;
 
-            // Only handle inbound messages (not echoes of our own sends)
             if (payload.Data.Key.FromMe)
                 return;
+
+            if (string.IsNullOrWhiteSpace(payload.Instance))
+            {
+                _logger.LogWarning("Webhook missing instance name — cannot route.");
+                return;
+            }
+
+            // Find the ChatCRM instance that owns this WhatsApp number.
+            var instance = await _db.WhatsAppInstances
+                .FirstOrDefaultAsync(i => i.InstanceName == payload.Instance, cancellationToken);
+
+            if (instance is null)
+            {
+                _logger.LogWarning("Webhook for unknown instance {Instance} — dropping.", payload.Instance);
+                return;
+            }
 
             var externalId = payload.Data.Key.Id;
 
@@ -101,7 +108,7 @@ namespace ChatCRM.Infrastructure.Services
                 ? DateTimeOffset.FromUnixTimeSeconds(payload.Data.MessageTimestamp).UtcDateTime
                 : DateTime.UtcNow;
 
-            // Upsert contact
+            // Upsert contact (contacts are global — a person is the same across all lines).
             var contact = await _db.WhatsAppContacts
                 .FirstOrDefaultAsync(c => c.PhoneNumber == phone, cancellationToken);
 
@@ -121,22 +128,22 @@ namespace ChatCRM.Infrastructure.Services
                 contact.DisplayName = payload.Data.PushName;
             }
 
-            // Upsert conversation
+            // One conversation per (contact, instance).
             var conversation = await _db.Conversations
-                .FirstOrDefaultAsync(c => c.ContactId == contact.Id, cancellationToken);
+                .FirstOrDefaultAsync(c => c.ContactId == contact.Id && c.WhatsAppInstanceId == instance.Id, cancellationToken);
 
             if (conversation is null)
             {
                 conversation = new Conversation
                 {
                     ContactId = contact.Id,
+                    WhatsAppInstanceId = instance.Id,
                     CreatedAt = DateTime.UtcNow
                 };
                 _db.Conversations.Add(conversation);
                 await _db.SaveChangesAsync(cancellationToken);
             }
 
-            // Store message
             var message = new Message
             {
                 ConversationId = conversation.Id,
@@ -148,25 +155,28 @@ namespace ChatCRM.Infrastructure.Services
             };
 
             _db.Messages.Add(message);
-
             conversation.LastMessageAt = sentAt;
             conversation.UnreadCount += 1;
 
             await _db.SaveChangesAsync(cancellationToken);
 
-            // Push real-time update via SignalR
-            await _hub.Clients.All.SendAsync("ReceiveMessage", new
-            {
-                conversationId = conversation.Id,
-                message = new
+            // Broadcast to the SignalR group for this specific instance.
+            await _hub.Clients.Group(ChatHub.InstanceGroupName(instance.Id))
+                .SendAsync("ReceiveMessage", new
                 {
-                    id = message.Id,
-                    body = message.Body,
-                    direction = (int)message.Direction,
-                    sentAt = message.SentAt
-                },
-                unreadCount = conversation.UnreadCount
-            }, cancellationToken);
+                    instanceId = instance.Id,
+                    conversationId = conversation.Id,
+                    contactPhone = contact.PhoneNumber,
+                    contactName = contact.DisplayName,
+                    message = new
+                    {
+                        id = message.Id,
+                        body = message.Body,
+                        direction = (int)message.Direction,
+                        sentAt = message.SentAt
+                    },
+                    unreadCount = conversation.UnreadCount
+                }, cancellationToken);
         }
     }
 }

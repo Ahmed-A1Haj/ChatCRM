@@ -7,6 +7,9 @@ namespace ChatCRM.Domain.Entities
         public int ContactId { get; set; }
         public WhatsAppContact Contact { get; set; } = null!;
 
+        public int WhatsAppInstanceId { get; set; }
+        public WhatsAppInstance Instance { get; set; } = null!;
+
         public string? AssignedUserId { get; set; }
         public User? AssignedUser { get; set; }
 
