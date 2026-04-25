@@ -10,9 +10,9 @@ const connection = new signalR.HubConnectionBuilder()
     .build();
 
 connection.on('ReceiveMessage', (data) => {
-    const { conversationId, instanceId, message, unreadCount } = data;
+    const { conversationId, instanceId, message, unreadCount, instanceUnread } = data;
 
-    // Messages for other instances — ignore (server groups should already filter, this is a belt-and-suspenders check)
+    // Belt-and-suspenders — server groups should already filter to active instance.
     if (instanceId && activeInstanceId && instanceId !== activeInstanceId) return;
 
     const exists = document.querySelector(`.conv-item[data-id="${conversationId}"]`);
@@ -22,20 +22,29 @@ connection.on('ReceiveMessage', (data) => {
         return;
     }
 
-    updateSidebarRow(conversationId, message, unreadCount);
+    const isActive = conversationId === activeConversationId;
 
-    if (conversationId === activeConversationId) {
+    // If the user is currently looking at this conversation, the badge stays at 0 — don't flash 1→0.
+    updateSidebarRow(conversationId, message, isActive ? 0 : unreadCount);
+
+    // Reflect the new instance-wide unread total on the dropdown row.
+    if (instanceId) updateInstanceDropdownUnread(instanceId, isActive ? Math.max(0, instanceUnread - unreadCount) : instanceUnread);
+
+    if (isActive) {
         appendMessage(message);
         if (atBottom) scrollToBottom();
+        // Tell the server we've read it (server will broadcast ConversationRead to all tabs).
         fetch(`/dashboard/chats/${conversationId}/messages`);
-        updateBadge(conversationId, 0);
     }
 });
 
-// Reload on disconnect event so status/UI stays honest.
+connection.on('ConversationRead', ({ conversationId, instanceId, instanceUnread }) => {
+    updateBadge(conversationId, 0);
+    if (instanceId) updateInstanceDropdownUnread(instanceId, instanceUnread);
+});
+
 connection.on('InstanceStatusChanged', ({ id, status }) => {
     if (id === activeInstanceId) {
-        // Gentle refresh of sidebar header; full reload keeps dropdown in sync.
         location.reload();
     }
 });
@@ -238,6 +247,18 @@ function updateBadge(conversationId, count) {
     } else {
         badge.classList.add('d-none');
     }
+}
+
+/**
+ * Updates the unread suffix in the instance dropdown row for the given instance.
+ * The dropdown rows have data-instance-id and an inner <span data-unread-suffix>.
+ */
+function updateInstanceDropdownUnread(instanceId, unreadTotal) {
+    const row = document.querySelector(`.instance-menu-item[data-instance-id="${instanceId}"]`);
+    if (!row) return;
+    const suffix = row.querySelector('[data-unread-suffix]');
+    if (!suffix) return;
+    suffix.textContent = unreadTotal > 0 ? `, ${unreadTotal} unread` : '';
 }
 
 function updateSidebarRow(conversationId, message, unreadCount) {

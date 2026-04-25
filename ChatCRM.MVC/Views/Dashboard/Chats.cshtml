@@ -64,13 +64,15 @@
                 @foreach (var inst in Model.Instances)
                 {
                     <a href="/dashboard/chats?instance=@inst.Id"
-                       class="instance-menu-item @(inst.Id == Model.ActiveInstanceId ? "active" : "")">
+                       class="instance-menu-item @(inst.Id == Model.ActiveInstanceId ? "active" : "")"
+                       data-instance-id="@inst.Id"
+                       data-conversation-count="@inst.ConversationCount">
                         <span class="status-dot status-@inst.Status.ToString().ToLowerInvariant()"></span>
                         <div class="instance-menu-body">
                             <strong>@inst.DisplayName</strong>
-                            <small>
+                            <small data-instance-meta="true">
                                 @(string.IsNullOrWhiteSpace(inst.PhoneNumber) ? "—" : "+" + inst.PhoneNumber)
-                                · @inst.ConversationCount chats@(inst.UnreadCount > 0 ? $", {inst.UnreadCount} unread" : "")
+                                · @inst.ConversationCount chats<span data-unread-suffix="true">@(inst.UnreadCount > 0 ? $", {inst.UnreadCount} unread" : "")</span>
                             </small>
                         </div>
                         @if (inst.Id == Model.ActiveInstanceId)

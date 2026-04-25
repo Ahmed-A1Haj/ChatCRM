@@ -160,11 +160,21 @@ namespace ChatCRM.Infrastructure.Services
 
             await _db.SaveChangesAsync(cancellationToken);
 
+            var instanceUnread = await _db.Conversations
+                .Where(c => c.WhatsAppInstanceId == instance.Id && !c.IsArchived)
+                .SumAsync(c => c.UnreadCount, cancellationToken);
+
+            var instanceChatCount = await _db.Conversations
+                .Where(c => c.WhatsAppInstanceId == instance.Id && !c.IsArchived)
+                .CountAsync(cancellationToken);
+
             // Broadcast to the SignalR group for this specific instance.
             await _hub.Clients.Group(ChatHub.InstanceGroupName(instance.Id))
                 .SendAsync("ReceiveMessage", new
                 {
                     instanceId = instance.Id,
+                    instanceUnread,
+                    instanceChatCount,
                     conversationId = conversation.Id,
                     contactPhone = contact.PhoneNumber,
                     contactName = contact.DisplayName,

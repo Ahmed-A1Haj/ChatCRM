@@ -54,17 +54,17 @@
     <div class="instances-grid" id="instancesGrid">
         @foreach (var inst in Model)
         {
-            <div class="instance-card" data-id="@inst.Id">
+            <div class="instance-card" data-id="@inst.Id" data-card-status="@inst.Status.ToString().ToLowerInvariant()" data-display-name="@inst.DisplayName">
                 <div class="instance-card-head">
-                    <span class="status-dot status-@inst.Status.ToString().ToLowerInvariant()" title="@inst.Status"></span>
+                    <span class="status-dot status-@inst.Status.ToString().ToLowerInvariant()" title="@inst.Status" data-status-dot></span>
                     <h3 class="instance-name">@inst.DisplayName</h3>
                 </div>
-                <div class="instance-phone">
+                <div class="instance-phone" data-phone>
                     @(string.IsNullOrWhiteSpace(inst.PhoneNumber) ? "—" : "+" + inst.PhoneNumber)
                 </div>
                 <div class="instance-meta">
-                    <span class="meta-pill status-pill-@inst.Status.ToString().ToLowerInvariant()">@FormatStatus(inst.Status)</span>
-                    <span class="meta-dim">
+                    <span class="meta-pill status-pill-@inst.Status.ToString().ToLowerInvariant()" data-status-pill>@FormatStatus(inst.Status)</span>
+                    <span class="meta-dim" data-last-connected="@(inst.LastConnectedAt?.ToString("o") ?? "")">
                         @if (inst.LastConnectedAt.HasValue)
                         { @($"Connected {Relative(inst.LastConnectedAt.Value)}") }
                         else
@@ -72,25 +72,24 @@
                     </span>
                 </div>
                 <div class="instance-stats">
-                    <div><strong>@inst.ConversationCount</strong> <span>chats</span></div>
-                    <div><strong>@inst.UnreadCount</strong> <span>unread</span></div>
+                    <div><strong data-conv-count>@inst.ConversationCount</strong> <span>chats</span></div>
+                    <div><strong data-unread-count>@inst.UnreadCount</strong> <span>unread</span></div>
                 </div>
                 <div class="instance-actions">
-                    @if (inst.Status == InstanceStatus.Connected)
-                    {
-                        <a href="/dashboard/chats?instance=@inst.Id" class="btn-ghost">Open inbox</a>
-                        <button class="btn-ghost btn-danger" onclick="openDisconnect(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">Disconnect</button>
-                    }
-                    else if (inst.Status == InstanceStatus.Pending || inst.Status == InstanceStatus.Connecting)
-                    {
-                        <button class="btn-ghost" onclick="openQr(@inst.Id)">📷 Show QR</button>
-                        <button class="btn-ghost btn-danger" onclick="openDisconnect(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">Cancel</button>
-                    }
-                    else
-                    {
-                        <button class="btn-ghost" onclick="openQr(@inst.Id)">🔄 Reconnect</button>
-                    }
-                    <button class="btn-ghost btn-danger" title="Delete permanently" onclick="openDelete(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">🗑</button>
+                    <a href="/dashboard/chats?instance=@inst.Id" class="btn-ghost action-when-connected">Open inbox</a>
+                    <button class="btn-ghost action-when-pending" onclick="openQr(@inst.Id)">📷 Show QR</button>
+                    <button class="btn-ghost action-when-disconnected" onclick="openQr(@inst.Id)">🔄 Reconnect</button>
+                    <button class="btn-ghost btn-danger action-when-connected" onclick="openDisconnect(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">Disconnect</button>
+                    <button class="btn-ghost btn-danger action-when-pending" onclick="openDisconnect(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">Cancel</button>
+                    <button class="btn-icon btn-icon-danger" title="Delete permanently" aria-label="Delete @inst.DisplayName" onclick="openDelete(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
         }

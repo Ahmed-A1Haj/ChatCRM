@@ -6,21 +6,111 @@ let disconnectTargetId = null;
 
 const token = () => document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
 
-/* ─── SignalR — listen for status changes ───────────────────────── */
+/* ─── SignalR — surgical live updates per card, no full-page reloads ─── */
 const hub = new signalR.HubConnectionBuilder()
     .withUrl('/hubs/chat')
     .withAutomaticReconnect()
     .build();
 
+const STATUS_NAMES  = ['pending', 'connecting', 'connected', 'disconnected'];
+const STATUS_LABELS = ['Awaiting QR scan', 'Connecting', 'Connected', 'Disconnected'];
+
 hub.on('InstanceStatusChanged', ({ id, status }) => {
-    const card = document.querySelector(`.instance-card[data-id="${id}"]`);
-    if (card) {
-        // Refresh page on meaningful status changes to keep UI in sync
-        location.reload();
-    }
+    updateCardStatus(id, status);
 });
 
-hub.start().catch(err => console.error('SignalR error:', err));
+hub.on('ReceiveMessage', ({ instanceId, instanceUnread, instanceChatCount }) => {
+    if (instanceId == null) return;
+    updateCardCounters(instanceId, instanceChatCount, instanceUnread);
+});
+
+hub.on('ConversationRead', ({ instanceId, instanceUnread }) => {
+    if (instanceId == null) return;
+    updateCardCounters(instanceId, null, instanceUnread);
+});
+
+hub.on('InstanceDeleted', ({ id }) => {
+    document.querySelector(`.instance-card[data-id="${id}"]`)?.remove();
+});
+
+// Subscribe to every visible instance's group so we receive their counter updates.
+async function subscribeToAllVisibleInstances() {
+    const cards = document.querySelectorAll('.instance-card[data-id]');
+    for (const card of cards) {
+        const id = parseInt(card.dataset.id, 10);
+        if (id) {
+            try { await hub.invoke('JoinInstance', id); }
+            catch (err) { console.warn('JoinInstance failed for', id, err); }
+        }
+    }
+}
+
+hub.start()
+    .then(subscribeToAllVisibleInstances)
+    .catch(err => console.error('SignalR error:', err));
+
+hub.onreconnected(() => subscribeToAllVisibleInstances());
+
+/* ─── DOM mutators (per-card surgical updates) ───────────────────── */
+function updateCardCounters(instanceId, chatCount, unread) {
+    const card = document.querySelector(`.instance-card[data-id="${instanceId}"]`);
+    if (!card) return;
+
+    if (chatCount != null) {
+        const el = card.querySelector('[data-conv-count]');
+        if (el) el.textContent = chatCount;
+    }
+    if (unread != null) {
+        const el = card.querySelector('[data-unread-count]');
+        if (el) el.textContent = unread;
+    }
+}
+
+function updateCardStatus(instanceId, status) {
+    const card = document.querySelector(`.instance-card[data-id="${instanceId}"]`);
+    if (!card) return;
+
+    const name  = STATUS_NAMES[status]  ?? 'disconnected';
+    const label = STATUS_LABELS[status] ?? '—';
+
+    card.dataset.cardStatus = name;          // toggles which actions are visible (CSS-driven)
+
+    const dot = card.querySelector('[data-status-dot]');
+    if (dot) dot.className = `status-dot status-${name}`;
+
+    const pill = card.querySelector('[data-status-pill]');
+    if (pill) {
+        pill.className  = `meta-pill status-pill-${name}`;
+        pill.textContent = label;
+    }
+
+    if (status === 2) {       // Connected — refresh "last connected" timestamp now
+        const ts = card.querySelector('[data-last-connected]');
+        if (ts) {
+            ts.dataset.lastConnected = new Date().toISOString();
+            ts.textContent = `Connected just now`;
+        }
+    }
+}
+
+/* ─── Relative-time ticker (cheap, runs once a minute) ───────────── */
+function updateRelativeTimes() {
+    document.querySelectorAll('[data-last-connected]').forEach(el => {
+        const iso = el.dataset.lastConnected;
+        if (!iso) return;
+        el.textContent = `Connected ${formatRelative(new Date(iso))}`;
+    });
+}
+
+function formatRelative(dt) {
+    const diff = (Date.now() - dt.getTime()) / 1000;
+    if (diff < 60)        return 'just now';
+    if (diff < 3600)      return `${Math.floor(diff / 60)} min ago`;
+    if (diff < 86400)     return `${Math.floor(diff / 3600)} hr ago`;
+    return `${Math.floor(diff / 86400)} days ago`;
+}
+
+setInterval(updateRelativeTimes, 60_000);
 
 /* ─── Add modal ─────────────────────────────────────────────────── */
 let isCreating = false;     // hard guard against double-submit (any input source)

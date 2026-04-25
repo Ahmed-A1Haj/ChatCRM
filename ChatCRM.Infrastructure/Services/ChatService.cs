@@ -101,11 +101,21 @@ namespace ChatCRM.Infrastructure.Services
                 _logger.LogWarning("Evolution API failed to deliver message {MessageId} via {Instance} to {Phone}",
                     message.Id, conversation.Instance.InstanceName, conversation.Contact.PhoneNumber);
 
+            var instanceUnread = await _db.Conversations
+                .Where(c => c.WhatsAppInstanceId == conversation.WhatsAppInstanceId && !c.IsArchived)
+                .SumAsync(c => c.UnreadCount, cancellationToken);
+
+            var instanceChatCount = await _db.Conversations
+                .Where(c => c.WhatsAppInstanceId == conversation.WhatsAppInstanceId && !c.IsArchived)
+                .CountAsync(cancellationToken);
+
             // Broadcast only to clients viewing this instance.
             await _hub.Clients.Group(ChatHub.InstanceGroupName(conversation.WhatsAppInstanceId))
                 .SendAsync("ReceiveMessage", new
                 {
                     instanceId = conversation.WhatsAppInstanceId,
+                    instanceUnread,
+                    instanceChatCount,
                     conversationId = conversation.Id,
                     contactPhone = conversation.Contact.PhoneNumber,
                     contactName = conversation.Contact.DisplayName,
@@ -134,8 +144,24 @@ namespace ChatCRM.Infrastructure.Services
             var conversation = await _db.Conversations.FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
             if (conversation is null) return;
 
+            // No-op if already read — don't trigger pointless broadcasts.
+            if (conversation.UnreadCount == 0) return;
+
             conversation.UnreadCount = 0;
             await _db.SaveChangesAsync(cancellationToken);
+
+            // Aggregate the new unread total for this instance so all dashboards/dropdowns can update.
+            var instanceUnread = await _db.Conversations
+                .Where(c => c.WhatsAppInstanceId == conversation.WhatsAppInstanceId && !c.IsArchived)
+                .SumAsync(c => c.UnreadCount, cancellationToken);
+
+            await _hub.Clients.Group(ChatHub.InstanceGroupName(conversation.WhatsAppInstanceId))
+                .SendAsync("ConversationRead", new
+                {
+                    conversationId = conversation.Id,
+                    instanceId = conversation.WhatsAppInstanceId,
+                    instanceUnread
+                }, cancellationToken);
         }
     }
 }

@@ -177,6 +177,7 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .btn-ghost {
@@ -607,3 +608,63 @@
     color: #9ca3af;
     cursor: not-allowed;
 }
+
+/* ─── Icon-only buttons (delete, etc.) ───────────────────────────── */
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid #e5e7eb;
+    color: #64748b;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.08s;
+    flex-shrink: 0;
+    padding: 0;
+    margin-left: auto;          /* push to the right edge of the actions row */
+}
+
+.btn-icon svg { width: 16px; height: 16px; }
+
+.btn-icon:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #111;
+}
+
+.btn-icon:active { transform: scale(0.94); }
+
+.btn-icon:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-icon-danger:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+.btn-icon-danger:active { background: #fee2e2; }
+
+.btn-icon-danger:focus-visible {
+    outline: 3px solid rgba(220, 38, 38, 0.25);
+    outline-offset: 2px;
+}
+
+/* ─── Action visibility driven by data-card-status ───────────────── */
+/* Hide all action variants by default; show only the ones matching the card's current status. */
+.instance-actions .action-when-connected,
+.instance-actions .action-when-pending,
+.instance-actions .action-when-disconnected {
+    display: none;
+}
+
+.instance-card[data-card-status="connected"] .action-when-connected            { display: inline-flex; }
+.instance-card[data-card-status="pending"] .action-when-pending                { display: inline-flex; }
+.instance-card[data-card-status="connecting"] .action-when-pending             { display: inline-flex; }
+.instance-card[data-card-status="disconnected"] .action-when-disconnected      { display: inline-flex; }
