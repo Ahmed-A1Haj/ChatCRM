@@ -129,6 +129,16 @@ namespace ChatCRM.Infrastructure.Services
                 contact.DisplayName = payload.Data.PushName;
             }
 
+            // Hard-block check — if the user has blocked this contact, the message is dropped silently.
+            // The contact row stays in the DB so any past chat history is preserved and the agent can
+            // unblock later from the Contacts page.
+            if (contact.IsBlocked)
+            {
+                _logger.LogInformation("Dropped inbound message from blocked contact {Phone} (id {ContactId})",
+                    phone, contact.Id);
+                return;
+            }
+
             // One conversation per (contact, instance).
             var conversation = await _db.Conversations
                 .FirstOrDefaultAsync(c => c.ContactId == contact.Id && c.WhatsAppInstanceId == instance.Id, cancellationToken);
