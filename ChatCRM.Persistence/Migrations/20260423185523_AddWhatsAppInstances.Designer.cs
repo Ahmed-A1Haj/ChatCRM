@@ -4,6 +4,7 @@ using ChatCRM.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ChatCRM.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260423185523_AddWhatsAppInstances")]
+    partial class AddWhatsAppInstances
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -45,12 +48,6 @@ namespace ChatCRM.Persistence.Migrations
                     b.Property<DateTime>("LastMessageAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("SnoozedUntil")
-                        .HasColumnType("datetime2");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint");
-
                     b.Property<int>("UnreadCount")
                         .HasColumnType("int");
 
@@ -71,21 +68,6 @@ namespace ChatCRM.Persistence.Migrations
                     b.ToTable("Conversations");
                 });
 
-            modelBuilder.Entity("ChatCRM.Domain.Entities.ConversationTag", b =>
-                {
-                    b.Property<int>("ConversationId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TagId")
-                        .HasColumnType("int");
-
-                    b.HasKey("ConversationId", "TagId");
-
-                    b.HasIndex("TagId");
-
-                    b.ToTable("ConversationTags");
-                });
-
             modelBuilder.Entity("ChatCRM.Domain.Entities.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -93,9 +75,6 @@ namespace ChatCRM.Persistence.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AuthorUserId")
-                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Body")
                         .IsRequired()
@@ -119,8 +98,6 @@ namespace ChatCRM.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AuthorUserId");
-
                     b.HasIndex("ConversationId");
 
                     b.HasIndex("ExternalId")
@@ -130,35 +107,6 @@ namespace ChatCRM.Persistence.Migrations
                     b.HasIndex("SentAt");
 
                     b.ToTable("Messages");
-                });
-
-            modelBuilder.Entity("ChatCRM.Domain.Entities.Tag", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Color")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Tags");
                 });
 
             modelBuilder.Entity("ChatCRM.Domain.Entities.User", b =>
@@ -173,9 +121,6 @@ namespace ChatCRM.Persistence.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -186,9 +131,6 @@ namespace ChatCRM.Persistence.Migrations
                     b.Property<string>("FirstName")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
 
                     b.Property<string>("LastName")
                         .HasMaxLength(100)
@@ -256,26 +198,12 @@ namespace ChatCRM.Persistence.Migrations
                         .HasMaxLength(260)
                         .HasColumnType("nvarchar(260)");
 
-                    b.Property<string>("Country")
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DisplayName")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("IsBlocked")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Language")
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
-
-                    b.Property<byte>("LifecycleStage")
-                        .HasColumnType("tinyint");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
@@ -297,9 +225,6 @@ namespace ChatCRM.Persistence.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<byte>("ChannelType")
-                        .HasColumnType("tinyint");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -500,39 +425,13 @@ namespace ChatCRM.Persistence.Migrations
                     b.Navigation("Instance");
                 });
 
-            modelBuilder.Entity("ChatCRM.Domain.Entities.ConversationTag", b =>
-                {
-                    b.HasOne("ChatCRM.Domain.Entities.Conversation", "Conversation")
-                        .WithMany("Tags")
-                        .HasForeignKey("ConversationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ChatCRM.Domain.Entities.Tag", "Tag")
-                        .WithMany("ConversationTags")
-                        .HasForeignKey("TagId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Conversation");
-
-                    b.Navigation("Tag");
-                });
-
             modelBuilder.Entity("ChatCRM.Domain.Entities.Message", b =>
                 {
-                    b.HasOne("ChatCRM.Domain.Entities.User", "AuthorUser")
-                        .WithMany()
-                        .HasForeignKey("AuthorUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("ChatCRM.Domain.Entities.Conversation", "Conversation")
                         .WithMany("Messages")
                         .HasForeignKey("ConversationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("AuthorUser");
 
                     b.Navigation("Conversation");
                 });
@@ -601,13 +500,6 @@ namespace ChatCRM.Persistence.Migrations
             modelBuilder.Entity("ChatCRM.Domain.Entities.Conversation", b =>
                 {
                     b.Navigation("Messages");
-
-                    b.Navigation("Tags");
-                });
-
-            modelBuilder.Entity("ChatCRM.Domain.Entities.Tag", b =>
-                {
-                    b.Navigation("ConversationTags");
                 });
 
             modelBuilder.Entity("ChatCRM.Domain.Entities.WhatsAppContact", b =>

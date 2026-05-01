@@ -9,5 +9,9 @@ namespace ChatCRM.Domain.Entities
         public string? LastName { get; set; }
 
         public string? ProfileImagePath { get; set; }
+
+        public bool IsActive { get; set; } = true;
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

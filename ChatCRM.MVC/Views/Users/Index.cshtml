@@ -1,0 +1,152 @@
+@{
+    ViewData["Title"] = "Users — Settings";
+    Layout = null;
+    var roles = (List<ChatCRM.Application.Users.DTOS.RoleListItemDto>)ViewBag.Roles;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Users — ChatCRM</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/settings.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/contacts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/users.css" asp-append-version="true" />
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "settings")
+
+<div class="settings-layout">
+
+    @await Html.PartialAsync("_SettingsSidenav", "users")
+
+    <main class="settings-main">
+        <div class="settings-header">
+            <div>
+                <h1 class="settings-title">Users</h1>
+                <p class="settings-sub">Invite, edit, and manage everyone with access to ChatCRM.</p>
+            </div>
+            <button class="btn-primary-soft has-icon" id="addUserBtn" type="button">
+                @await Html.PartialAsync("_Icon", new IconModel("plus", size: 14))
+                <span>Add user</span>
+            </button>
+        </div>
+
+        <div class="contacts-filters" style="border-bottom:none;padding-left:0;padding-right:0;">
+            <div class="filter-search">
+                @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
+                <input type="search" id="userSearch" placeholder="Search by name or email…" />
+            </div>
+        </div>
+
+        <section class="contacts-table-wrap" style="padding:0;">
+            <table class="contacts-table" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="usersBody">
+                    <tr><td colspan="6" class="contacts-empty">Loading…</td></tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</div>
+
+@* ─── User modal ─── *@
+<div class="modal-backdrop d-none" id="userModal" onclick="if(event.target===this) closeUserModal()">
+    <div class="modal-panel">
+        <div class="modal-header">
+            <h3 id="userModalTitle">Add user</h3>
+            <button class="modal-close" type="button" onclick="closeUserModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-error d-none" id="userFormError"></div>
+
+            <div class="form-grid-2">
+                <label class="form-field">
+                    <span>First name</span>
+                    <input type="text" id="userFirstName" class="form-input" />
+                </label>
+                <label class="form-field">
+                    <span>Last name</span>
+                    <input type="text" id="userLastName" class="form-input" />
+                </label>
+            </div>
+
+            <label class="form-field">
+                <span>Email <em>*</em></span>
+                <input type="email" id="userEmail" class="form-input" autocomplete="off" />
+            </label>
+
+            <label class="form-field">
+                <span id="passwordLabel">Password <em>*</em></span>
+                <input type="password" id="userPassword" class="form-input" autocomplete="new-password" />
+                <small class="form-hint" id="passwordHint">Min 10 characters, mixed case, with a digit.</small>
+            </label>
+
+            <div class="form-grid-2">
+                <label class="form-field">
+                    <span>Role</span>
+                    <select id="userRole" class="form-input">
+                        @foreach (var r in roles)
+                        {
+                            <option value="@r.Name">@r.Name</option>
+                        }
+                    </select>
+                </label>
+                <label class="form-field form-toggle-field">
+                    <span>Active</span>
+                    <label class="switch">
+                        <input type="checkbox" id="userIsActive" checked />
+                        <span class="slider"></span>
+                    </label>
+                </label>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" onclick="closeUserModal()">Cancel</button>
+            <button class="btn-primary-round" type="button" id="userSaveBtn">
+                <span class="btn-label">Save</span>
+                <span class="btn-spinner d-none" aria-hidden="true"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@* ─── Confirm modal ─── *@
+<div class="modal-backdrop d-none" id="confirmModal" onclick="if(event.target===this) closeConfirmModal()">
+    <div class="modal-panel modal-panel-small">
+        <div class="modal-header">
+            <h3 id="confirmTitle">Confirm</h3>
+            <button class="modal-close" type="button" onclick="closeConfirmModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <p id="confirmBody" style="margin:0;font-size:13.5px;color:#374151;"></p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" onclick="closeConfirmModal()">Cancel</button>
+            <button class="btn-ghost btn-danger" type="button" id="confirmAction">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+@Html.AntiForgeryToken()
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/js/users.js" asp-append-version="true"></script>
+
+</body>
+</html>

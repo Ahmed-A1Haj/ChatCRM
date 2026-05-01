@@ -1,0 +1,30 @@
+@*
+    Side navigation for the Settings module — pass the active tab name.
+    Usage:
+        @await Html.PartialAsync("_SettingsSidenav", "channels")
+        @await Html.PartialAsync("_SettingsSidenav", "users")
+        @await Html.PartialAsync("_SettingsSidenav", "roles")
+*@
+@model string
+@{
+    var active = (Model ?? string.Empty).ToLowerInvariant();
+    string Cls(string name) => active == name ? "settings-nav-link active has-icon" : "settings-nav-link has-icon";
+}
+
+<aside class="settings-side">
+    <h2 class="settings-side-title">Settings</h2>
+    <nav class="settings-nav">
+        <a href="/dashboard/settings/channels" class="@Cls("channels")">
+            @await Html.PartialAsync("_Icon", new IconModel("smartphone", size: 16))
+            <span>Channels</span>
+        </a>
+        <a href="/dashboard/settings/users" class="@Cls("users")">
+            @await Html.PartialAsync("_Icon", new IconModel("users", size: 16))
+            <span>Users</span>
+        </a>
+        <a href="/dashboard/settings/roles" class="@Cls("roles")">
+            @await Html.PartialAsync("_Icon", new IconModel("lock", size: 16))
+            <span>Roles &amp; permissions</span>
+        </a>
+    </nav>
+</aside>

@@ -55,6 +55,15 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
                             </li>
+                            @if (User.Identity?.IsAuthenticated == true)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link has-icon" href="/dashboard/chats">
+                                        @await Html.PartialAsync("_Icon", new IconModel("message-square", size: 16))
+                                        <span>Chats</span>
+                                    </a>
+                                </li>
+                            }
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Home" asp-action="Privacy">Privacy</a>
                             </li>

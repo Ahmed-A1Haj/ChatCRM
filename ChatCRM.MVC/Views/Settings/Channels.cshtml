@@ -1,0 +1,90 @@
+@{
+    ViewData["Title"] = "Channels — Settings";
+    Layout = null;
+    var whatsappCount = (int?)ViewBag.WhatsAppCount ?? 0;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Channels — ChatCRM</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/settings.css" asp-append-version="true" />
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "settings")
+
+<div class="settings-layout">
+
+    @await Html.PartialAsync("_SettingsSidenav", "channels")
+
+    @* ─── Main content ─── *@
+    <main class="settings-main">
+
+        <div class="settings-header">
+            <h1 class="settings-title">Channels</h1>
+            <p class="settings-sub">Connect customer-facing messaging platforms to ChatCRM. Conversations from every connected channel land in the same inbox.</p>
+        </div>
+
+        <div class="channel-grid">
+
+            @* WhatsApp — active *@
+            <a href="/dashboard/whatsapp" class="channel-card channel-card-active">
+                <div class="channel-card-head">
+                    <span class="channel-icon channel-icon-whatsapp">
+                        @await Html.PartialAsync("_Icon", new IconModel("channel-whatsapp", size: 26))
+                    </span>
+                    <span class="channel-status-pill channel-status-active">
+                        @await Html.PartialAsync("_Icon", new IconModel("check", size: 11))
+                        <span>Active</span>
+                    </span>
+                </div>
+                <h3 class="channel-name">WhatsApp</h3>
+                <p class="channel-desc">Connect WhatsApp numbers via Evolution API or WhatsApp Business Cloud.</p>
+                <div class="channel-card-foot">
+                    <strong>@whatsappCount</strong>&nbsp;<span>connected number@(whatsappCount == 1 ? "" : "s")</span>
+                    <span class="channel-action">Manage →</span>
+                </div>
+            </a>
+
+            @* Instagram — coming soon *@
+            <div class="channel-card channel-card-disabled" aria-disabled="true">
+                <div class="channel-card-head">
+                    <span class="channel-icon channel-icon-instagram">
+                        @await Html.PartialAsync("_Icon", new IconModel("channel-instagram", size: 26))
+                    </span>
+                    <span class="channel-status-pill channel-status-soon">Coming soon</span>
+                </div>
+                <h3 class="channel-name">Instagram</h3>
+                <p class="channel-desc">Reply to DMs and story replies from your Instagram Business account.</p>
+                <div class="channel-card-foot">
+                    <span class="channel-foot-muted">Not yet available</span>
+                </div>
+            </div>
+
+            @* Messenger — coming soon *@
+            <div class="channel-card channel-card-disabled" aria-disabled="true">
+                <div class="channel-card-head">
+                    <span class="channel-icon channel-icon-messenger">
+                        @await Html.PartialAsync("_Icon", new IconModel("channel-messenger", size: 26))
+                    </span>
+                    <span class="channel-status-pill channel-status-soon">Coming soon</span>
+                </div>
+                <h3 class="channel-name">Facebook Messenger</h3>
+                <p class="channel-desc">Manage Messenger conversations from your Facebook Page in the same inbox.</p>
+                <div class="channel-card-foot">
+                    <span class="channel-foot-muted">Not yet available</span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+</body>
+</html>

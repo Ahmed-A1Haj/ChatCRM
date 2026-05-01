@@ -1,0 +1,153 @@
+@{
+    ViewData["Title"] = "Roles & Permissions — Settings";
+    Layout = null;
+    var groups = (Dictionary<string, string[]>)ViewBag.Groups;
+    var labels = (Dictionary<string, string>)ViewBag.Labels;
+    var activeRoles = (List<string>)ViewBag.ActiveRoles ?? new();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Roles &amp; permissions — ChatCRM</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/settings.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/users.css" asp-append-version="true" />
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "settings")
+
+<div class="settings-layout">
+    @await Html.PartialAsync("_SettingsSidenav", "roles")
+
+    <main class="settings-main">
+        <div class="settings-header">
+            <div>
+                <h1 class="settings-title">Roles &amp; permissions</h1>
+                <p class="settings-sub">Define what each role can do across the system.</p>
+            </div>
+            <button class="btn-primary-soft has-icon" id="addRoleBtn" type="button">
+                @await Html.PartialAsync("_Icon", new IconModel("plus", size: 14))
+                <span>Add role</span>
+            </button>
+        </div>
+
+        @* ─── Toolbar: search + filter + sort ────────────────────────── *@
+        <section class="roles-toolbar" role="toolbar" aria-label="Role list controls">
+            <div class="filter-search" style="max-width:340px;">
+                @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
+                <input type="search" id="roleSearch" placeholder="Search roles or permissions…" aria-label="Search roles" />
+            </div>
+
+            <div class="roles-filter-tabs" role="tablist" aria-label="Filter by role kind">
+                <button class="rt-chip is-active" data-filter="all"     type="button" role="tab" aria-selected="true">All</button>
+                <button class="rt-chip"           data-filter="builtin" type="button" role="tab" aria-selected="false">Built-in</button>
+                <button class="rt-chip"           data-filter="custom"  type="button" role="tab" aria-selected="false">Custom</button>
+            </div>
+
+            <label class="rt-sort">
+                <span class="rt-sort-label">Sort:</span>
+                <select id="roleSort" aria-label="Sort roles">
+                    <option value="name-asc">Name (A → Z)</option>
+                    <option value="name-desc">Name (Z → A)</option>
+                    <option value="users-desc">Most users</option>
+                    <option value="users-asc">Fewest users</option>
+                    <option value="perms-desc">Most permissions</option>
+                    <option value="perms-asc">Fewest permissions</option>
+                </select>
+            </label>
+        </section>
+
+        @* ─── Role cards container ─── *@
+        <section class="roles-list" id="rolesList" aria-live="polite">
+            <div class="contacts-empty">Loading…</div>
+        </section>
+    </main>
+</div>
+
+@* ─── Role modal ─── *@
+<div class="modal-backdrop d-none" id="roleModal" onclick="if(event.target===this) closeRoleModal()">
+    <div class="modal-panel modal-panel-wide" role="dialog" aria-labelledby="roleModalTitle" aria-modal="true">
+        <div class="modal-header">
+            <h3 id="roleModalTitle">Edit role</h3>
+            <button class="modal-close" type="button" onclick="closeRoleModal()" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-error d-none" id="roleFormError" role="alert"></div>
+
+            <label class="form-field">
+                <span>Role name <em>*</em></span>
+                <input type="text" id="roleName" class="form-input" maxlength="50" />
+                <small class="form-hint" id="roleNameHint"></small>
+            </label>
+
+            <div class="permissions-grid">
+                @foreach (var (groupName, perms) in groups)
+                {
+                    <div class="permission-group" data-group="@groupName">
+                        <div class="permission-group-head">
+                            <h4>@groupName</h4>
+                            <button type="button" class="link-btn" data-toggle-group="@groupName">Toggle all</button>
+                        </div>
+                        <div class="permission-list">
+                            @foreach (var p in perms)
+                            {
+                                var lbl = labels.TryGetValue(p, out var l) ? l : p;
+                                <label class="permission-row">
+                                    <input type="checkbox" data-permission="@p" data-group="@groupName" />
+                                    <div>
+                                        <div class="permission-label">@lbl</div>
+                                        <div class="permission-key" title="@p">@p</div>
+                                    </div>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" onclick="closeRoleModal()">Cancel</button>
+            <button class="btn-primary-round" type="button" id="roleSaveBtn">
+                <span class="btn-label">Save</span>
+                <span class="btn-spinner d-none" aria-hidden="true"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@* ─── Confirm modal ─── *@
+<div class="modal-backdrop d-none" id="confirmModal" onclick="if(event.target===this) closeConfirmModal()">
+    <div class="modal-panel modal-panel-small" role="dialog" aria-labelledby="confirmTitle" aria-modal="true">
+        <div class="modal-header">
+            <h3 id="confirmTitle">Confirm</h3>
+            <button class="modal-close" type="button" onclick="closeConfirmModal()" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <p id="confirmBody" style="margin:0;font-size:13.5px;color:#374151;"></p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" onclick="closeConfirmModal()">Cancel</button>
+            <button class="btn-ghost btn-danger" type="button" id="confirmAction">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+@Html.AntiForgeryToken()
+
+<script>
+    window.__PERMISSION_LABELS__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(labels));
+    window.__PERMISSION_GROUPS__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(groups));
+    window.__ACTIVE_ROLES__      = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(activeRoles));
+</script>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/js/roles.js" asp-append-version="true"></script>
+
+</body>
+</html>

@@ -1,0 +1,221 @@
+@{
+    ViewData["Title"] = "Contacts";
+    Layout = null;
+    var team = (List<ChatCRM.Application.Chats.DTOs.TeamMemberDto>)ViewBag.TeamMembers;
+    var currentUserId = (string?)ViewBag.CurrentUserId;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contacts — ChatCRM</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/contacts.css" asp-append-version="true" />
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "contacts")
+
+<main class="contacts-page">
+
+    <header class="contacts-header">
+        <div>
+            <h1 class="contacts-title">Contacts</h1>
+            <p class="contacts-sub">Browse and manage everyone who has ever contacted you.</p>
+        </div>
+        <div class="contacts-toolbar">
+            <button class="btn-primary-soft has-icon" id="exportBtn" type="button">
+                @await Html.PartialAsync("_Icon", new IconModel("download", size: 14))
+                <span class="export-label">Export to Excel</span>
+                <span class="btn-spinner d-none" aria-hidden="true"></span>
+            </button>
+        </div>
+    </header>
+
+    <section class="contacts-filters">
+        <div class="filter-search">
+            @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
+            <input type="search" id="searchInput" placeholder="Search by name, phone, country, language…" />
+        </div>
+
+        <select id="lifecycleFilter" class="filter-select" aria-label="Lifecycle stage filter">
+            <option value="">All lifecycles</option>
+            <option value="0">New Client</option>
+            <option value="1">Not Responding</option>
+            <option value="2">Interested</option>
+            <option value="3">Thinking</option>
+            <option value="4">Wants a Meeting</option>
+            <option value="5">Waiting for Meeting</option>
+            <option value="6">Discussed</option>
+            <option value="7">Potential Client</option>
+            <option value="8">Will Make Payment</option>
+            <option value="9">Waiting for Contract</option>
+            <option value="10">Our Client</option>
+        </select>
+
+        <select id="assigneeFilter" class="filter-select" aria-label="Assigned user filter">
+            <option value="">All assignees</option>
+            @foreach (var u in team)
+            {
+                <option value="@u.Id">@u.Name</option>
+            }
+        </select>
+
+        <select id="statusFilter" class="filter-select" aria-label="Conversation status filter">
+            <option value="">All statuses</option>
+            <option value="0">Open</option>
+            <option value="2">Closed</option>
+        </select>
+
+        <select id="blockedFilter" class="filter-select" aria-label="Blocked filter">
+            <option value="">Active &amp; blocked</option>
+            <option value="false">Active only</option>
+            <option value="true">Blocked only</option>
+        </select>
+    </section>
+
+    <section class="contacts-table-wrap">
+        <table class="contacts-table" id="contactsTable">
+            <thead>
+                <tr>
+                    <th class="col-name sortable" data-sort="name">Contact</th>
+                    <th class="col-channel">Channel</th>
+                    <th class="col-last sortable" data-sort="lastMessage">Last message</th>
+                    <th class="col-created sortable" data-sort="createdAt">Created</th>
+                    <th class="col-country">Country</th>
+                    <th class="col-language">Language</th>
+                    <th class="col-lifecycle">Lifecycle</th>
+                    <th class="col-assigned">Assigned to</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-actions"></th>
+                </tr>
+            </thead>
+            <tbody id="contactsBody">
+                <tr><td colspan="10" class="contacts-empty">Loading…</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <footer class="contacts-pagination">
+        <div class="pagination-left">
+            <span class="pagination-info" id="pageInfo">—</span>
+            <label class="page-size-picker">
+                Rows per page:
+                <select id="pageSize">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </label>
+        </div>
+        <div class="pagination-controls">
+            <button id="prevPage" class="btn-ghost" type="button">Previous</button>
+            <span id="pageLabel" class="pagination-page">Page 1</span>
+            <button id="nextPage" class="btn-ghost" type="button">Next</button>
+        </div>
+    </footer>
+</main>
+
+@* ─── Contact Details modal ─── *@
+<div class="modal-backdrop d-none" id="contactDetailsModal" onclick="if(event.target===this) closeContactDetailsModal()">
+    <div class="modal-panel modal-panel-detail">
+        <div class="modal-header">
+            <h3>Contact details</h3>
+            <button class="modal-close" type="button" onclick="closeContactDetailsModal()">✕</button>
+        </div>
+        <div class="modal-body cd-body">
+            <div class="cd-loading" id="cdLoading">Loading…</div>
+
+            <div class="cd-content d-none" id="cdContent">
+                <div class="cd-hero">
+                    <div class="cd-avatar" id="cdAvatar">?</div>
+                    <div class="cd-name" id="cdName">—</div>
+                    <div class="cd-phone" id="cdPhone">—</div>
+                </div>
+
+                <dl class="cd-grid">
+                    <div class="cd-row">
+                        <dt>Lifecycle</dt>
+                        <dd id="cdLifecycle"><span class="badge-btn lc-gray"><span class="badge-dot"></span>—</span></dd>
+                    </div>
+                    <div class="cd-row">
+                        <dt>Channel</dt>
+                        <dd id="cdChannel">—</dd>
+                    </div>
+                    <div class="cd-row">
+                        <dt>Country</dt>
+                        <dd id="cdCountry">—</dd>
+                    </div>
+                    <div class="cd-row">
+                        <dt>Language</dt>
+                        <dd id="cdLanguage">—</dd>
+                    </div>
+                    <div class="cd-row">
+                        <dt>Assigned to</dt>
+                        <dd id="cdAssigned">Unassigned</dd>
+                    </div>
+                    <div class="cd-row">
+                        <dt>Status</dt>
+                        <dd id="cdStatus"><span class="badge-btn status-badge status-open"><span class="status-dot-inline"></span>Open</span></dd>
+                    </div>
+                    <div class="cd-row">
+                        <dt>Blocked</dt>
+                        <dd id="cdBlocked">No</dd>
+                    </div>
+                    <div class="cd-row">
+                        <dt>First contact</dt>
+                        <dd id="cdCreated">—</dd>
+                    </div>
+                    <div class="cd-row">
+                        <dt>Total messages</dt>
+                        <dd id="cdMsgCount">0</dd>
+                    </div>
+                    <div class="cd-row">
+                        <dt>Internal notes</dt>
+                        <dd id="cdNoteCount">0</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+        <div class="modal-actions cd-actions">
+            <button class="btn-ghost" type="button" onclick="closeContactDetailsModal()">Close</button>
+            <a href="#" class="btn-primary-soft" id="cdOpenChat">Open conversation →</a>
+        </div>
+    </div>
+</div>
+
+@* ─── Confirmation modals ─── *@
+<div class="modal-backdrop d-none" id="confirmModal" onclick="if(event.target===this) closeConfirmModal()">
+    <div class="modal-panel modal-panel-small">
+        <div class="modal-header">
+            <h3 id="confirmTitle">Confirm</h3>
+            <button class="modal-close" type="button" onclick="closeConfirmModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <p id="confirmBody" style="margin:0 0 8px;font-size:13.5px;color:#374151;"></p>
+            <ul id="confirmList" class="disconnect-bullets"></ul>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" onclick="closeConfirmModal()">Cancel</button>
+            <button class="btn-ghost btn-danger" type="button" id="confirmAction">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+@Html.AntiForgeryToken()
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script>
+    window.__TEAM__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(team.Select(u => new { id = u.Id, name = u.Name })));
+    window.__CURRENT_USER_ID__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(currentUserId));
+</script>
+<script src="~/js/contacts.js" asp-append-version="true"></script>
+
+</body>
+</html>

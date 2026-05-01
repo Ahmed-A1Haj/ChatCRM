@@ -1,0 +1,405 @@
+@model ChatCRM.Application.Chats.DTOs.ChatsPageViewModel
+@using ChatCRM.Domain.Entities
+@{
+    ViewData["Title"] = "Inbox";
+    Layout = null;
+    var active = Model.Instances.FirstOrDefault(i => i.Id == Model.ActiveInstanceId);
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inbox — ChatCRM</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/chat.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "inbox")
+
+@* ─── MAIN 3-PANEL LAYOUT ─── *@
+<div class="inbox-layout">
+
+    @* ── PANEL 1: Conversation list ── *@
+    <aside class="inbox-sidebar" id="chatSidebar"
+           data-active-instance="@Model.ActiveInstanceId"
+           data-current-user="@Model.CurrentUserId"
+           data-filter="@Model.Filter">
+
+        <div class="inbox-header">
+            <div class="inbox-title-row">
+                <h2 class="inbox-title">Inbox</h2>
+                <button class="instance-pick-btn" id="instanceSelectBtn" onclick="toggleInstanceMenu()" title="Switch number">
+                    <span class="status-dot status-@(active?.Status.ToString().ToLowerInvariant() ?? "disconnected")"></span>
+                    <span class="instance-pick-name">@(active?.DisplayName ?? "Number")</span>
+                    @await Html.PartialAsync("_Icon", new IconModel("chevron-down", size: 14))
+                </button>
+
+                <div class="instance-menu d-none" id="instanceMenu">
+                    @foreach (var inst in Model.Instances)
+                    {
+                        <a href="/dashboard/chats?instance=@inst.Id&filter=@Model.Filter"
+                           class="instance-menu-item @(inst.Id == Model.ActiveInstanceId ? "active" : "")"
+                           data-instance-id="@inst.Id">
+                            <span class="status-dot status-@inst.Status.ToString().ToLowerInvariant()"></span>
+                            <div class="instance-menu-body">
+                                <strong>@inst.DisplayName</strong>
+                                <small data-instance-meta="true">
+                                    @(string.IsNullOrWhiteSpace(inst.PhoneNumber) ? "—" : "+" + inst.PhoneNumber)
+                                    · @inst.ConversationCount chats<span data-unread-suffix="true">@(inst.UnreadCount > 0 ? $", {inst.UnreadCount} unread" : "")</span>
+                                </small>
+                            </div>
+                            @if (inst.Id == Model.ActiveInstanceId)
+                            {
+                                <span class="check-mark">@await Html.PartialAsync("_Icon", new IconModel("check", size: 14))</span>
+                            }
+                        </a>
+                    }
+                    <a href="/dashboard/whatsapp" class="instance-menu-item instance-menu-manage">
+                        <span class="manage-icon">@await Html.PartialAsync("_Icon", new IconModel("settings", size: 14))</span>
+                        <div class="instance-menu-body">
+                            <strong>Manage numbers</strong>
+                            <small>Add, disconnect, configure</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            @* Channel filter — compact, single-row, horizontally scrollable *@
+            @{
+                string ChannelHref(string suffix) => $"/dashboard/chats?instance={Model.ActiveInstanceId}&filter={Model.Filter}{suffix}";
+                bool channelAll = !Model.ActiveChannelType.HasValue;
+                bool channelWhatsApp = Model.ActiveChannelType == 0;
+            }
+            <div class="ch-bar-wrap">
+                <div class="ch-bar">
+                    <a href="@ChannelHref("")" class="ch-chip @(channelAll ? "is-active" : "")" title="All channels">
+                        <span class="ch-chip-label">All</span>
+                    </a>
+                    <a href="@ChannelHref("&channel=0")" class="ch-chip ch-chip-whatsapp @(channelWhatsApp ? "is-active" : "")" title="WhatsApp">
+                        <span class="ch-chip-icon">@await Html.PartialAsync("_Icon", new IconModel("channel-whatsapp", size: 12))</span>
+                        <span class="ch-chip-label">WhatsApp</span>
+                    </a>
+                    <span class="ch-chip is-disabled" title="Instagram — coming soon" aria-disabled="true">
+                        <span class="ch-chip-icon">@await Html.PartialAsync("_Icon", new IconModel("channel-instagram", size: 12))</span>
+                        <span class="ch-chip-label">Instagram</span>
+                    </span>
+                    <span class="ch-chip is-disabled" title="Messenger — coming soon" aria-disabled="true">
+                        <span class="ch-chip-icon">@await Html.PartialAsync("_Icon", new IconModel("channel-messenger", size: 12))</span>
+                        <span class="ch-chip-label">Messenger</span>
+                    </span>
+                </div>
+            </div>
+
+            @* Inbox filter tabs *@
+            <div class="inbox-tabs">
+                @{
+                    string FilterHref(string f) =>
+                        $"/dashboard/chats?instance={Model.ActiveInstanceId}&filter={f}" +
+                        (Model.ActiveChannelType.HasValue ? $"&channel={Model.ActiveChannelType.Value}" : "");
+                }
+                <a href="@FilterHref("mine")"
+                   class="inbox-tab @(Model.Filter == "mine" ? "active" : "")">
+                    Mine <span class="tab-count">@Model.CountMine</span>
+                </a>
+                <a href="@FilterHref("unassigned")"
+                   class="inbox-tab @(Model.Filter == "unassigned" ? "active" : "")">
+                    Unassigned <span class="tab-count">@Model.CountUnassigned</span>
+                </a>
+                <a href="@FilterHref("all")"
+                   class="inbox-tab @(Model.Filter == "all" || string.IsNullOrEmpty(Model.Filter) ? "active" : "")">
+                    All <span class="tab-count">@Model.CountAll</span>
+                </a>
+            </div>
+
+            <div class="sidebar-search">
+                @await Html.PartialAsync("_Icon", new IconModel("search", size: 16, cssClass: "search-icon"))
+                <input type="search" id="searchInput" class="sidebar-search-input" placeholder="Search…" />
+            </div>
+        </div>
+
+        <div class="conversation-list" id="conversationList">
+            @if (!Model.Conversations.Any())
+            {
+                <div class="empty-sidebar">
+                    @await Html.PartialAsync("_Icon", new IconModel("message-square", size: 48))
+                    <p>No conversations</p>
+                    <span>@(Model.Filter == "mine" ? "Nothing assigned to you yet" : "Messages will appear here")</span>
+                </div>
+            }
+            else
+            {
+                string ChannelIconName(byte ct) => ct switch
+                {
+                    0 => "channel-whatsapp",
+                    1 => "channel-instagram",
+                    2 => "channel-messenger",
+                    _ => "smartphone"
+                };
+                string ChannelLabel(byte ct) => ct switch
+                {
+                    0 => "WhatsApp",
+                    1 => "Instagram",
+                    2 => "Messenger",
+                    _ => "Channel"
+                };
+                string ChannelClass(byte ct) => ct switch
+                {
+                    0 => "ch-whatsapp",
+                    1 => "ch-instagram",
+                    2 => "ch-messenger",
+                    _ => "ch-default"
+                };
+                @foreach (var conv in Model.Conversations)
+                {
+                    <div class="conv-item @(conv.ConversationStatus == 2 ? "is-closed" : "")" data-id="@conv.Id" data-phone="@conv.PhoneNumber" onclick="selectConversation(@conv.Id)">
+                        <div class="conv-avatar-wrap">
+                            <div class="conv-avatar">
+                                @if (!string.IsNullOrWhiteSpace(conv.AvatarUrl))
+                                { <img src="@conv.AvatarUrl" alt="" /> }
+                                else
+                                { <span>@((conv.DisplayName ?? conv.PhoneNumber)[..1].ToUpperInvariant())</span> }
+                            </div>
+                            <span class="conv-channel-badge @ChannelClass(conv.ChannelType)" title="@ChannelLabel(conv.ChannelType)">
+                                @await Html.PartialAsync("_Icon", new IconModel(ChannelIconName(conv.ChannelType), size: 10))
+                            </span>
+                        </div>
+                        <div class="conv-info">
+                            <div class="conv-top">
+                                <span class="conv-name">@(conv.DisplayName ?? conv.PhoneNumber)</span>
+                                <span class="conv-time">@FormatTime(conv.LastMessageAt)</span>
+                            </div>
+                            <div class="conv-bottom">
+                                <span class="conv-preview">@TruncatePreview(conv.LastMessage)</span>
+                                @if (conv.UnreadCount > 0)
+                                { <span class="unread-badge" id="badge-@conv.Id">@conv.UnreadCount</span> }
+                                else
+                                { <span class="unread-badge d-none" id="badge-@conv.Id">0</span> }
+                            </div>
+                            <div class="conv-meta">
+                                <span class="channel-pill" title="@conv.InstanceDisplayName">
+                                    @await Html.PartialAsync("_Icon", new IconModel("smartphone", size: 11))
+                                    <span>@conv.InstanceDisplayName</span>
+                                </span>
+                                @if (!string.IsNullOrWhiteSpace(conv.AssignedUserName))
+                                {
+                                    <span class="assignee-pill" title="Assigned to @conv.AssignedUserName">
+                                        @await Html.PartialAsync("_Icon", new IconModel("user", size: 11))
+                                        <span>@conv.AssignedUserName</span>
+                                    </span>
+                                }
+                                @if (conv.ConversationStatus == 2)
+                                {
+                                    <span class="closed-pill" title="Conversation closed">Closed</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </aside>
+
+    @* ── PANEL 2: Chat window ── *@
+    <main class="chat-main" id="chatMain">
+
+        <div class="chat-empty" id="chatEmpty">
+            <div class="chat-empty-inner">
+                @await Html.PartialAsync("_Icon", new IconModel("message-square", size: 56))
+                <h3>Select a conversation</h3>
+                <p>Click any chat on the left to open it</p>
+            </div>
+        </div>
+
+        <div class="chat-window d-none" id="chatWindow">
+
+            @* Chat header — name + actions *@
+            <div class="chat-header" id="chatHeader">
+                <div class="chat-header-avatar" id="chatHeaderAvatar"></div>
+                <div class="chat-header-info">
+                    <strong id="chatHeaderName"></strong>
+                    <span id="chatHeaderPhone"></span>
+                </div>
+                <div class="chat-header-actions">
+                    @* Assign dropdown *@
+                    <div class="dropdown-wrap" id="assignWrap">
+                        <button class="header-btn" id="assignBtn" onclick="toggleAssign()" title="Assign">
+                            @await Html.PartialAsync("_Icon", new IconModel("user", size: 16))
+                            <span id="assignLabel">Unassigned</span>
+                            @await Html.PartialAsync("_Icon", new IconModel("chevron-down", size: 12))
+                        </button>
+                        <div class="cm-menu d-none" id="assignMenu">
+                            <button class="cm-item" onclick="assignTo('')" data-user-id="">Unassigned</button>
+                            @foreach (var u in Model.TeamMembers)
+                            {
+                                <button class="cm-item" onclick="assignTo('@u.Id')" data-user-id="@u.Id">@u.Name</button>
+                            }
+                        </div>
+                    </div>
+
+                    @* Lifecycle stage dropdown *@
+                    <div class="dropdown-wrap" id="lifecycleWrap">
+                        <button class="lifecycle-chip lifecycle-stage-0" id="lifecycleBtn" onclick="toggleLifecycle()" title="Lifecycle stage">
+                            <span class="lifecycle-chip-dot"></span>
+                            <span id="lifecycleLabel">New Client</span>
+                            @await Html.PartialAsync("_Icon", new IconModel("chevron-down", size: 12))
+                        </button>
+                        <div class="cm-menu d-none" id="lifecycleMenu">
+                            <button class="cm-item" onclick="setLifecycle(0)"><span class="lc-dot" style="background:#94a3b8"></span> New Client</button>
+                            <button class="cm-item" onclick="setLifecycle(1)"><span class="lc-dot" style="background:#ef4444"></span> Not Responding</button>
+                            <button class="cm-item" onclick="setLifecycle(2)"><span class="lc-dot" style="background:#3b82f6"></span> Interested</button>
+                            <button class="cm-item" onclick="setLifecycle(3)"><span class="lc-dot" style="background:#8b5cf6"></span> Thinking</button>
+                            <button class="cm-item" onclick="setLifecycle(4)"><span class="lc-dot" style="background:#06b6d4"></span> Wants a Meeting</button>
+                            <button class="cm-item" onclick="setLifecycle(5)"><span class="lc-dot" style="background:#0ea5e9"></span> Waiting for Meeting</button>
+                            <button class="cm-item" onclick="setLifecycle(6)"><span class="lc-dot" style="background:#6366f1"></span> Discussed</button>
+                            <button class="cm-item" onclick="setLifecycle(7)"><span class="lc-dot" style="background:#f59e0b"></span> Potential Client</button>
+                            <button class="cm-item" onclick="setLifecycle(8)"><span class="lc-dot" style="background:#eab308"></span> Will Make Payment</button>
+                            <button class="cm-item" onclick="setLifecycle(9)"><span class="lc-dot" style="background:#84cc16"></span> Waiting for Contract</button>
+                            <button class="cm-item" onclick="setLifecycle(10)"><span class="lc-dot" style="background:#16a34a"></span> Our Client</button>
+                        </div>
+                    </div>
+
+                    @* Status dropdown — Open / Closed *@
+                    <div class="dropdown-wrap" id="statusWrap">
+                        <button class="header-btn" id="statusBtn" onclick="toggleStatus()" title="Status">
+                            <span class="status-pill-mini" id="statusPill">Open</span>
+                            @await Html.PartialAsync("_Icon", new IconModel("chevron-down", size: 12))
+                        </button>
+                        <div class="cm-menu d-none" id="statusMenu">
+                            <button class="cm-item" onclick="setStatus(0)">Open</button>
+                            <button class="cm-item" onclick="setStatus(2)">Closed</button>
+                        </div>
+                    </div>
+
+                    @* Toggle right contact panel *@
+                    <button class="header-btn header-btn-icon" id="contactToggle" onclick="toggleContactPanel()" title="Contact details">
+                        @await Html.PartialAsync("_Icon", new IconModel("user", size: 18))
+                    </button>
+                </div>
+            </div>
+
+            @* Compose mode toggle (Reply vs Note) *@
+            <div class="compose-mode-bar" id="composeMode">
+                <button class="compose-mode-btn active" data-mode="reply" onclick="setComposeMode('reply')">
+                    @await Html.PartialAsync("_Icon", new IconModel("send", size: 13))
+                    <span>Reply</span>
+                </button>
+                <button class="compose-mode-btn" data-mode="note" onclick="setComposeMode('note')">
+                    @await Html.PartialAsync("_Icon", new IconModel("settings", size: 13))
+                    <span>Internal note</span>
+                </button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="messages-loading" id="messagesLoading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <form class="chat-input-bar" id="chatForm" onsubmit="sendMessage(event)">
+                @Html.AntiForgeryToken()
+                <input type="text" id="messageInput" class="chat-input" placeholder="Type a message…" autocomplete="off" maxlength="4096" />
+                <button type="submit" class="send-btn" id="sendBtn" aria-label="Send">
+                    @await Html.PartialAsync("_Icon", new IconModel("send", size: 18))
+                </button>
+            </form>
+        </div>
+    </main>
+
+    @* ── PANEL 3: Right contact panel ── *@
+    <aside class="contact-panel d-none" id="contactPanel">
+        <div class="cp-header">
+            <h3>Contact</h3>
+            <button class="cp-close" onclick="toggleContactPanel()" aria-label="Close panel">
+                @await Html.PartialAsync("_Icon", new IconModel("x", size: 18))
+            </button>
+        </div>
+
+        <div class="cp-tabs">
+            <button class="cp-tab active" data-tab="details" onclick="setContactTab('details')">Details</button>
+            <button class="cp-tab" data-tab="notes" onclick="setContactTab('notes')">Notes <span class="cp-tab-count" id="cpNotesCount">0</span></button>
+            <button class="cp-tab" data-tab="activity" onclick="setContactTab('activity')">Activity</button>
+        </div>
+
+        <div class="cp-body">
+            <div class="cp-pane" data-pane="details">
+                <div class="cp-avatar">
+                    <span id="cpAvatarLetter">?</span>
+                </div>
+                <div class="cp-name" id="cpName">—</div>
+                <div class="cp-phone" id="cpPhone">—</div>
+
+                <div class="cp-section">
+                    <div class="cp-row">
+                        <span class="cp-row-key">Channel</span>
+                        <span class="cp-row-val" id="cpChannel">—</span>
+                    </div>
+                    <div class="cp-row">
+                        <span class="cp-row-key">Assigned to</span>
+                        <span class="cp-row-val" id="cpAssigned">Unassigned</span>
+                    </div>
+                    <div class="cp-row">
+                        <span class="cp-row-key">Status</span>
+                        <span class="cp-row-val" id="cpStatus">Open</span>
+                    </div>
+                    <div class="cp-row">
+                        <span class="cp-row-key">Lifecycle</span>
+                        <span class="cp-row-val">
+                            <span class="cp-lifecycle-display" id="cpLifecycle">
+                                <span class="lc-dot" style="background:#94a3b8"></span>
+                                <span id="cpLifecycleLabel">New Client</span>
+                            </span>
+                        </span>
+                    </div>
+                    <div class="cp-row">
+                        <span class="cp-row-key">First contact</span>
+                        <span class="cp-row-val" id="cpCreatedAt">—</span>
+                    </div>
+                    <div class="cp-row">
+                        <span class="cp-row-key">Total messages</span>
+                        <span class="cp-row-val" id="cpMsgCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cp-pane d-none" data-pane="notes">
+                <div class="cp-empty" id="cpNotesEmpty">No notes yet — switch to "Internal note" mode in the chat to add one.</div>
+                <div class="cp-notes-list" id="cpNotesList"></div>
+            </div>
+
+            <div class="cp-pane d-none" data-pane="activity">
+                <div class="cp-empty">Activity log will appear here.</div>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<script src="~/js/chat.js" asp-append-version="true"></script>
+
+</body>
+</html>
+
+@functions {
+    static string FormatTime(DateTime dt)
+    {
+        var now = DateTime.UtcNow;
+        var diff = now - dt;
+        if (diff.TotalMinutes < 1) return "now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m";
+        if (diff.TotalDays < 1) return dt.ToLocalTime().ToString("HH:mm");
+        if (diff.TotalDays < 7) return dt.ToLocalTime().ToString("ddd");
+        return dt.ToLocalTime().ToString("dd/MM");
+    }
+
+    static string TruncatePreview(string text) =>
+        text.Length > 55 ? text[..55] + "…" : text;
+}

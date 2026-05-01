@@ -1,0 +1,101 @@
+@*
+    Vertical icon rail used on every dashboard page (Inbox / Numbers / Settings).
+    Pass the active section name so the matching link gets highlighted.
+
+    Usage:
+        @await Html.PartialAsync("_DashboardRail", "inbox")        // chats
+        @await Html.PartialAsync("_DashboardRail", "numbers")      // /dashboard/whatsapp
+        @await Html.PartialAsync("_DashboardRail", "settings")     // /dashboard/settings
+*@
+@model string
+@{
+    var active = (Model ?? string.Empty).ToLowerInvariant();
+    string Cls(string name) => active == name ? "rail-link active" : "rail-link";
+}
+
+<aside class="rail">
+    <a class="rail-brand" asp-controller="Home" asp-action="Index" title="ChatCRM">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="var(--brand)"/>
+            <path d="M9 11.5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-6.5l-3 3v-3H11a2 2 0 0 1-2-2v-6z"
+                  fill="white"/>
+        </svg>
+    </a>
+
+    <nav class="rail-nav">
+        <a class="@Cls("inbox")" href="/dashboard/chats" title="Inbox">
+            @await Html.PartialAsync("_Icon", new IconModel("inbox", size: 22, ariaLabel: "Inbox"))
+        </a>
+        <a class="@Cls("contacts")" href="/dashboard/contacts" title="Contacts">
+            @await Html.PartialAsync("_Icon", new IconModel("users", size: 22, ariaLabel: "Contacts"))
+        </a>
+        <div class="rail-link-wrap" id="settingsRailWrap">
+            <button type="button"
+                    class="@Cls("settings")"
+                    id="settingsRailBtn"
+                    title="Settings"
+                    aria-haspopup="true"
+                    aria-expanded="false">
+                @await Html.PartialAsync("_Icon", new IconModel("settings", size: 22, ariaLabel: "Settings"))
+            </button>
+            <div class="settings-popover d-none" id="settingsPopover" role="menu">
+                <a class="settings-popover-item" href="/Account/Profile" role="menuitem">
+                    @await Html.PartialAsync("_Icon", new IconModel("user", size: 16))
+                    <span>Personal Settings</span>
+                </a>
+                <a class="settings-popover-item" href="/dashboard/settings/channels" role="menuitem">
+                    @await Html.PartialAsync("_Icon", new IconModel("smartphone", size: 16))
+                    <span>Channels</span>
+                </a>
+                <a class="settings-popover-item" href="/dashboard/settings/users" role="menuitem">
+                    @await Html.PartialAsync("_Icon", new IconModel("users", size: 16))
+                    <span>User Management</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="rail-bottom">
+        <a asp-controller="Account" asp-action="Profile" class="rail-link" title="Profile">
+            @await Html.PartialAsync("_Icon", new IconModel("user", size: 22, ariaLabel: "Profile"))
+        </a>
+        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="rail-link" title="Sign out">
+                @await Html.PartialAsync("_Icon", new IconModel("log-out", size: 22, ariaLabel: "Sign out"))
+            </button>
+        </form>
+    </div>
+</aside>
+
+<script>
+    (function () {
+        const btn  = document.getElementById('settingsRailBtn');
+        const menu = document.getElementById('settingsPopover');
+        if (!btn || !menu) return;
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const open = !menu.classList.contains('d-none');
+            menu.classList.toggle('d-none', open);
+            btn.setAttribute('aria-expanded', String(!open));
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            const wrap = document.getElementById('settingsRailWrap');
+            if (wrap && !wrap.contains(e.target)) {
+                menu.classList.add('d-none');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Close on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                menu.classList.add('d-none');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    })();
+</script>
