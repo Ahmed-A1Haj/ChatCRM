@@ -212,12 +212,14 @@ Railway's one-click template deploys Evolution API + PostgreSQL + Redis with SSL
 
 ### Option B — Self-host via Docker
 
-A reference `docker-compose.yml` is included at `docker/docker-compose.yml`:
+A reference `docker-compose.yml` is included at `docker/docker-compose.yml`. Copy the example env file and fill in your own values first:
 ```bash
 cd docker
+cp .env.example .env
+# edit .env and set AUTHENTICATION_API_KEY + POSTGRES_PASSWORD to long random strings
 docker compose up -d
 ```
-Evolution API becomes available at `http://localhost:8081` with API key `ChatCRM-Evolution-Key-2026`.
+Evolution API becomes available at `http://localhost:8081`. Use the `AUTHENTICATION_API_KEY` you set in `.env` as the `apikey` header for all client requests.
 
 > ⚠️ **Known caveat**: WhatsApp frequently rejects Baileys device links from home/residential IPs — especially Docker-on-WSL2 on Windows. Cloud hosting (Option A) has a much higher success rate.
 

@@ -17,7 +17,7 @@ services:
       DEL_INSTANCE: false
       DATABASE_ENABLED: true
       DATABASE_PROVIDER: postgresql
-      DATABASE_CONNECTION_URI: "postgresql://evo_user:evo_pass@postgres:5432/evolution"
+      DATABASE_CONNECTION_URI: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
       DATABASE_CONNECTION_CLIENT_NAME: evolution_exchange
       DATABASE_SAVE_DATA_INSTANCE: true
       DATABASE_SAVE_DATA_NEW_MESSAGE: true
@@ -32,7 +32,7 @@ services:
       CONFIG_SESSION_PHONE_CLIENT: ChatCRM
       CONFIG_SESSION_PHONE_NAME: Chrome
       CONFIG_SESSION_PHONE_VERSION: "2.3000.1023204200"
-      AUTHENTICATION_API_KEY: ChatCRM-Evolution-Key-2026
+      AUTHENTICATION_API_KEY: ${AUTHENTICATION_API_KEY}
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: true
       QRCODE_LIMIT: 30
     depends_on:
@@ -44,9 +44,9 @@ services:
     container_name: evolution_postgres
     restart: always
     environment:
-      POSTGRES_USER: evo_user
-      POSTGRES_PASSWORD: evo_pass
-      POSTGRES_DB: evolution
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

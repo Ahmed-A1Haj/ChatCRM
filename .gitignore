@@ -367,11 +367,12 @@ FodyWeavers.xsd
 # Local dev secrets — never commit real API keys
 ChatCRM.MVC/appsettings.Development.json
 
-# Docker runtime artifacts (only commit docker-compose.yml)
+# Docker runtime artifacts (only commit docker-compose.yml + .env.example)
 docker/*.log
 docker/*.json
 docker/*.png
 docker/*.txt
+docker/.env
 
 # ngrok config
 ngrok.yml
