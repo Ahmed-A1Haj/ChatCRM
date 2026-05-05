@@ -540,5 +540,9 @@
   "Dashboard.Idle.Minutes": "{0} min",
   "Dashboard.Idle.Hours": "{0}h",
   "Dashboard.Idle.Days": "{0}z",
-  "Dashboard.MockNotice": "Date demonstrative — urmează conectarea cu date reale."
+  "Dashboard.MockNotice": "Date demonstrative — urmează conectarea cu date reale.",
+  "Channels.Integration.Personal": "Personal",
+  "Channels.Integration.Business": "Business",
+  "Channels.Integration.Personal.Tooltip": "Conectat prin WhatsApp Web. Funcționalități limitate și nerecomandat pentru producție.",
+  "Channels.Integration.Business.Tooltip": "Conectat prin WhatsApp Business API oficial. Funcționalități complete și aprobat de Meta."
 }

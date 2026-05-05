@@ -540,5 +540,9 @@
   "Dashboard.Idle.Minutes": "{0} dk",
   "Dashboard.Idle.Hours": "{0}sa",
   "Dashboard.Idle.Days": "{0}g",
-  "Dashboard.MockNotice": "Gösterim verisi — gerçek veriler bağlanacak."
+  "Dashboard.MockNotice": "Gösterim verisi — gerçek veriler bağlanacak.",
+  "Channels.Integration.Personal": "Kişisel",
+  "Channels.Integration.Business": "İşletme",
+  "Channels.Integration.Personal.Tooltip": "WhatsApp Web üzerinden bağlandı. Sınırlı özellikler ve canlı ortam için önerilmez.",
+  "Channels.Integration.Business.Tooltip": "Resmi WhatsApp Business API üzerinden bağlandı. Tüm özellikler ve Meta onaylı."
 }

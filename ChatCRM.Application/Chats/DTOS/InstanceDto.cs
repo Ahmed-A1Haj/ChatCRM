@@ -9,6 +9,8 @@ namespace ChatCRM.Application.Chats.DTOs
         public string DisplayName { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
         public InstanceStatus Status { get; set; }
+        public ChannelType ChannelType { get; set; } = ChannelType.WhatsApp;
+        public WhatsAppIntegration Integration { get; set; } = WhatsAppIntegration.Personal;
         public DateTime CreatedAt { get; set; }
         public DateTime? LastConnectedAt { get; set; }
         public int ConversationCount { get; set; }

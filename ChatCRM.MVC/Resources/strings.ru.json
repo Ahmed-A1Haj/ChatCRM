@@ -540,5 +540,9 @@
   "Dashboard.Idle.Minutes": "{0} мин",
   "Dashboard.Idle.Hours": "{0} ч",
   "Dashboard.Idle.Days": "{0} д",
-  "Dashboard.MockNotice": "Демонстрационные данные — далее подключим реальные."
+  "Dashboard.MockNotice": "Демонстрационные данные — далее подключим реальные.",
+  "Channels.Integration.Personal": "Личный",
+  "Channels.Integration.Business": "Бизнес",
+  "Channels.Integration.Personal.Tooltip": "Подключено через WhatsApp Web. Ограниченные функции и не рекомендуется для продакшена.",
+  "Channels.Integration.Business.Tooltip": "Подключено через официальный WhatsApp Business API. Полные возможности и одобрено Meta."
 }

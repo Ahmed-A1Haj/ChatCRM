@@ -540,5 +540,9 @@
   "Dashboard.Idle.Minutes": "{0} min",
   "Dashboard.Idle.Hours": "{0}h",
   "Dashboard.Idle.Days": "{0}d",
-  "Dashboard.MockNotice": "Live mock data — wiring real numbers next."
+  "Dashboard.MockNotice": "Live mock data — wiring real numbers next.",
+  "Channels.Integration.Personal": "Personal",
+  "Channels.Integration.Business": "Business",
+  "Channels.Integration.Personal.Tooltip": "Connected via WhatsApp Web. Limited features and not recommended for production.",
+  "Channels.Integration.Business.Tooltip": "Connected via official WhatsApp Business API. Full features and Meta-approved."
 }

@@ -958,6 +958,56 @@ body.inbox-shell {
 .ch-chip.is-disabled .ch-chip-icon  { opacity: 0.5; }
 .ch-chip.is-disabled .ch-chip-label { text-decoration: line-through; text-decoration-color: rgba(148, 163, 184, 0.45); }
 
+/* Mini-dot on the WhatsApp chip indicating Personal vs Business integration. The browser
+   title attribute carries the full explanation on hover. */
+.ch-chip-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-left: 2px;
+}
+.ch-chip-dot.is-personal { background: var(--warn);  box-shadow: 0 0 0 2px var(--warn-bg); }
+.ch-chip-dot.is-business { background: var(--ok);    box-shadow: 0 0 0 2px var(--ok-bg); }
+
+/* ─── Integration pill (Personal / Business) — shown per-instance on the WhatsApp Numbers
+   page so users can see the type of each connected number, not just the channel as a whole. */
+.integration-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    line-height: 1.4;
+    margin-left: auto;            /* push to the end of any flex container (e.g. card head) */
+    cursor: help;
+    border: 1px solid transparent;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+.integration-pill::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+.integration-pill.is-personal {
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    border-color: rgba(245, 158, 11, 0.25);
+}
+.integration-pill.is-personal::before { background: var(--warn); }
+.integration-pill.is-business {
+    background: var(--ok-bg);
+    color: var(--ok-text);
+    border-color: rgba(22, 163, 74, 0.22);
+}
+.integration-pill.is-business::before { background: var(--ok); }
+
 /* ─── Avatar wrap with channel badge overlay ─────────────────────── */
 .conv-avatar-wrap {
     position: relative;

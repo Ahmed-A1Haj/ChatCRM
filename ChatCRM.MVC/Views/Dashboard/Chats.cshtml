@@ -95,9 +95,44 @@
                     <a href="@ChannelHref("")" class="ch-chip @(channelAll ? "is-active" : "")" title="@T["Inbox.Channel.All"]">
                         <span class="ch-chip-label">All</span>
                     </a>
-                    <a href="@ChannelHref("&channel=0")" class="ch-chip ch-chip-whatsapp @(channelWhatsApp ? "is-active" : "")" title="WhatsApp">
+                    @{
+                        // Mini-indicator next to WhatsApp tells agents whether they're talking through
+                        // a personal QR-scanned account (amber) or an official Cloud API one (green).
+                        // Decision rule: if the currently-selected instance is WhatsApp, mirror its type;
+                        // otherwise fall back to the dominant type across all WhatsApp instances.
+                        var waInstances = Model.Instances.Where(i => i.ChannelType == ChannelType.WhatsApp).ToList();
+                        WhatsAppIntegration? waIntegration = null;
+                        string? waTooltipKey = null;
+                        if (active is not null && active.ChannelType == ChannelType.WhatsApp)
+                        {
+                            waIntegration = active.Integration;
+                        }
+                        else if (waInstances.Count > 0)
+                        {
+                            var distinct = waInstances.Select(x => x.Integration).Distinct().ToList();
+                            waIntegration = distinct.Count == 1 ? distinct[0] : (WhatsAppIntegration?)null;
+                        }
+                        if (waIntegration.HasValue)
+                        {
+                            waTooltipKey = waIntegration.Value == WhatsAppIntegration.Business
+                                ? "Channels.Integration.Business.Tooltip"
+                                : "Channels.Integration.Personal.Tooltip";
+                        }
+                        var waChipDotClass = waIntegration switch
+                        {
+                            WhatsAppIntegration.Personal => "is-personal",
+                            WhatsAppIntegration.Business => "is-business",
+                            _                              => null
+                        };
+                        var waChipTitle = waTooltipKey is null ? "WhatsApp" : T[waTooltipKey].Value;
+                    }
+                    <a href="@ChannelHref("&channel=0")" class="ch-chip ch-chip-whatsapp @(channelWhatsApp ? "is-active" : "")" title="@waChipTitle">
                         <span class="ch-chip-icon">@await Html.PartialAsync("_Icon", new IconModel("channel-whatsapp", size: 12))</span>
                         <span class="ch-chip-label">WhatsApp</span>
+                        @if (waChipDotClass is not null)
+                        {
+                            <span class="ch-chip-dot @waChipDotClass" aria-hidden="true"></span>
+                        }
                     </a>
                     <span class="ch-chip is-disabled" title="Instagram — coming soon" aria-disabled="true">
                         <span class="ch-chip-icon">@await Html.PartialAsync("_Icon", new IconModel("channel-instagram", size: 12))</span>
