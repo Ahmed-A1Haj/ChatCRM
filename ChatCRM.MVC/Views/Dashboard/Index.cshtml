@@ -1,0 +1,396 @@
+@model ChatCRM.Application.Dashboard.DTOs.DashboardViewModel
+@using System.Globalization
+@using ChatCRM.Application.Dashboard.DTOs
+@using ChatCRM.Domain.Entities
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+
+@{
+    Layout = null;
+    ViewData["Title"] = T["Dashboard.Title"].Value;
+
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+
+    string LifecycleKey(LifecycleStage s) => s switch
+    {
+        LifecycleStage.NewClient          => "Lifecycle.NewClient",
+        LifecycleStage.NotResponding      => "Lifecycle.NotResponding",
+        LifecycleStage.Interested         => "Lifecycle.Interested",
+        LifecycleStage.Thinking           => "Lifecycle.Thinking",
+        LifecycleStage.WantsAMeeting      => "Lifecycle.WantsAMeeting",
+        LifecycleStage.WaitingForMeeting  => "Lifecycle.WaitingForMeeting",
+        LifecycleStage.Discussed          => "Lifecycle.Discussed",
+        LifecycleStage.PotentialClient    => "Lifecycle.PotentialClient",
+        LifecycleStage.WillMakePayment    => "Lifecycle.WillMakePayment",
+        LifecycleStage.WaitingForContract => "Lifecycle.WaitingForContract",
+        LifecycleStage.OurClient          => "Lifecycle.OurClient",
+        _                                  => "Lifecycle.NewClient"
+    };
+
+    string ChannelKey(ChannelType c) => c switch
+    {
+        ChannelType.WhatsApp  => "Inbox.Channel.WhatsApp",
+        ChannelType.Instagram => "Inbox.Channel.Instagram",
+        ChannelType.Messenger => "Inbox.Channel.Messenger",
+        _                     => "Inbox.Channel.WhatsApp"
+    };
+
+    string ChannelClass(ChannelType c) => c switch
+    {
+        ChannelType.WhatsApp  => "dash-channel-whatsapp",
+        ChannelType.Instagram => "dash-channel-instagram",
+        ChannelType.Messenger => "dash-channel-messenger",
+        _                     => "dash-channel-whatsapp"
+    };
+
+    string KpiToneClass(KpiTone tone) => tone switch
+    {
+        KpiTone.Positive => "tone-positive",
+        KpiTone.Warning  => "tone-warning",
+        KpiTone.Danger   => "tone-danger",
+        _                 => ""
+    };
+
+    string AttentionSeverityClass(AttentionSeverity s) => s switch
+    {
+        AttentionSeverity.Urgent   => "urgent",
+        AttentionSeverity.Watching => "watching",
+        _                           => "calm"
+    };
+
+    string FormatIdle(TimeSpan span)
+    {
+        if (span.TotalMinutes < 60) return string.Format(T["Dashboard.Idle.Minutes"].Value, (int)span.TotalMinutes);
+        if (span.TotalHours < 24) return string.Format(T["Dashboard.Idle.Hours"].Value, (int)span.TotalHours);
+        return string.Format(T["Dashboard.Idle.Days"].Value, (int)span.TotalDays);
+    }
+
+    string Relative(DateTime utc)
+    {
+        var diff = DateTime.UtcNow - utc;
+        if (diff.TotalSeconds < 60) return T["Time.JustNow"].Value;
+        if (diff.TotalMinutes < 60) return string.Format(T["Dashboard.Idle.Minutes"].Value, (int)diff.TotalMinutes);
+        if (diff.TotalHours < 24) return string.Format(T["Dashboard.Idle.Hours"].Value, (int)diff.TotalHours);
+        return string.Format(T["Dashboard.Idle.Days"].Value, (int)diff.TotalDays);
+    }
+
+    // Channel donut geometry — pure SVG, single circle per slice with stroke-dasharray.
+    // Circumference for r=70: 2 * pi * 70 ≈ 439.823. Each slice's dash length = pct * circumference / 100.
+    const double DonutR = 70;
+    var donutCircumference = 2 * Math.PI * DonutR;
+    double donutOffsetCursor = 0;
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "dashboard")
+
+<section class="dash-shell">
+    @* ── Top bar ─────────────────────────────────────────────────── *@
+    <header class="dash-topbar">
+        <div class="dash-topbar-left">
+            <h1>@T["Dashboard.Title"]</h1>
+        </div>
+        <div class="dash-topbar-right">
+            <nav class="dash-range" aria-label="@T["Dashboard.Range.Aria"]">
+                <a href="?range=today" class="@(Model.Range == DashboardRange.Today ? "is-active" : "")">@T["Dashboard.Range.Today"]</a>
+                <a href="?range=week"  class="@(Model.Range == DashboardRange.Week  ? "is-active" : "")">@T["Dashboard.Range.Week"]</a>
+                <a href="?range=month" class="@(Model.Range == DashboardRange.Month ? "is-active" : "")">@T["Dashboard.Range.Month"]</a>
+            </nav>
+            <span class="dash-updated" data-last-updated-utc="@Model.LastUpdatedUtc.ToString("o")">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span data-last-updated-text>@T["Dashboard.UpdatedJustNow"]</span>
+            </span>
+            <button type="button" class="dash-refresh" onclick="location.reload()" title="@T["Dashboard.Refresh"]" aria-label="@T["Dashboard.Refresh"]">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="dash-main">
+        <div class="dash-container">
+
+            @* ── KPI strip ───────────────────────────────────────────── *@
+            <section class="dash-kpis">
+                @foreach (var k in Model.Kpis)
+                {
+                    var showDot = k.Key == "Unanswered" && k.Value != "0";
+                    <div class="dash-kpi @KpiToneClass(k.Tone)">
+                        <span class="dash-kpi-label">
+                            @T[k.LabelKey]
+                            @if (showDot) { <span class="dash-kpi-dot" aria-hidden="true"></span> }
+                        </span>
+                        <span class="dash-kpi-value">@k.Value</span>
+                        @if (!string.IsNullOrEmpty(k.DeltaText))
+                        {
+                            <span class="dash-kpi-delta @(k.DeltaIsPositive ? "dash-kpi-delta-up" : "dash-kpi-delta-down")">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    @if (k.DeltaIsPositive) { <polyline points="18 15 12 9 6 15"/> } else { <polyline points="6 9 12 15 18 9"/> }
+                                </svg>
+                                @k.DeltaText
+                            </span>
+                        }
+                    </div>
+                }
+            </section>
+
+            @* ── Pipeline + Channel breakdown ─────────────────────────── *@
+            <section class="dash-row">
+                <div class="dash-card">
+                    <header class="dash-card-head">
+                        <h2>@T["Dashboard.Pipeline.Title"]</h2>
+                        <a href="/dashboard/contacts" class="dash-card-head-link">@T["Dashboard.SeeAll"]</a>
+                    </header>
+                    @if (Model.Pipeline.Count == 0)
+                    {
+                        <div class="dash-empty">
+                            <div class="dash-empty-title">@T["Dashboard.Pipeline.EmptyTitle"]</div>
+                            @T["Dashboard.Pipeline.EmptySub"]
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var row in Model.Pipeline)
+                        {
+                            // TODO: link target — once Contacts supports server-side lifecycle filter via querystring,
+                            // change this to /dashboard/contacts?lifecycle={(byte)row.Stage}.
+                            <a class="dash-pipeline-row" href="/dashboard/contacts">
+                                <span class="dash-pipeline-stage">@T[LifecycleKey(row.Stage)]</span>
+                                <span class="dash-pipeline-bar">
+                                    <span class="dash-pipeline-bar-fill" style="width:@(row.Percentage.ToString(CultureInfo.InvariantCulture))%"></span>
+                                </span>
+                                <span class="dash-pipeline-count">@row.Count</span>
+                                <span class="dash-pipeline-delta @(row.Delta > 0 ? "up" : row.Delta < 0 ? "down" : "")">
+                                    @(row.Delta > 0 ? "+" + row.Delta : row.Delta < 0 ? row.Delta.ToString() : "—")
+                                </span>
+                            </a>
+                        }
+                    }
+                </div>
+
+                <div class="dash-card">
+                    <header class="dash-card-head">
+                        <h2>@T["Dashboard.Channels.Title"]</h2>
+                    </header>
+                    @if (Model.Channels.Count == 0 || Model.Channels.Sum(c => c.Count) == 0)
+                    {
+                        <div class="dash-empty">
+                            <div class="dash-empty-title">@T["Dashboard.Channels.EmptyTitle"]</div>
+                            @T["Dashboard.Channels.EmptySub"]
+                        </div>
+                    }
+                    else
+                    {
+                        var totalChannel = Model.Channels.Sum(c => c.Count);
+                        <div class="dash-channel-wrap">
+                            <div class="dash-donut" role="img" aria-label="@T["Dashboard.Channels.Title"]">
+                                <svg viewBox="0 0 160 160">
+                                    <circle cx="80" cy="80" r="@DonutR" fill="none" stroke="var(--bg-muted)" stroke-width="18"/>
+                                    @foreach (var slice in Model.Channels)
+                                    {
+                                        var dashLen = slice.Percentage * donutCircumference / 100.0;
+                                        var gap = donutCircumference - dashLen;
+                                        var rotation = donutOffsetCursor;
+                                        donutOffsetCursor += slice.Percentage;
+                                        var color = slice.Channel switch
+                                        {
+                                            ChannelType.WhatsApp  => "var(--channel-whatsapp)",
+                                            ChannelType.Instagram => "var(--channel-instagram)",
+                                            ChannelType.Messenger => "var(--channel-messenger)",
+                                            _                     => "var(--text-dim)"
+                                        };
+                                        <circle cx="80" cy="80" r="@DonutR" fill="none"
+                                                stroke="@color" stroke-width="18"
+                                                stroke-dasharray="@(dashLen.ToString("0.##", CultureInfo.InvariantCulture)) @(gap.ToString("0.##", CultureInfo.InvariantCulture))"
+                                                stroke-dashoffset="@((-rotation * donutCircumference / 100.0).ToString("0.##", CultureInfo.InvariantCulture))"/>
+                                    }
+                                </svg>
+                                <div class="dash-donut-center">
+                                    <span class="dash-donut-center-value">@totalChannel</span>
+                                    <span class="dash-donut-center-label">@T["Dashboard.Channels.Total"]</span>
+                                </div>
+                            </div>
+                            <div class="dash-channel-legend">
+                                @foreach (var slice in Model.Channels)
+                                {
+                                    <div class="dash-channel-legend-row">
+                                        <span class="dash-channel-legend-dot @ChannelClass(slice.Channel)"></span>
+                                        <span>@T[ChannelKey(slice.Channel)]</span>
+                                        <span class="dash-channel-legend-count">@slice.Count</span>
+                                        <span class="dash-channel-legend-pct">@slice.Percentage.ToString("0", CultureInfo.InvariantCulture)%</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+
+            @* ── Needs attention + Team status ────────────────────────── *@
+            <section class="dash-row">
+                <div class="dash-card">
+                    <header class="dash-card-head">
+                        <h2>@T["Dashboard.Attention.Title"]</h2>
+                        <a href="/dashboard/chats?filter=unassigned" class="dash-card-head-link">@T["Dashboard.SeeAll"]</a>
+                    </header>
+                    @if (Model.Attention.Count == 0)
+                    {
+                        <div class="dash-empty">
+                            <div class="dash-empty-title">@T["Dashboard.Attention.EmptyTitle"]</div>
+                            @T["Dashboard.Attention.EmptySub"]
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Attention)
+                        {
+                            <a class="dash-attention-row" href="/dashboard/chats?conversation=@item.ConversationId">
+                                <span class="dash-attention-avatar">@item.Initials</span>
+                                <span class="dash-attention-body">
+                                    <span class="dash-attention-name">
+                                        @item.ContactName
+                                        <span class="dash-attention-channel">@T[ChannelKey(item.Channel)]</span>
+                                    </span>
+                                    <span class="dash-attention-preview">@item.LastMessagePreview</span>
+                                </span>
+                                <span class="dash-attention-idle @AttentionSeverityClass(item.Severity)">@FormatIdle(item.IdleTime)</span>
+                                <span class="dash-attention-open">@T["Dashboard.Attention.Open"] →</span>
+                            </a>
+                        }
+                    }
+                </div>
+
+                <div class="dash-card">
+                    <header class="dash-card-head">
+                        <h2>@T["Dashboard.Team.Title"]</h2>
+                        <a href="/dashboard/settings/users" class="dash-card-head-link">@T["Dashboard.SeeAll"]</a>
+                    </header>
+                    @if (Model.Team.Count == 0)
+                    {
+                        <div class="dash-empty">
+                            <div class="dash-empty-title">@T["Dashboard.Team.EmptyTitle"]</div>
+                            @T["Dashboard.Team.EmptySub"]
+                        </div>
+                    }
+                    else
+                    {
+                        var ordered = Model.Team
+                            .OrderBy(t => t.Presence == PresenceStatus.Online ? 0 : t.Presence == PresenceStatus.Away ? 1 : 2)
+                            .ThenByDescending(t => t.LastActiveUtc);
+                        @foreach (var member in ordered)
+                        {
+                            <div class="dash-team-row">
+                                <span class="dash-team-avatar">
+                                    @member.Initials
+                                    <span class="dash-team-presence @member.Presence.ToString().ToLowerInvariant()" title="@member.Presence"></span>
+                                </span>
+                                <span>
+                                    <span class="dash-team-name">@member.Name</span>
+                                    <span class="dash-team-meta">@T["Dashboard.Team.Active"] · @Relative(member.LastActiveUtc)</span>
+                                </span>
+                                <span class="dash-team-count">@member.ActiveConversationCount</span>
+                            </div>
+                        }
+                    }
+                </div>
+            </section>
+
+            @* ── Recent activity ──────────────────────────────────────── *@
+            <section class="dash-card">
+                <header class="dash-card-head">
+                    <h2>@T["Dashboard.Activity.Title"]</h2>
+                </header>
+                @if (Model.Activity.Count == 0)
+                {
+                    <div class="dash-empty">
+                        <div class="dash-empty-title">@T["Dashboard.Activity.EmptyTitle"]</div>
+                        @T["Dashboard.Activity.EmptySub"]
+                    </div>
+                }
+                else
+                {
+                    <div class="dash-activity-list">
+                        @foreach (var entry in Model.Activity)
+                        {
+                            var typeClass = entry.Type.ToString().ToLowerInvariant();
+                            <div class="dash-activity-row @typeClass">
+                                <span class="dash-activity-icon" aria-hidden="true">
+                                    @switch (entry.Type)
+                                    {
+                                        case ActivityType.Assigned:
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3 3-2-2"/></svg>
+                                            break;
+                                        case ActivityType.StatusChanged:
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                            break;
+                                        case ActivityType.LifecycleChanged:
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                                            break;
+                                        case ActivityType.NewContact:
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                                            break;
+                                        case ActivityType.MessageSent:
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                            break;
+                                        default:
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            break;
+                                    }
+                                </span>
+                                <span class="dash-activity-text">@Html.Raw(entry.DescriptionHtml)</span>
+                                <span class="dash-activity-time">@Relative(entry.AtUtc)</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+
+            <p class="dash-footer">@T["Dashboard.MockNotice"]</p>
+        </div>
+    </main>
+</section>
+
+<script>
+    /* Live-update the "Updated X ago" label every 30 seconds — no full refresh, no SignalR. */
+    (function () {
+        const el = document.querySelector('[data-last-updated-utc]');
+        const txt = document.querySelector('[data-last-updated-text]');
+        if (!el || !txt) return;
+        const startedAt = new Date(el.getAttribute('data-last-updated-utc')).getTime();
+        const T = window.__i18n__ || {};
+        function fmt() {
+            const sec = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+            if (sec < 30) return T['Dashboard.UpdatedJustNow'] || 'just now';
+            if (sec < 60) return (T['Dashboard.UpdatedSecondsAgo'] || '{0}s ago').replace('{0}', String(sec));
+            const min = Math.floor(sec / 60);
+            if (min < 60) return (T['Dashboard.UpdatedMinutesAgo'] || '{0} min ago').replace('{0}', String(min));
+            const hr = Math.floor(min / 60);
+            return (T['Dashboard.UpdatedHoursAgo'] || '{0}h ago').replace('{0}', String(hr));
+        }
+        txt.textContent = fmt();
+        setInterval(() => { txt.textContent = fmt(); }, 30_000);
+    })();
+</script>
+</body>
+</html>

@@ -39,7 +39,7 @@ namespace ChatCRM.MVC.Controllers
         {
             if (User.Identity?.IsAuthenticated == true)
             {
-                return Redirect("/dashboard/chats");
+                return Redirect("/dashboard");
             }
 
             return View(new RegisterDto());
@@ -103,7 +103,7 @@ namespace ChatCRM.MVC.Controllers
         {
             if (User.Identity?.IsAuthenticated == true)
             {
-                return Redirect("/dashboard/chats");
+                return Redirect("/dashboard");
             }
 
             return View(new LoginDto { ReturnUrl = returnUrl });
@@ -587,8 +587,8 @@ namespace ChatCRM.MVC.Controllers
                 return Redirect(returnUrl);
             }
 
-            // Default post-sign-in destination is the inbox — there is no marketing landing page anymore.
-            return Redirect("/dashboard/chats");
+            // Default post-sign-in destination is the dashboard home (command-center view).
+            return Redirect("/dashboard");
         }
 
         private void AddIdentityErrors(IdentityResult result)

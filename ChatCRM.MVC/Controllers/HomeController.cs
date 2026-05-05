@@ -15,7 +15,7 @@ namespace ChatCRM.MVC.Controllers
         {
             if (User.Identity?.IsAuthenticated == true)
             {
-                return Redirect("/dashboard/chats");
+                return Redirect("/dashboard");
             }
 
             return RedirectToAction(nameof(AccountController.Login), "Account");

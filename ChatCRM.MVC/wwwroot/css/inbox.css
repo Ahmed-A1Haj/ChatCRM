@@ -1,6 +1,11 @@
 /* ─── Shell layout (left rail + 3-panel) ───────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Visibility helper used by the rail popovers, language switcher, and modals.
+   Defined here (in the foundational dashboard CSS) so every page that mounts
+   the rail gets it without needing to load Bootstrap. */
+.d-none { display: none !important; }
+
 body.inbox-shell {
     margin: 0;
     height: 100dvh;

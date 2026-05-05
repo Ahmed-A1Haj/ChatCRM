@@ -24,6 +24,9 @@
     </a>
 
     <nav class="rail-nav">
+        <a class="@Cls("dashboard")" href="/dashboard" title="@T["Rail.Dashboard"]">
+            @await Html.PartialAsync("_Icon", new IconModel("layout-dashboard", size: 22, ariaLabel: T["Rail.Dashboard"].Value))
+        </a>
         <a class="@Cls("inbox")" href="/dashboard/chats" title="@T["Rail.Inbox"]">
             @await Html.PartialAsync("_Icon", new IconModel("inbox", size: 22, ariaLabel: T["Rail.Inbox"].Value))
         </a>
@@ -76,8 +79,10 @@
         const menu = document.getElementById('settingsPopover');
         if (!btn || !menu) return;
 
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
+        btn.addEventListener('click', () => {
+            // No stopPropagation — letting the click bubble means other open popovers (e.g.
+            // the language switcher) can close themselves via their own document-level
+            // outside-click listeners.
             const open = !menu.classList.contains('d-none');
             menu.classList.toggle('d-none', open);
             btn.setAttribute('aria-expanded', String(!open));

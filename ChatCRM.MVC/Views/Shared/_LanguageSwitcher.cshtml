@@ -59,8 +59,11 @@
             const menu = wrap.querySelector('[data-lang-menu]');
             if (!btn || !menu) return;
 
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
+            btn.addEventListener('click', () => {
+                // No stopPropagation — let the click bubble so other open popovers (e.g. the
+                // settings rail popover) can dismiss themselves via their document-level
+                // outside-click listeners. Our own outside-click handler below sees the click
+                // is inside `wrap` and keeps this menu open.
                 const open = !menu.classList.contains('d-none');
                 menu.classList.toggle('d-none', open);
                 btn.setAttribute('aria-expanded', String(!open));
