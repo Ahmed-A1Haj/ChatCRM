@@ -1,3 +1,18 @@
+/* i18n fallback — guarantee t() is callable even if i18n.js failed to load
+   (cached HTML from an older deploy, blocked CDN, etc.). The page-level inline
+   script still injects window.__i18n__ before this file runs, so translations
+   are available; we just make sure the function itself exists. */
+if (typeof window.t !== 'function') {
+    window.t = function (key) {
+        var dict = window.__i18n__ || {};
+        var value = dict[key] != null ? dict[key] : key;
+        for (var i = 1; i < arguments.length; i++) {
+            value = value.split('{' + (i - 1) + '}').join(String(arguments[i]));
+        }
+        return value;
+    };
+}
+
 /* ─── State ──────────────────────────────────────────────────────── */
 let creatingInstanceId = null;
 let qrPollHandle = null;

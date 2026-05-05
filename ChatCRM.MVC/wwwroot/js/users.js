@@ -1,3 +1,15 @@
+/* i18n fallback — guarantee t() is callable even if i18n.js failed to load. */
+if (typeof window.t !== 'function') {
+    window.t = function (key) {
+        var dict = window.__i18n__ || {};
+        var value = dict[key] != null ? dict[key] : key;
+        for (var i = 1; i < arguments.length; i++) {
+            value = value.split('{' + (i - 1) + '}').join(String(arguments[i]));
+        }
+        return value;
+    };
+}
+
 const token = () => document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
 const state = { search: '', editingId: null };
 
