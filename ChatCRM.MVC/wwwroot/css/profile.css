@@ -1,15 +1,158 @@
-/* ─── Profile / Manage Profile (renders inside the dashboard layout — rail + page) ──── */
+/* ─── Dashboard top bar (used by Profile, applicable to other dashboard pages) ──── */
+.topbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 32px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+}
+
+.topbar-title h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.2px;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* User chip + dropdown */
+.topbar-user { position: relative; }
+
+.topbar-user-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px 4px 4px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+.topbar-user-btn:hover { background: var(--bg-muted); }
+.topbar-user-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--brand-ring); }
+
+.topbar-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.topbar-user-avatar-fallback {
+    background: var(--brand-100);
+    color: var(--brand-text);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+.topbar-user-name {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topbar-user-chevron { color: var(--text-muted); flex-shrink: 0; }
+
+.topbar-user-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 220px;
+    background: var(--bg-panel);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.04);
+    padding: 6px;
+    z-index: 1100;
+    animation: msgMenuIn 0.14s cubic-bezier(.2,.8,.3,1);
+}
+
+.topbar-user-menu form { margin: 0; }
+
+.topbar-user-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 8px 10px;
+    border-radius: 6px;
+    text-align: left;
+    text-decoration: none;
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.1s ease, color 0.1s ease;
+}
+.topbar-user-item:hover { background: var(--bg-muted); color: var(--text); }
+.topbar-user-item-danger { color: var(--danger-text); }
+.topbar-user-item-danger:hover { background: var(--danger-bg); }
+
+/* ─── Top-bar / inbox-header language switcher (sidebar lost the switcher) ────
+   Default switcher CSS is positioned for the rail (drops to the right, bottom-aligned).
+   Inside the topbar or inbox header it must drop DOWN, right-aligned, otherwise the
+   menu opens upward and clips at the top of the viewport. */
+.topbar .lang-switcher-menu,
+.inbox-title-actions .lang-switcher-menu {
+    bottom: auto;
+    top: calc(100% + 6px);
+    left: auto;
+    right: 0;
+    transform-origin: top right;
+}
+.topbar .lang-switcher-btn,
+.inbox-title-actions .lang-switcher-btn {
+    width: 36px;
+    height: 36px;
+}
+
+.inbox-title-actions {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* ─── Profile (renders inside the dashboard layout — rail + topbar + page) ──── */
+
+.profile-shell {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-page);
+}
 
 .profile-main {
     flex: 1;
     overflow-y: auto;
-    background: var(--bg-page);
 }
 
 .profile-container {
-    max-width: 880px;
+    max-width: 720px;
     margin: 0 auto;
-    padding: 32px 32px 64px;
+    padding: 24px 32px 80px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -26,7 +169,7 @@
 }
 
 .profile-page-sub {
-    margin: 0;
+    margin: 0 0 8px;
     color: var(--text-muted);
     font-size: 13.5px;
 }
@@ -55,7 +198,7 @@
     font-size: 13px;
 }
 
-/* ── Header card (avatar + name) ───────────────────────────── */
+/* ── Header card (avatar + name + status pill) ─────────────── */
 .profile-card-head {
     display: flex;
     align-items: center;
@@ -133,39 +276,142 @@
 @media (max-width: 640px) {
     .profile-grid { grid-template-columns: 1fr; }
     .profile-card-head { flex-direction: column; align-items: flex-start; }
-    .profile-container { padding: 20px; }
+    .profile-container { padding: 20px 16px 64px; }
+    .topbar { padding: 14px 16px; }
+    .profile-upload { flex-direction: column; align-items: flex-start; }
+    .profile-upload-preview { align-self: center; }
 }
 
-/* ── Upload section ────────────────────────────────────────── */
+/* ── Email-change inline warning ───────────────────────────── */
+.profile-email-warning {
+    margin-top: 6px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    color: var(--warn-text);
+    font-size: 12.5px;
+    line-height: 1.4;
+}
+.profile-email-warning::before {
+    content: "⚠";
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+/* ── Custom photo upload ───────────────────────────────────── */
 .profile-upload {
     margin-top: 18px;
-    padding: 16px;
+    padding: 20px;
     background: var(--bg-soft);
     border: 1px solid var(--border-soft);
     border-radius: 10px;
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    gap: 20px;
 }
 
-.profile-upload-text h3 {
+.profile-upload-preview {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--brand-100);
+    color: var(--brand-text);
+    overflow: hidden;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.profile-upload-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.profile-upload-preview-fallback {
+    font-weight: 600;
+    font-size: 24px;
+    letter-spacing: 0.5px;
+}
+
+.profile-upload-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-upload-title {
     margin: 0 0 4px;
     font-size: 14px;
     font-weight: 600;
     color: var(--text);
 }
-.profile-upload-text p {
-    margin: 0;
+
+.profile-upload-help {
+    margin: 0 0 12px;
     color: var(--text-muted);
     font-size: 12.5px;
 }
 
-/* ── Action row ────────────────────────────────────────────── */
+.profile-upload-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.profile-upload-input { display: none; }
+
+/* "Upload new photo" outlined button (matches dashboard secondary buttons). */
+.profile-upload-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+.profile-upload-trigger:hover { background: var(--bg-muted); border-color: var(--text-dim); }
+.profile-upload-trigger:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--brand-ring); }
+
+/* "Remove current photo" muted text link, red on hover. */
+.profile-upload-remove {
+    background: transparent;
+    border: none;
+    padding: 4px 0;
+    font: inherit;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.12s ease;
+}
+.profile-upload-remove:hover { color: var(--danger-text); text-decoration: underline; }
+.profile-upload-remove:focus-visible { outline: none; color: var(--brand-text); }
+
+/* ── Card action row (Save + Cancel) ───────────────────────── */
 .profile-actions {
     display: flex;
-    gap: 8px;
-    margin-top: 16px;
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+    justify-content: flex-end;
+    align-items: center;
 }
-.profile-actions .auth-btn { width: auto; min-width: 160px; }
+.profile-actions .auth-btn { width: auto; min-width: 140px; }
 
+@media (max-width: 480px) {
+    .profile-actions { flex-direction: column-reverse; align-items: stretch; }
+    .profile-actions .auth-btn { width: 100%; }
+}
+
+/* ── Sign-out button on Account card (full-width on mobile) ── */
 .profile-signout-btn { width: auto; min-width: 160px; }

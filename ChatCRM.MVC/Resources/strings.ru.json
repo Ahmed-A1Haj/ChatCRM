@@ -498,5 +498,9 @@
   "Profile.Password.ConfirmPlaceholder": "Повторите новый пароль",
   "Profile.Password.Submit": "Обновить пароль",
   "Profile.SignOut.Title": "Выйти",
-  "Profile.SignOut.Sub": "Выйти на этом устройстве. Ваши данные остаются в безопасности."
+  "Profile.SignOut.Sub": "Выйти на этом устройстве. Ваши данные остаются в безопасности.",
+  "Profile.Photo.RemoveLink": "Удалить текущее фото",
+  "Profile.EmailChangeWarning": "Новый адрес нужно будет подтвердить, прежде чем он вступит в силу.",
+  "Profile.Account.Title": "Аккаунт",
+  "Profile.Account.Sub": "Выйти на этом устройстве. Ваши данные остаются в безопасности."
 }

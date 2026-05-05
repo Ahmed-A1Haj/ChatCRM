@@ -498,5 +498,9 @@
   "Profile.Password.ConfirmPlaceholder": "Yeni parolayı tekrar gir",
   "Profile.Password.Submit": "Parolayı güncelle",
   "Profile.SignOut.Title": "Çıkış",
-  "Profile.SignOut.Sub": "Bu cihazdan çıkış yap. Verilerin güvende kalır."
+  "Profile.SignOut.Sub": "Bu cihazdan çıkış yap. Verilerin güvende kalır.",
+  "Profile.Photo.RemoveLink": "Mevcut fotoğrafı kaldır",
+  "Profile.EmailChangeWarning": "Yeni adres geçerli olmadan önce doğrulamanız gerekecek.",
+  "Profile.Account.Title": "Hesap",
+  "Profile.Account.Sub": "Bu cihazdan çıkış yap. Verilerin güvende kalır."
 }

@@ -498,5 +498,9 @@
   "Profile.Password.ConfirmPlaceholder": "Re-type your new password",
   "Profile.Password.Submit": "Update password",
   "Profile.SignOut.Title": "Sign out",
-  "Profile.SignOut.Sub": "Sign out of this device. Your data stays safe."
+  "Profile.SignOut.Sub": "Sign out of this device. Your data stays safe.",
+  "Profile.Photo.RemoveLink": "Remove current photo",
+  "Profile.EmailChangeWarning": "You'll need to verify the new address before it takes effect.",
+  "Profile.Account.Title": "Account",
+  "Profile.Account.Sub": "Sign out of this device. Your data stays safe."
 }

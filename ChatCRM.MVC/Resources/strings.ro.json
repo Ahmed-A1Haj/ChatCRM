@@ -498,5 +498,9 @@
   "Profile.Password.ConfirmPlaceholder": "Reintrodu parola nouă",
   "Profile.Password.Submit": "Actualizează parola",
   "Profile.SignOut.Title": "Deconectare",
-  "Profile.SignOut.Sub": "Deconectează-te de pe acest dispozitiv. Datele tale rămân în siguranță."
+  "Profile.SignOut.Sub": "Deconectează-te de pe acest dispozitiv. Datele tale rămân în siguranță.",
+  "Profile.Photo.RemoveLink": "Elimină fotografia curentă",
+  "Profile.EmailChangeWarning": "Va trebui să verifici noua adresă înainte ca aceasta să devină activă.",
+  "Profile.Account.Title": "Cont",
+  "Profile.Account.Sub": "Deconectează-te de pe acest dispozitiv. Datele tale rămân în siguranță."
 }

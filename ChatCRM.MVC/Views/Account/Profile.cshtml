@@ -50,179 +50,250 @@
 
 @await Html.PartialAsync("_DashboardRail", "settings")
 
-<main class="profile-main">
-    <div class="profile-container">
-        <header class="profile-page-head">
-            <h1 class="profile-page-title">@T["Profile.Title"]</h1>
-            <p class="profile-page-sub">@T["Profile.Sub"]</p>
-        </header>
+<section class="profile-shell">
 
-        @if (!string.IsNullOrWhiteSpace(statusMessage))
-        {
-            <div class="auth-alert auth-alert-@(statusType == "error" ? "danger" : statusType)" role="alert">@statusMessage</div>
-        }
-
-        <section class="profile-card">
-            <div class="profile-card-head">
-                <div class="profile-avatar" data-profile-preview-container>
-                    @if (!string.IsNullOrWhiteSpace(Model.ProfileImagePath))
-                    {
-                        <img src="@Model.ProfileImagePath" alt="@displayName" class="profile-avatar-img" data-profile-preview-image />
-                        <span class="profile-avatar-fallback d-none" data-profile-preview-fallback>@initials</span>
-                    }
-                    else
-                    {
-                        <img src="" alt="" class="profile-avatar-img d-none" data-profile-preview-image />
-                        <span class="profile-avatar-fallback" data-profile-preview-fallback>@initials</span>
-                    }
-                </div>
-                <div class="profile-card-head-text">
-                    <h2 class="profile-card-name">@displayName</h2>
-                    <p class="profile-card-email">@Model.Email</p>
-                    <span class="profile-email-pill @(Model.EmailConfirmed ? "is-verified" : "is-pending")">
-                        @(Model.EmailConfirmed ? T["Profile.EmailVerified"].Value : T["Profile.EmailPending"].Value)
-                    </span>
-                </div>
-            </div>
-        </section>
-
-        @* ── Personal info & email ─────────────────────────────────────── *@
-        <section class="profile-card">
-            <header class="profile-section-head">
-                <h2>@T["Profile.EditTitle"]</h2>
-                <p>@T["Profile.EditSub"]</p>
+    <main class="profile-main">
+        <div class="profile-container">
+            <header class="profile-page-head">
+                <h1 class="profile-page-title">@T["Profile.Title"]</h1>
+                <p class="profile-page-sub">@T["Profile.Sub"]</p>
             </header>
 
-            <form asp-action="Profile" method="post" enctype="multipart/form-data" novalidate data-loading-form>
-                @Html.AntiForgeryToken()
+            @if (!string.IsNullOrWhiteSpace(statusMessage))
+            {
+                <div class="auth-alert auth-alert-@(statusType == "error" ? "danger" : statusType)" role="alert">@statusMessage</div>
+            }
 
-                <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
-
-                <div class="profile-grid">
-                    <div class="auth-field">
-                        <label asp-for="FirstName"></label>
-                        <input asp-for="FirstName" class="auth-input" autocomplete="given-name" placeholder="@T["Profile.FirstNamePlaceholder"]" />
-                        <span asp-validation-for="FirstName" class="auth-error"></span>
-                    </div>
-                    <div class="auth-field">
-                        <label asp-for="LastName"></label>
-                        <input asp-for="LastName" class="auth-input" autocomplete="family-name" placeholder="@T["Profile.LastNamePlaceholder"]" />
-                        <span asp-validation-for="LastName" class="auth-error"></span>
-                    </div>
-                    <div class="auth-field">
-                        <label asp-for="Email"></label>
-                        <input asp-for="Email" class="auth-input" autocomplete="email" placeholder="@T["Profile.EmailPlaceholder"]" />
-                        <span asp-validation-for="Email" class="auth-error"></span>
-                    </div>
-                    <div class="auth-field">
-                        <label asp-for="PhoneNumber"></label>
-                        <input asp-for="PhoneNumber" class="auth-input" autocomplete="tel" placeholder="@T["Profile.PhonePlaceholder"]" />
-                        <span asp-validation-for="PhoneNumber" class="auth-error"></span>
-                    </div>
-                </div>
-
-                <div class="profile-upload">
-                    <div class="profile-upload-text">
-                        <h3>@T["Profile.Photo.Title"]</h3>
-                        <p>@T["Profile.Photo.Sub"]</p>
-                    </div>
-                    <div class="auth-field">
-                        <label for="profileImage">@T["Profile.Photo.UploadLabel"]</label>
-                        <input id="profileImage" name="profileImage" type="file" class="auth-input" accept=".jpg,.jpeg,.png,.webp" data-profile-image-input />
-                        <p class="auth-hint">@T["Profile.Photo.Hint"]</p>
-                    </div>
-                    @if (!string.IsNullOrWhiteSpace(Model.ProfileImagePath))
-                    {
-                        <label class="auth-check">
-                            <input asp-for="RemoveProfileImage" />
-                            <span>@T["Profile.Photo.Remove"]</span>
-                        </label>
-                    }
-                </div>
-
-                <div class="profile-actions">
-                    <button type="submit" class="auth-btn auth-btn-primary" data-loading-text="@T["Profile.Saving"]">@T["Profile.SaveChanges"]</button>
-                </div>
-            </form>
-        </section>
-
-        @* ── Change password ──────────────────────────────────────────── *@
-        <section class="profile-card" id="changePasswordSection">
-            <header class="profile-section-head">
-                <h2>@T["Profile.Password.Title"]</h2>
-                <p>@T["Profile.Password.Sub"]</p>
-            </header>
-
-            <form asp-action="ChangePassword" method="post" novalidate>
-                @Html.AntiForgeryToken()
-
-                <div class="profile-grid">
-                    <div class="auth-field">
-                        <label for="CurrentPassword">@T["Profile.Password.Current"]</label>
-                        <div class="auth-password">
-                            <input id="CurrentPassword" name="CurrentPassword" type="password" class="auth-input @(string.IsNullOrEmpty(cpCurrentErr) ? "" : "is-invalid")" autocomplete="current-password" placeholder="@T["Profile.Password.CurrentPlaceholder"]" />
-                            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
-                                <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
-                            </button>
-                        </div>
-                        @if (!string.IsNullOrEmpty(cpCurrentErr))
+            @* ── Identity card ──────────────────────────────────────────── *@
+            <section class="profile-card">
+                <div class="profile-card-head">
+                    <div class="profile-avatar">
+                        @if (!string.IsNullOrWhiteSpace(Model.ProfileImagePath))
                         {
-                            <span class="auth-error">@cpCurrentErr</span>
+                            <img src="@Model.ProfileImagePath" alt="@displayName" class="profile-avatar-img" />
+                        }
+                        else
+                        {
+                            <span class="profile-avatar-fallback">@initials</span>
                         }
                     </div>
-                    <div class="auth-field">
-                        <label for="NewPassword">@T["Profile.Password.New"]</label>
-                        <div class="auth-password">
-                            <input id="NewPassword" name="NewPassword" type="password" class="auth-input @(string.IsNullOrEmpty(cpNewErr) ? "" : "is-invalid")" autocomplete="new-password" placeholder="@T["Profile.Password.NewPlaceholder"]" />
-                            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
-                                <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
-                            </button>
-                        </div>
-                        @if (!string.IsNullOrEmpty(cpNewErr))
-                        {
-                            <span class="auth-error">@cpNewErr</span>
-                        }
-                        <p class="auth-hint">@T["Auth.Register.PasswordHint"]</p>
-                    </div>
-                    <div class="auth-field">
-                        <label for="ConfirmNewPassword">@T["Profile.Password.Confirm"]</label>
-                        <div class="auth-password">
-                            <input id="ConfirmNewPassword" name="ConfirmNewPassword" type="password" class="auth-input @(string.IsNullOrEmpty(cpConfirmErr) ? "" : "is-invalid")" autocomplete="new-password" placeholder="@T["Profile.Password.ConfirmPlaceholder"]" />
-                            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
-                                <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
-                            </button>
-                        </div>
-                        @if (!string.IsNullOrEmpty(cpConfirmErr))
-                        {
-                            <span class="auth-error">@cpConfirmErr</span>
-                        }
+                    <div class="profile-card-head-text">
+                        <h2 class="profile-card-name">@displayName</h2>
+                        <p class="profile-card-email">@Model.Email</p>
+                        <span class="profile-email-pill @(Model.EmailConfirmed ? "is-verified" : "is-pending")">
+                            @(Model.EmailConfirmed ? T["Profile.EmailVerified"].Value : T["Profile.EmailPending"].Value)
+                        </span>
                     </div>
                 </div>
+            </section>
 
-                <div class="profile-actions">
-                    <button type="submit" class="auth-btn auth-btn-primary">@T["Profile.Password.Submit"]</button>
-                </div>
-            </form>
-        </section>
+            @* ── Edit profile card ──────────────────────────────────────── *@
+            <section class="profile-card">
+                <header class="profile-section-head">
+                    <h2>@T["Profile.EditTitle"]</h2>
+                    <p>@T["Profile.EditSub"]</p>
+                </header>
 
-        @* ── Sign out ─────────────────────────────────────────────────── *@
-        <section class="profile-card profile-card-quiet">
-            <header class="profile-section-head">
-                <h2>@T["Profile.SignOut.Title"]</h2>
-                <p>@T["Profile.SignOut.Sub"]</p>
-            </header>
-            <form asp-action="Logout" method="post">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="auth-btn auth-btn-secondary profile-signout-btn">@T["Layout.Nav.SignOut"]</button>
-            </form>
-        </section>
-    </div>
-</main>
+                <form id="profileForm" asp-action="Profile" method="post" enctype="multipart/form-data" novalidate data-loading-form>
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
+
+                    <div class="profile-grid">
+                        <div class="auth-field">
+                            <label asp-for="FirstName"></label>
+                            <input asp-for="FirstName" class="auth-input" autocomplete="given-name" placeholder="@T["Profile.FirstNamePlaceholder"]" />
+                            <span asp-validation-for="FirstName" class="auth-error"></span>
+                        </div>
+                        <div class="auth-field">
+                            <label asp-for="LastName"></label>
+                            <input asp-for="LastName" class="auth-input" autocomplete="family-name" placeholder="@T["Profile.LastNamePlaceholder"]" />
+                            <span asp-validation-for="LastName" class="auth-error"></span>
+                        </div>
+                        <div class="auth-field">
+                            <label asp-for="Email"></label>
+                            <input asp-for="Email" class="auth-input" autocomplete="email" placeholder="@T["Profile.EmailPlaceholder"]" data-original-email="@Model.Email" />
+                            <span asp-validation-for="Email" class="auth-error"></span>
+                            <p class="profile-email-warning d-none" data-email-warning>@T["Profile.EmailChangeWarning"]</p>
+                        </div>
+                        <div class="auth-field">
+                            <label asp-for="PhoneNumber"></label>
+                            <input asp-for="PhoneNumber" class="auth-input" autocomplete="tel" placeholder="@T["Profile.PhonePlaceholder"]" />
+                            <span asp-validation-for="PhoneNumber" class="auth-error"></span>
+                        </div>
+                    </div>
+
+                    @* ── Custom photo upload component ─────────────────────── *@
+                    <div class="profile-upload">
+                        <div class="profile-upload-preview" data-upload-preview>
+                            @if (!string.IsNullOrWhiteSpace(Model.ProfileImagePath))
+                            {
+                                <img src="@Model.ProfileImagePath" alt="@displayName" data-upload-preview-img />
+                            }
+                            else
+                            {
+                                <img src="" alt="" class="d-none" data-upload-preview-img />
+                                <span class="profile-upload-preview-fallback" data-upload-preview-fallback>@initials</span>
+                            }
+                        </div>
+                        <div class="profile-upload-body">
+                            <h3 class="profile-upload-title">@T["Profile.Photo.Title"]</h3>
+                            <p class="profile-upload-help">@T["Profile.Photo.Hint"]</p>
+
+                            <input type="file" id="profileImage" name="profileImage" class="profile-upload-input"
+                                   accept=".jpg,.jpeg,.png,.webp" data-upload-input />
+                            <input asp-for="RemoveProfileImage" type="hidden" data-upload-remove-flag />
+
+                            <div class="profile-upload-actions">
+                                <label for="profileImage" class="profile-upload-trigger" tabindex="0">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                    <span data-upload-trigger-label>@T["Profile.Photo.UploadLabel"]</span>
+                                </label>
+                                <button type="button" class="profile-upload-remove @(string.IsNullOrWhiteSpace(Model.ProfileImagePath) ? "d-none" : "")" data-upload-remove>
+                                    @T["Profile.Photo.RemoveLink"]
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* ── Save / Cancel row ─────────────────────────────────── *@
+                    <div class="profile-actions">
+                        <a asp-action="Profile" class="auth-btn auth-btn-secondary">@T["Action.Cancel"]</a>
+                        <button type="submit" class="auth-btn auth-btn-primary" data-loading-text="@T["Profile.Saving"]">@T["Profile.SaveChanges"]</button>
+                    </div>
+                </form>
+            </section>
+
+            @* ── Change password card ──────────────────────────────────────── *@
+            <section class="profile-card" id="changePasswordSection">
+                <header class="profile-section-head">
+                    <h2>@T["Profile.Password.Title"]</h2>
+                    <p>@T["Profile.Password.Sub"]</p>
+                </header>
+
+                <form asp-action="ChangePassword" method="post" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    <div class="profile-grid">
+                        <div class="auth-field">
+                            <label for="CurrentPassword">@T["Profile.Password.Current"]</label>
+                            <div class="auth-password">
+                                <input id="CurrentPassword" name="CurrentPassword" type="password" class="auth-input @(string.IsNullOrEmpty(cpCurrentErr) ? "" : "is-invalid")" autocomplete="current-password" placeholder="@T["Profile.Password.CurrentPlaceholder"]" />
+                                <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+                                    <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(cpCurrentErr)) { <span class="auth-error">@cpCurrentErr</span> }
+                        </div>
+                        <div class="auth-field">
+                            <label for="NewPassword">@T["Profile.Password.New"]</label>
+                            <div class="auth-password">
+                                <input id="NewPassword" name="NewPassword" type="password" class="auth-input @(string.IsNullOrEmpty(cpNewErr) ? "" : "is-invalid")" autocomplete="new-password" placeholder="@T["Profile.Password.NewPlaceholder"]" />
+                                <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+                                    <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(cpNewErr)) { <span class="auth-error">@cpNewErr</span> }
+                            <p class="auth-hint">@T["Auth.Register.PasswordHint"]</p>
+                        </div>
+                        <div class="auth-field">
+                            <label for="ConfirmNewPassword">@T["Profile.Password.Confirm"]</label>
+                            <div class="auth-password">
+                                <input id="ConfirmNewPassword" name="ConfirmNewPassword" type="password" class="auth-input @(string.IsNullOrEmpty(cpConfirmErr) ? "" : "is-invalid")" autocomplete="new-password" placeholder="@T["Profile.Password.ConfirmPlaceholder"]" />
+                                <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+                                    <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(cpConfirmErr)) { <span class="auth-error">@cpConfirmErr</span> }
+                        </div>
+                    </div>
+
+                    <div class="profile-actions">
+                        <button type="submit" class="auth-btn auth-btn-primary">@T["Profile.Password.Submit"]</button>
+                    </div>
+                </form>
+            </section>
+
+            @* ── Account card ──────────────────────────────────────────────── *@
+            <section class="profile-card profile-card-quiet">
+                <header class="profile-section-head">
+                    <h2>@T["Profile.Account.Title"]</h2>
+                    <p>@T["Profile.Account.Sub"]</p>
+                </header>
+                <form asp-action="Logout" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="auth-btn auth-btn-secondary profile-signout-btn">@T["Layout.Nav.SignOut"]</button>
+                </form>
+            </section>
+        </div>
+    </main>
+</section>
 
 @if (changePasswordOpen)
 {
     <script>document.addEventListener('DOMContentLoaded', () => document.getElementById('changePasswordSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));</script>
 }
+
+<script>
+    /* ── Custom photo upload: live preview + remove link ───────── */
+    (function () {
+        const input    = document.querySelector('[data-upload-input]');
+        const previewImg = document.querySelector('[data-upload-preview-img]');
+        const previewFallback = document.querySelector('[data-upload-preview-fallback]');
+        const removeFlag = document.querySelector('[data-upload-remove-flag]');
+        const removeBtn  = document.querySelector('[data-upload-remove]');
+        const triggerLabel = document.querySelector('[data-upload-trigger-label]');
+        if (!input) return;
+
+        const labelInitial = triggerLabel?.textContent;
+
+        input.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            // Live preview before submit.
+            const url = URL.createObjectURL(file);
+            if (previewImg) {
+                previewImg.src = url;
+                previewImg.classList.remove('d-none');
+                previewImg.onload = () => URL.revokeObjectURL(url);
+            }
+            previewFallback?.classList.add('d-none');
+            removeBtn?.classList.remove('d-none');
+            // Once a new file is chosen we cancel any pending "remove" intent.
+            if (removeFlag) removeFlag.value = 'false';
+            if (triggerLabel && file.name) triggerLabel.textContent = file.name.length > 22 ? file.name.slice(0, 19) + '…' : file.name;
+        });
+
+        removeBtn?.addEventListener('click', () => {
+            // Clear the file input + flip the hidden flag so the server deletes the stored photo.
+            input.value = '';
+            if (removeFlag) removeFlag.value = 'true';
+            previewImg?.classList.add('d-none');
+            if (previewImg) previewImg.src = '';
+            previewFallback?.classList.remove('d-none');
+            removeBtn.classList.add('d-none');
+            if (triggerLabel && labelInitial) triggerLabel.textContent = labelInitial;
+        });
+    })();
+
+    /* ── Email-change inline warning ───────────────────────────── */
+    (function () {
+        const emailField = document.querySelector('input[data-original-email]');
+        const warning    = document.querySelector('[data-email-warning]');
+        if (!emailField || !warning) return;
+        const original = (emailField.dataset.originalEmail || '').trim().toLowerCase();
+        const update = () => {
+            const current = (emailField.value || '').trim().toLowerCase();
+            warning.classList.toggle('d-none', !current || current === original);
+        };
+        emailField.addEventListener('input', update);
+        update();
+    })();
+</script>
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
