@@ -31,4 +31,13 @@
     <ProjectReference Include="..\ChatCRM.Persistence\ChatCRM.Persistence.csproj" />
   </ItemGroup>
 
+  <!-- Translation JSON files: copied next to the binary so the JsonStringLocalizer can read them at runtime.
+       Use <Update> rather than <Include> to override the SDK's implicit Content items without duplicating. -->
+  <ItemGroup>
+    <Content Update="Resources\strings.*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

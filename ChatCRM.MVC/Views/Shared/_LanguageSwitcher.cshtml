@@ -1,0 +1,86 @@
+@*
+    Compact language picker — drop-in chip that opens a dropdown of supported cultures.
+    Renders the active language's native name and POSTs to /language/set with antiforgery.
+
+    Usage in a view or partial:
+        @await Html.PartialAsync("_LanguageSwitcher")
+*@
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+
+@{
+    var current = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant();
+    var languages = new (string Code, string Native, string Flag)[]
+    {
+        ("en", "English",   "🇬🇧"),
+        ("ru", "Русский",   "🇷🇺"),
+        ("ro", "Română",    "🇷🇴"),
+        ("tr", "Türkçe",    "🇹🇷")
+    };
+    var active = languages.FirstOrDefault(l => l.Code == current);
+    if (active.Code is null) active = languages[0];
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+
+<div class="lang-switcher" data-lang-switcher>
+    <button type="button" class="lang-switcher-btn" data-lang-toggle aria-haspopup="listbox" aria-expanded="false" title="@T["Language.Switch"]">
+        <span class="lang-flag">@active.Flag</span>
+        <span class="lang-code">@active.Code.ToUpperInvariant()</span>
+        <svg class="lang-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"/>
+        </svg>
+    </button>
+    <div class="lang-switcher-menu d-none" data-lang-menu role="listbox">
+        @foreach (var lang in languages)
+        {
+            <form method="post" asp-controller="Language" asp-action="Set" class="lang-switcher-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="culture" value="@lang.Code" />
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="lang-switcher-item @(lang.Code == current ? "active" : "")" role="option" aria-selected="@(lang.Code == current ? "true" : "false")">
+                    <span class="lang-flag">@lang.Flag</span>
+                    <span class="lang-name">@lang.Native</span>
+                    @if (lang.Code == current)
+                    {
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                    }
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+<script>
+    (function () {
+        document.querySelectorAll('[data-lang-switcher]').forEach((wrap) => {
+            const btn  = wrap.querySelector('[data-lang-toggle]');
+            const menu = wrap.querySelector('[data-lang-menu]');
+            if (!btn || !menu) return;
+
+            btn.addEventListener('click', () => {
+                // No stopPropagation — let the click bubble so other open popovers (e.g. the
+                // settings rail popover) can dismiss themselves via their document-level
+                // outside-click listeners. Our own outside-click handler below sees the click
+                // is inside `wrap` and keeps this menu open.
+                const open = !menu.classList.contains('d-none');
+                menu.classList.toggle('d-none', open);
+                btn.setAttribute('aria-expanded', String(!open));
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!wrap.contains(e.target)) {
+                    menu.classList.add('d-none');
+                    btn.setAttribute('aria-expanded', 'false');
+                }
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    menu.classList.add('d-none');
+                    btn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+    })();
+</script>

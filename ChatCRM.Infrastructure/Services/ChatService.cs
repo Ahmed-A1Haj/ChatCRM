@@ -2,6 +2,7 @@ using ChatCRM.Application.Chats.DTOs;
 using ChatCRM.Application.Interfaces;
 using ChatCRM.Domain.Entities;
 using ChatCRM.Persistence;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -13,17 +14,20 @@ namespace ChatCRM.Infrastructure.Services
         private readonly AppDbContext _db;
         private readonly IEvolutionService _evolutionService;
         private readonly IHubContext<ChatHub> _hub;
+        private readonly IWebHostEnvironment _env;
         private readonly ILogger<ChatService> _logger;
 
         public ChatService(
             AppDbContext db,
             IEvolutionService evolutionService,
             IHubContext<ChatHub> hub,
+            IWebHostEnvironment env,
             ILogger<ChatService> logger)
         {
             _db = db;
             _evolutionService = evolutionService;
             _hub = hub;
+            _env = env;
             _logger = logger;
         }
 
@@ -73,7 +77,15 @@ namespace ChatCRM.Infrastructure.Services
                     AvatarUrl = c.Contact.AvatarUrl,
                     LastMessage = c.Messages
                         .OrderByDescending(m => m.SentAt)
-                        .Select(m => m.Body)
+                        .Select(m =>
+                            m.IsDeleted ? "\U0001F6AB Message deleted" :
+                            m.Kind == MessageKind.Text || !string.IsNullOrEmpty(m.Body) ? m.Body :
+                            m.Kind == MessageKind.Image    ? "\U0001F4F7 Photo" :
+                            m.Kind == MessageKind.Video    ? "\U0001F3A5 Video" :
+                            m.Kind == MessageKind.Audio    ? "\U0001F3A4 Audio" :
+                            m.Kind == MessageKind.Sticker  ? "\U0001F4CC Sticker" :
+                            m.Kind == MessageKind.Document ? "\U0001F4CE " + (m.MediaFileName ?? "Document") :
+                            string.Empty)
                         .FirstOrDefault() ?? string.Empty,
                     LastMessageAt = c.LastMessageAt,
                     UnreadCount = c.UnreadCount,
@@ -100,6 +112,12 @@ namespace ChatCRM.Infrastructure.Services
                     Direction = m.Direction,
                     Status = m.Status,
                     SentAt = m.SentAt,
+                    Kind = m.Kind,
+                    MediaUrl = m.MediaUrl,
+                    MediaMimeType = m.MediaMimeType,
+                    MediaFileName = m.MediaFileName,
+                    EditedAt = m.EditedAt,
+                    IsDeleted = m.IsDeleted,
                     AuthorName = m.AuthorUser != null
                         ? (string.IsNullOrWhiteSpace(m.AuthorUser.FirstName) ? m.AuthorUser.Email : m.AuthorUser.FirstName + " " + m.AuthorUser.LastName)
                         : null
@@ -128,15 +146,24 @@ namespace ChatCRM.Infrastructure.Services
             conversation.LastMessageAt = message.SentAt;
             await _db.SaveChangesAsync(cancellationToken);
 
-            var sent = await _evolutionService.SendMessageAsync(
+            var result = await _evolutionService.SendMessageAsync(
                 conversation.Instance.InstanceName,
                 conversation.Contact.PhoneNumber,
                 dto.Body,
                 cancellationToken);
 
-            if (!sent)
+            if (!result.Success)
                 _logger.LogWarning("Evolution API failed to deliver message {MessageId} via {Instance} to {Phone}",
                     message.Id, conversation.Instance.InstanceName, conversation.Contact.PhoneNumber);
+
+            // Capture the Baileys message ID + remoteJid so the agent can edit/delete this later.
+            if (!string.IsNullOrEmpty(result.ExternalId))
+            {
+                message.ExternalId = result.ExternalId;
+                if (!string.IsNullOrEmpty(result.RemoteJid) && conversation.Contact.RemoteJid != result.RemoteJid)
+                    conversation.Contact.RemoteJid = result.RemoteJid;
+                await _db.SaveChangesAsync(cancellationToken);
+            }
 
             var instanceUnread = await _db.Conversations
                 .Where(c => c.WhatsAppInstanceId == conversation.WhatsAppInstanceId && !c.IsArchived)
@@ -360,6 +387,319 @@ namespace ChatCRM.Infrastructure.Services
                     Email = u.Email
                 })
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task<MessageDto> EditMessageAsync(int messageId, string newBody, CancellationToken cancellationToken = default)
+        {
+            var message = await _db.Messages
+                .Include(m => m.Conversation).ThenInclude(c => c.Contact)
+                .Include(m => m.Conversation).ThenInclude(c => c.Instance)
+                .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken)
+                ?? throw new InvalidOperationException($"Message {messageId} not found.");
+
+            if (message.Direction != MessageDirection.Outgoing)
+                throw new InvalidOperationException("Only outgoing messages can be edited.");
+            if (message.IsDeleted)
+                throw new InvalidOperationException("Cannot edit a deleted message.");
+            if (string.IsNullOrEmpty(message.ExternalId))
+                throw new InvalidOperationException("This message wasn't accepted by Evolution yet — try again in a moment.");
+
+            var remoteJid = message.Conversation.Contact.RemoteJid
+                            ?? $"{message.Conversation.Contact.PhoneNumber}@s.whatsapp.net";
+
+            var ok = await _evolutionService.EditMessageAsync(
+                message.Conversation.Instance.InstanceName,
+                remoteJid,
+                message.ExternalId,
+                newBody,
+                cancellationToken);
+
+            if (!ok)
+                throw new InvalidOperationException("Evolution rejected the edit. WhatsApp only allows edits within ~15 minutes of sending.");
+
+            message.Body = newBody;
+            message.EditedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
+
+            await _hub.Clients.Group(ChatHub.InstanceGroupName(message.Conversation.WhatsAppInstanceId))
+                .SendAsync("MessageEdited", new
+                {
+                    instanceId = message.Conversation.WhatsAppInstanceId,
+                    conversationId = message.ConversationId,
+                    messageId = message.Id,
+                    body = message.Body,
+                    editedAt = message.EditedAt
+                }, cancellationToken);
+
+            return new MessageDto
+            {
+                Id = message.Id,
+                Body = message.Body,
+                Direction = message.Direction,
+                Status = message.Status,
+                SentAt = message.SentAt,
+                EditedAt = message.EditedAt,
+                Kind = message.Kind,
+                MediaUrl = message.MediaUrl,
+                MediaMimeType = message.MediaMimeType,
+                MediaFileName = message.MediaFileName
+            };
+        }
+
+        public async Task DeleteMessageAsync(int messageId, CancellationToken cancellationToken = default)
+        {
+            var message = await _db.Messages
+                .Include(m => m.Conversation).ThenInclude(c => c.Contact)
+                .Include(m => m.Conversation).ThenInclude(c => c.Instance)
+                .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken)
+                ?? throw new InvalidOperationException($"Message {messageId} not found.");
+
+            if (message.Direction != MessageDirection.Outgoing)
+                throw new InvalidOperationException("Only outgoing messages can be deleted for everyone.");
+            if (message.IsDeleted)
+                return;
+            if (string.IsNullOrEmpty(message.ExternalId))
+                throw new InvalidOperationException("This message wasn't accepted by Evolution yet.");
+
+            var remoteJid = message.Conversation.Contact.RemoteJid
+                            ?? $"{message.Conversation.Contact.PhoneNumber}@s.whatsapp.net";
+
+            var ok = await _evolutionService.DeleteMessageAsync(
+                message.Conversation.Instance.InstanceName,
+                remoteJid,
+                message.ExternalId,
+                cancellationToken);
+
+            if (!ok)
+                throw new InvalidOperationException("Evolution rejected the delete request.");
+
+            message.IsDeleted = true;
+            message.Body = string.Empty;
+            message.MediaUrl = null;
+            message.MediaMimeType = null;
+            message.MediaFileName = null;
+            await _db.SaveChangesAsync(cancellationToken);
+
+            await _hub.Clients.Group(ChatHub.InstanceGroupName(message.Conversation.WhatsAppInstanceId))
+                .SendAsync("MessageDeleted", new
+                {
+                    instanceId = message.Conversation.WhatsAppInstanceId,
+                    conversationId = message.ConversationId,
+                    messageId = message.Id
+                }, cancellationToken);
+        }
+
+        public async Task<MessageDto> SendMediaMessageAsync(
+            int conversationId,
+            byte[] data,
+            string fileName,
+            string mimeType,
+            string? caption,
+            CancellationToken cancellationToken = default)
+        {
+            var conversation = await _db.Conversations
+                .Include(c => c.Contact)
+                .Include(c => c.Instance)
+                .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken)
+                ?? throw new InvalidOperationException($"Conversation {conversationId} not found.");
+
+            var (kind, evolutionMediaType) = ClassifyMedia(mimeType);
+
+            // Save the file under wwwroot/media so the chat UI can render it directly.
+            var rootForMedia = string.IsNullOrWhiteSpace(_env.WebRootPath)
+                ? Path.Combine(_env.ContentRootPath, "wwwroot")
+                : _env.WebRootPath;
+            var mediaDir = Path.Combine(rootForMedia, "media");
+            Directory.CreateDirectory(mediaDir);
+
+            var ext = Path.GetExtension(fileName);
+            if (string.IsNullOrEmpty(ext)) ext = ExtensionForMimeFallback(mimeType);
+            var diskName = $"out-{Guid.NewGuid():N}{ext}";
+            await File.WriteAllBytesAsync(Path.Combine(mediaDir, diskName), data, cancellationToken);
+
+            var message = new Message
+            {
+                ConversationId = conversation.Id,
+                Body = caption ?? string.Empty,
+                Direction = MessageDirection.Outgoing,
+                Status = MessageStatus.Sent,
+                SentAt = DateTime.UtcNow,
+                Kind = kind,
+                MediaUrl = $"/media/{diskName}",
+                MediaMimeType = mimeType,
+                MediaFileName = kind == MessageKind.Document ? fileName : null
+            };
+
+            _db.Messages.Add(message);
+            conversation.LastMessageAt = message.SentAt;
+            await _db.SaveChangesAsync(cancellationToken);
+
+            var result = await _evolutionService.SendMediaAsync(
+                conversation.Instance.InstanceName,
+                conversation.Contact.PhoneNumber,
+                evolutionMediaType,
+                data,
+                mimeType,
+                fileName,
+                caption,
+                cancellationToken);
+
+            if (!result.Success)
+                _logger.LogWarning("Evolution failed to deliver media message {Id}", message.Id);
+
+            if (!string.IsNullOrEmpty(result.ExternalId))
+            {
+                message.ExternalId = result.ExternalId;
+                if (!string.IsNullOrEmpty(result.RemoteJid) && conversation.Contact.RemoteJid != result.RemoteJid)
+                    conversation.Contact.RemoteJid = result.RemoteJid;
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+
+            await BroadcastOutgoingAsync(conversation, message, cancellationToken);
+
+            return ToDto(message);
+        }
+
+        public async Task<MessageDto> SendVoiceNoteAsync(
+            int conversationId,
+            byte[] data,
+            string mimeType,
+            CancellationToken cancellationToken = default)
+        {
+            var conversation = await _db.Conversations
+                .Include(c => c.Contact)
+                .Include(c => c.Instance)
+                .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken)
+                ?? throw new InvalidOperationException($"Conversation {conversationId} not found.");
+
+            var rootForMedia = string.IsNullOrWhiteSpace(_env.WebRootPath)
+                ? Path.Combine(_env.ContentRootPath, "wwwroot")
+                : _env.WebRootPath;
+            var mediaDir = Path.Combine(rootForMedia, "media");
+            Directory.CreateDirectory(mediaDir);
+
+            var ext = ExtensionForMimeFallback(mimeType);
+            var diskName = $"voice-{Guid.NewGuid():N}{ext}";
+            await File.WriteAllBytesAsync(Path.Combine(mediaDir, diskName), data, cancellationToken);
+
+            var message = new Message
+            {
+                ConversationId = conversation.Id,
+                Body = string.Empty,
+                Direction = MessageDirection.Outgoing,
+                Status = MessageStatus.Sent,
+                SentAt = DateTime.UtcNow,
+                Kind = MessageKind.Audio,
+                MediaUrl = $"/media/{diskName}",
+                MediaMimeType = mimeType
+            };
+
+            _db.Messages.Add(message);
+            conversation.LastMessageAt = message.SentAt;
+            await _db.SaveChangesAsync(cancellationToken);
+
+            var result = await _evolutionService.SendVoiceNoteAsync(
+                conversation.Instance.InstanceName,
+                conversation.Contact.PhoneNumber,
+                data,
+                cancellationToken);
+
+            if (!result.Success)
+                _logger.LogWarning("Evolution failed to deliver voice note message {Id}", message.Id);
+
+            if (!string.IsNullOrEmpty(result.ExternalId))
+            {
+                message.ExternalId = result.ExternalId;
+                if (!string.IsNullOrEmpty(result.RemoteJid) && conversation.Contact.RemoteJid != result.RemoteJid)
+                    conversation.Contact.RemoteJid = result.RemoteJid;
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+
+            await BroadcastOutgoingAsync(conversation, message, cancellationToken);
+
+            return ToDto(message);
+        }
+
+        // ── Helpers ─────────────────────────────────────────────────────────
+
+        private async Task BroadcastOutgoingAsync(Conversation conversation, Message message, CancellationToken ct)
+        {
+            var instanceUnread = await _db.Conversations
+                .Where(c => c.WhatsAppInstanceId == conversation.WhatsAppInstanceId && !c.IsArchived)
+                .SumAsync(c => c.UnreadCount, ct);
+
+            var instanceChatCount = await _db.Conversations
+                .Where(c => c.WhatsAppInstanceId == conversation.WhatsAppInstanceId && !c.IsArchived)
+                .CountAsync(ct);
+
+            await _hub.Clients.Group(ChatHub.InstanceGroupName(conversation.WhatsAppInstanceId))
+                .SendAsync("ReceiveMessage", new
+                {
+                    instanceId = conversation.WhatsAppInstanceId,
+                    instanceUnread,
+                    instanceChatCount,
+                    conversationId = conversation.Id,
+                    contactPhone = conversation.Contact.PhoneNumber,
+                    contactName = conversation.Contact.DisplayName,
+                    message = new
+                    {
+                        id = message.Id,
+                        body = message.Body,
+                        direction = (int)message.Direction,
+                        sentAt = message.SentAt,
+                        kind = (int)message.Kind,
+                        mediaUrl = message.MediaUrl,
+                        mediaMimeType = message.MediaMimeType,
+                        mediaFileName = message.MediaFileName
+                    },
+                    unreadCount = conversation.UnreadCount
+                }, ct);
+        }
+
+        private static MessageDto ToDto(Message m) => new()
+        {
+            Id = m.Id,
+            Body = m.Body,
+            Direction = m.Direction,
+            Status = m.Status,
+            SentAt = m.SentAt,
+            EditedAt = m.EditedAt,
+            IsDeleted = m.IsDeleted,
+            Kind = m.Kind,
+            MediaUrl = m.MediaUrl,
+            MediaMimeType = m.MediaMimeType,
+            MediaFileName = m.MediaFileName
+        };
+
+        private static (MessageKind, string evolutionType) ClassifyMedia(string mime)
+        {
+            var bare = (mime ?? "").Split(';')[0].Trim().ToLowerInvariant();
+            if (bare.StartsWith("image/")) return (MessageKind.Image, "image");
+            if (bare.StartsWith("video/")) return (MessageKind.Video, "video");
+            if (bare.StartsWith("audio/")) return (MessageKind.Audio, "audio");
+            return (MessageKind.Document, "document");
+        }
+
+        private static string ExtensionForMimeFallback(string? mime)
+        {
+            if (string.IsNullOrEmpty(mime)) return ".bin";
+            var bare = mime.Split(';')[0].Trim().ToLowerInvariant();
+            return bare switch
+            {
+                "image/jpeg" or "image/jpg" => ".jpg",
+                "image/png" => ".png",
+                "image/gif" => ".gif",
+                "image/webp" => ".webp",
+                "video/mp4" => ".mp4",
+                "video/webm" => ".webm",
+                "audio/ogg" or "audio/ogg; codecs=opus" => ".ogg",
+                "audio/webm" => ".webm",
+                "audio/mpeg" => ".mp3",
+                "audio/mp4" => ".m4a",
+                "audio/wav" => ".wav",
+                "application/pdf" => ".pdf",
+                _ => ".bin"
+            };
         }
     }
 }

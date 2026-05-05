@@ -61,7 +61,7 @@ $body = @{
         url             = $webhookUrl
         webhookByEvents = $false
         webhookBase64   = $false
-        events          = @("MESSAGES_UPSERT")
+        events          = @("MESSAGES_UPSERT", "MESSAGES_UPDATE", "MESSAGES_DELETE")
         headers         = @{ "x-webhook-secret" = $WebhookSecret }
     }
 } | ConvertTo-Json -Depth 5

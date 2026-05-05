@@ -1,3 +1,15 @@
+/* i18n fallback — guarantee t() is callable even if i18n.js failed to load. */
+if (typeof window.t !== 'function') {
+    window.t = function (key) {
+        var dict = window.__i18n__ || {};
+        var value = dict[key] != null ? dict[key] : key;
+        for (var i = 1; i < arguments.length; i++) {
+            value = value.split('{' + (i - 1) + '}').join(String(arguments[i]));
+        }
+        return value;
+    };
+}
+
 /* ─── State ─────────────────────────────────────────────────────────── */
 const state = {
     page: 1,
@@ -12,18 +24,23 @@ const state = {
 };
 
 const STAGES = [
-    { id: 0,  name: 'New Client',          cls: 'gray'    },
-    { id: 1,  name: 'Not Responding',      cls: 'red'     },
-    { id: 2,  name: 'Interested',          cls: 'blue'    },
-    { id: 3,  name: 'Thinking',            cls: 'yellow'  },
-    { id: 4,  name: 'Wants a Meeting',     cls: 'purple'  },
-    { id: 5,  name: 'Waiting for Meeting', cls: 'orange'  },
-    { id: 6,  name: 'Discussed',           cls: 'teal'    },
-    { id: 7,  name: 'Potential Client',    cls: 'indigo'  },
-    { id: 8,  name: 'Will Make Payment',   cls: 'green'   },
-    { id: 9,  name: 'Waiting for Contract',cls: 'amber'   },
-    { id: 10, name: 'Our Client',          cls: 'emerald' }
+    { id: 0,  key: 'Lifecycle.NewClient',          cls: 'gray'    },
+    { id: 1,  key: 'Lifecycle.NotResponding',      cls: 'red'     },
+    { id: 2,  key: 'Lifecycle.Interested',         cls: 'blue'    },
+    { id: 3,  key: 'Lifecycle.Thinking',           cls: 'yellow'  },
+    { id: 4,  key: 'Lifecycle.WantsAMeeting',      cls: 'purple'  },
+    { id: 5,  key: 'Lifecycle.WaitingForMeeting',  cls: 'orange'  },
+    { id: 6,  key: 'Lifecycle.Discussed',          cls: 'teal'    },
+    { id: 7,  key: 'Lifecycle.PotentialClient',    cls: 'indigo'  },
+    { id: 8,  key: 'Lifecycle.WillMakePayment',    cls: 'green'   },
+    { id: 9,  key: 'Lifecycle.WaitingForContract', cls: 'amber'   },
+    { id: 10, key: 'Lifecycle.OurClient',          cls: 'emerald' }
 ];
+
+function stageName(id) {
+    const s = STAGES[id] ?? STAGES[0];
+    return t(s.key);
+}
 
 const CHANNEL_DEFS = [
     { id: 0, name: 'WhatsApp',  icon: 'channel-whatsapp',  cls: 'ch-wa' },
@@ -52,13 +69,13 @@ const token = () => document.querySelector('input[name="__RequestVerificationTok
 function showToast(message, type = 'info') {
     const stack = document.getElementById('toastStack');
     if (!stack) return;
-    const t = document.createElement('div');
-    t.className = `toast toast-${type}`;
-    t.textContent = message;
-    stack.appendChild(t);
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.textContent = message;
+    stack.appendChild(el);
     setTimeout(() => {
-        t.classList.add('toast-out');
-        setTimeout(() => t.remove(), 200);
+        el.classList.add('toast-out');
+        setTimeout(() => el.remove(), 200);
     }, 2400);
 }
 
@@ -70,13 +87,13 @@ function escapeHtml(s) {
 function fmtDateTime(iso) {
     if (!iso) return null;
     const d = new Date(iso);
-    return d.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleString(window.__i18nCulture__ || undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtDate(iso) {
     if (!iso) return null;
     const d = new Date(iso);
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString(window.__i18nCulture__ || undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function muted(text) { return `<span class="cell-muted">${escapeHtml(text)}</span>`; }
@@ -116,7 +133,7 @@ async function loadContacts() {
     if (state.blocked !== '') q.set('blocked', state.blocked);
 
     const tbody = document.getElementById('contactsBody');
-    tbody.innerHTML = '<tr><td colspan="10" class="contacts-empty">Loading…</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="10" class="contacts-empty">${escapeHtml(t('Action.Loading'))}</td></tr>`;
 
     try {
         const resp = await fetch('/api/contacts?' + q.toString());
@@ -126,14 +143,14 @@ async function loadContacts() {
         renderPagination(result);
         updateSortHeaders();
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="10" class="contacts-empty">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="contacts-empty">${escapeHtml(t('Contacts.LoadFailed', e.message))}</td></tr>`;
     }
 }
 
 function renderRows(items) {
     const tbody = document.getElementById('contactsBody');
     if (!items.length) {
-        tbody.innerHTML = '<tr><td colspan="10" class="contacts-empty">No contacts match these filters.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="10" class="contacts-empty">${escapeHtml(t('Contacts.NoMatch'))}</td></tr>`;
         return;
     }
 
@@ -159,7 +176,7 @@ function renderRow(c) {
               <span class="cell-last-text">${escapeHtml(preview)}</span>
               <span class="cell-last-time">${escapeHtml(ts || '')}</span>
            </div>`
-        : `<span class="cell-muted">No messages yet</span>`;
+        : `<span class="cell-muted">${escapeHtml(t('Contacts.NoMessages'))}</span>`;
 
     // Lifecycle — colored badge button
     const stage = STAGES[c.lifecycleStage] ?? STAGES[0];
@@ -167,7 +184,7 @@ function renderRow(c) {
         <button class="badge-btn lc-badge lc-${stage.cls}" type="button"
                 data-popover="lifecycle" data-id="${c.id}" data-current="${c.lifecycleStage}">
             <span class="badge-dot"></span>
-            <span>${escapeHtml(stage.name)}</span>
+            <span>${escapeHtml(t(stage.key))}</span>
             <span class="chev">▾</span>
         </button>`;
 
@@ -184,7 +201,7 @@ function renderRow(c) {
     } else {
         assigneeHtml = `
             <button class="badge-btn unassigned-badge" type="button" data-popover="assignee" data-id="${c.id}" data-current="">
-                <span>Unassigned</span>
+                <span>${escapeHtml(t('Inbox.Unassigned'))}</span>
                 <span class="chev">▾</span>
             </button>`;
     }
@@ -192,25 +209,25 @@ function renderRow(c) {
     // Status — green Open / grey Closed
     const isClosed = c.conversationStatus === 2;
     const statusCls = isClosed ? 'status-closed' : 'status-open';
-    const statusLabel = isClosed ? 'Closed' : 'Open';
+    const statusLabel = isClosed ? t('Inbox.Closed') : t('Inbox.Open');
     const statusHtml = `
         <button class="badge-btn status-badge ${statusCls}" type="button"
                 data-popover="status" data-id="${c.id}" data-current="${isClosed ? 2 : 0}">
             <span class="status-dot-inline"></span>
-            <span>${statusLabel}</span>
+            <span>${escapeHtml(statusLabel)}</span>
             <span class="chev">▾</span>
         </button>`;
 
     // Country / Language with muted "Unknown" fallback
-    const countryHtml = c.country ? escapeHtml(c.country) : muted('Unknown');
+    const countryHtml = c.country ? escapeHtml(c.country) : muted(t('Contacts.Unknown'));
     const langHtml = `
         <input type="text" class="cell-lang-input"
                value="${escapeHtml(c.language || '')}"
-               placeholder="Unknown"
+               placeholder="${escapeHtml(t('Contacts.LangPlaceholder'))}"
                data-action="lang" data-id="${c.id}" />`;
 
     // Blocked tag inline next to name
-    const blockedTag = c.isBlocked ? '<span class="cell-blocked-tag">Blocked</span>' : '';
+    const blockedTag = c.isBlocked ? `<span class="cell-blocked-tag">${escapeHtml(t('Contacts.Blocked'))}</span>` : '';
 
     return `
     <tr data-id="${c.id}" data-conv-id="${c.primaryConversationId ?? ''}" data-instance-id="${c.primaryInstanceId ?? ''}" class="${c.isBlocked ? 'is-blocked' : ''}">
@@ -233,7 +250,7 @@ function renderRow(c) {
         <td>${statusHtml}</td>
         <td class="cell-actions">
             <div class="action-menu-wrap">
-                <button class="action-trigger" type="button" data-popover="actions" data-id="${c.id}" aria-label="Actions">
+                <button class="action-trigger" type="button" data-popover="actions" data-id="${c.id}" aria-label="${escapeHtml(t('Roles.Action.ActionsAria'))}">
                     ${svgIcon('more', 16)}
                 </button>
             </div>
@@ -248,8 +265,8 @@ function renderPagination(result) {
     const to   = Math.min(page * pageSize, total);
 
     document.getElementById('pageInfo').textContent =
-        total === 0 ? 'No contacts' : `${from}–${to} of ${total}`;
-    document.getElementById('pageLabel').textContent = `Page ${page} of ${totalPages}`;
+        total === 0 ? t('Contacts.Pagination.NoContacts') : t('Contacts.Pagination.Range', from, to, total);
+    document.getElementById('pageLabel').textContent = t('Contacts.Pagination.Page', page, totalPages);
     document.getElementById('prevPage').disabled = page <= 1;
     document.getElementById('nextPage').disabled = page >= totalPages;
 }
@@ -273,7 +290,7 @@ function buildLifecyclePopover(currentId, anchorId) {
     const items = STAGES.map(s => `
         <button class="cm-popover-item" data-stage="${s.id}">
             <span class="lc-dot lc-bg-${s.cls}"></span>
-            <span>${s.name}</span>
+            <span>${escapeHtml(t(s.key))}</span>
             ${s.id === currentId ? `<span class="cm-popover-check">${svgIcon('check', 12)}</span>` : ''}
         </button>`).join('');
 
@@ -282,12 +299,12 @@ function buildLifecyclePopover(currentId, anchorId) {
 
 function buildStatusPopover(currentId, anchorId) {
     const items = [
-        { id: 0, label: 'Open',   cls: 'status-open'   },
-        { id: 2, label: 'Closed', cls: 'status-closed' }
+        { id: 0, label: t('Inbox.Open'),   cls: 'status-open'   },
+        { id: 2, label: t('Inbox.Closed'), cls: 'status-closed' }
     ].map(s => `
         <button class="cm-popover-item" data-status="${s.id}">
             <span class="status-dot-inline ${s.cls}"></span>
-            <span>${s.label}</span>
+            <span>${escapeHtml(s.label)}</span>
             ${s.id === currentId ? `<span class="cm-popover-check">${svgIcon('check', 12)}</span>` : ''}
         </button>`).join('');
 
@@ -303,7 +320,7 @@ function buildAssigneePopover(currentUserId, anchorId) {
     const meBtn = (me && myEntry)
         ? `<button class="cm-popover-item" data-assign="${escapeHtml(me)}">
               <span class="assignee-avatar sm">${escapeHtml(avatarInitials(myEntry.name))}</span>
-              <span>Assign to me</span>
+              <span>${escapeHtml(t('Contacts.AssignToMe'))}</span>
               ${currentUserId === me ? `<span class="cm-popover-check">${svgIcon('check', 12)}</span>` : ''}
            </button>`
         : '';
@@ -318,7 +335,7 @@ function buildAssigneePopover(currentUserId, anchorId) {
     const unassign = `
         <button class="cm-popover-item" data-assign="">
             <span class="assignee-avatar sm assignee-none">—</span>
-            <span>Unassigned</span>
+            <span>${escapeHtml(t('Inbox.Unassigned'))}</span>
             ${!currentUserId ? `<span class="cm-popover-check">${svgIcon('check', 12)}</span>` : ''}
         </button>`;
 
@@ -334,18 +351,18 @@ function buildAssigneePopover(currentUserId, anchorId) {
 function buildActionsPopover(id, isBlocked, anchorId) {
     return `<div class="cm-popover cm-popover-actions" data-anchor="${anchorId}" role="menu">
         <button class="cm-popover-item" data-action="view-details">
-            ${svgIcon('eye', 14)}<span>View details</span>
+            ${svgIcon('eye', 14)}<span>${escapeHtml(t('Contacts.Action.ViewDetails'))}</span>
         </button>
         <button class="cm-popover-item" data-action="view-contact">
-            ${svgIcon('user', 14)}<span>View contact</span>
+            ${svgIcon('user', 14)}<span>${escapeHtml(t('Contacts.Action.ViewContact'))}</span>
         </button>
         <div class="cm-popover-sep"></div>
         <button class="cm-popover-item" data-action="block">
             ${isBlocked ? svgIcon('shield', 14) : svgIcon('shield-off', 14)}
-            <span>${isBlocked ? 'Unblock contact' : 'Block contact'}</span>
+            <span>${escapeHtml(isBlocked ? t('Contacts.Action.Unblock') : t('Contacts.Action.Block'))}</span>
         </button>
         <button class="cm-popover-item is-danger" data-action="delete">
-            ${svgIcon('trash', 14)}<span>Delete contact</span>
+            ${svgIcon('trash', 14)}<span>${escapeHtml(t('Contacts.Action.Delete'))}</span>
         </button>
     </div>`;
 }
@@ -420,9 +437,9 @@ document.addEventListener('click', async (e) => {
         const resp = await postJson(`/api/contacts/${id}/lifecycle`, { stage });
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            showToast(err.error || 'Failed to update lifecycle.', 'error');
+            showToast(err.error || t('Contacts.Toast.LifecycleFailed'), 'error');
         } else {
-            showToast(`Lifecycle: ${STAGES[stage].name}`, 'success');
+            showToast(t('Contacts.Toast.LifecycleUpdated', stageName(stage)), 'success');
             loadContacts();
         }
         closeAllPopovers();
@@ -435,9 +452,9 @@ document.addEventListener('click', async (e) => {
         const resp = await postJson(`/api/contacts/${id}/status`, { status });
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            showToast(err.error || 'Failed to update status.', 'error');
+            showToast(err.error || t('Contacts.Toast.StatusFailed'), 'error');
         } else {
-            showToast(status === 2 ? 'Marked as closed' : 'Reopened', 'success');
+            showToast(status === 2 ? t('Contacts.Toast.MarkedClosed') : t('Contacts.Toast.Reopened'), 'success');
             loadContacts();
         }
         closeAllPopovers();
@@ -450,9 +467,9 @@ document.addEventListener('click', async (e) => {
         const resp = await postJson(`/api/contacts/${id}/assign`, { userId: userId || null });
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            showToast(err.error || 'Failed to assign.', 'error');
+            showToast(err.error || t('Contacts.Toast.AssignFailed'), 'error');
         } else {
-            showToast(userId ? 'Assigned' : 'Unassigned', 'success');
+            showToast(userId ? t('Contacts.Toast.Assigned') : t('Contacts.Toast.Unassigned'), 'success');
             loadContacts();
         }
         closeAllPopovers();
@@ -478,7 +495,7 @@ document.addEventListener('click', async (e) => {
             const convId = row?.dataset.convId;
             const instId = row?.dataset.instanceId;
             if (!convId || !instId) {
-                showToast('No conversation found for this contact.', 'error');
+                showToast(t('Contacts.Toast.NoConversation'), 'error');
                 return;
             }
             window.location.href = `/dashboard/chats?instance=${instId}&conversation=${convId}`;
@@ -488,34 +505,34 @@ document.addEventListener('click', async (e) => {
         if (action === 'block') {
             const isBlocked = row?.classList.contains('is-blocked') || false;
             const next = !isBlocked;
-            const name = row?.querySelector('.cell-contact-name')?.textContent.trim() || 'this contact';
+            const name = row?.querySelector('.cell-contact-name')?.textContent.trim() || t('Contacts.ThisContact');
             openConfirm({
-                title: next ? 'Block contact?' : 'Unblock contact?',
+                title: next ? t('Contacts.Confirm.Block.Title') : t('Contacts.Confirm.Unblock.Title'),
                 body: `<strong>${escapeHtml(name)}</strong>`,
                 bullets: next
-                    ? ['No further messages will be processed', 'Existing chat history is kept', 'You can unblock at any time']
-                    : ['Messages from this contact will resume', 'You can re-block at any time'],
-                confirmLabel: next ? 'Block' : 'Unblock',
+                    ? [t('Contacts.Confirm.Block.Bullet1'), t('Contacts.Confirm.Block.Bullet2'), t('Contacts.Confirm.Block.Bullet3')]
+                    : [t('Contacts.Confirm.Unblock.Bullet1'), t('Contacts.Confirm.Unblock.Bullet2')],
+                confirmLabel: next ? t('Contacts.Confirm.Block.Action') : t('Contacts.Confirm.Unblock.Action'),
                 onConfirm: async () => {
                     const resp = await postJson(`/api/contacts/${id}/block`, { blocked: next });
                     if (!resp.ok) {
                         const err = await resp.json().catch(() => ({}));
-                        showToast(err.error || 'Failed.', 'error');
+                        showToast(err.error || t('Contacts.Toast.BlockFailed'), 'error');
                         return;
                     }
-                    showToast(next ? 'Contact blocked' : 'Contact unblocked', 'success');
+                    showToast(next ? t('Contacts.Toast.Blocked') : t('Contacts.Toast.Unblocked'), 'success');
                     loadContacts();
                 }
             });
         }
 
         if (action === 'delete') {
-            const name = row?.querySelector('.cell-contact-name')?.textContent.trim() || 'this contact';
+            const name = row?.querySelector('.cell-contact-name')?.textContent.trim() || t('Contacts.ThisContact');
             openConfirm({
-                title: 'Delete contact?',
+                title: t('Contacts.Confirm.Delete.Title'),
                 body: `<strong>${escapeHtml(name)}</strong>`,
-                bullets: ['All conversations and messages will be deleted', 'This cannot be undone'],
-                confirmLabel: 'Delete forever',
+                bullets: [t('Contacts.Confirm.Delete.Bullet1'), t('Contacts.Confirm.Delete.Bullet2')],
+                confirmLabel: t('Contacts.Confirm.Delete.Action'),
                 isDanger: true,
                 onConfirm: async () => {
                     const resp = await fetch(`/api/contacts/${id}`, {
@@ -524,10 +541,10 @@ document.addEventListener('click', async (e) => {
                     });
                     if (!resp.ok) {
                         const err = await resp.json().catch(() => ({}));
-                        showToast(err.error || 'Delete failed.', 'error');
+                        showToast(err.error || t('Contacts.Toast.DeleteFailed'), 'error');
                         return;
                     }
-                    showToast('Contact deleted', 'success');
+                    showToast(t('Contacts.Toast.Deleted'), 'success');
                     loadContacts();
                 }
             });
@@ -545,12 +562,12 @@ document.addEventListener('change', async (e) => {
         const resp = await postJson(`/api/contacts/${id}/language`, { contactId: id, language: el.value });
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            showToast(err.error || 'Failed to update.', 'error');
+            showToast(err.error || t('Contacts.Toast.LangFailed'), 'error');
             return;
         }
-        showToast('Language updated', 'success');
+        showToast(t('Contacts.Toast.LangUpdated'), 'success');
     } catch (err) {
-        showToast('Network error: ' + err.message, 'error');
+        showToast(t('Toast.NetworkError', err.message), 'error');
     }
 });
 
@@ -563,7 +580,7 @@ function openConfirm({ title, body, bullets, confirmLabel, isDanger, onConfirm }
     document.getElementById('confirmBody').innerHTML = body || '';
     document.getElementById('confirmList').innerHTML = (bullets || []).map(b => `<li>${escapeHtml(b)}</li>`).join('');
     const btn = document.getElementById('confirmAction');
-    btn.textContent = confirmLabel || 'Confirm';
+    btn.textContent = confirmLabel || t('Common.Confirm.Action');
     btn.className = 'btn-ghost ' + (isDanger ? 'btn-danger' : '');
     document.getElementById('confirmModal').classList.remove('d-none');
 }
@@ -582,8 +599,8 @@ document.getElementById('confirmAction')?.addEventListener('click', async () => 
 
 /* ─── Filters / search / sort / paging ──────────────────────────────── */
 function debounce(fn, ms) {
-    let t;
-    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
 }
 
 document.getElementById('searchInput').addEventListener('input', debounce((e) => {
@@ -632,7 +649,7 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
     const label = btn.querySelector('.export-label');
     btn.disabled = true;
     spinner.classList.remove('d-none');
-    label.textContent = 'Exporting…';
+    label.textContent = t('Contacts.Exporting');
 
     const q = new URLSearchParams();
     q.set('sort', state.sort);
@@ -655,13 +672,13 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-        showToast('Export ready', 'success');
+        showToast(t('Contacts.Toast.ExportReady'), 'success');
     } catch (e) {
-        showToast('Export failed: ' + e.message, 'error');
+        showToast(t('Contacts.Toast.ExportFailed', e.message), 'error');
     } finally {
         btn.disabled = false;
         spinner.classList.add('d-none');
-        label.textContent = 'Export to Excel';
+        label.textContent = t('Contacts.Export');
     }
 });
 
@@ -674,11 +691,12 @@ function openContactDetails(conversationId, instanceId) {
     if (!modal) return;
 
     document.getElementById('cdLoading').classList.remove('d-none');
+    document.getElementById('cdLoading').textContent = t('Action.Loading');
     document.getElementById('cdContent').classList.add('d-none');
     modal.classList.remove('d-none');
 
     if (!conversationId) {
-        document.getElementById('cdLoading').textContent = 'No primary conversation for this contact yet.';
+        document.getElementById('cdLoading').textContent = t('Contacts.NoPrimaryConversation');
         return;
     }
 
@@ -694,7 +712,7 @@ function openContactDetails(conversationId, instanceId) {
         .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
         .then(d => populateDetails(d))
         .catch(err => {
-            document.getElementById('cdLoading').textContent = 'Failed to load: ' + err.message;
+            document.getElementById('cdLoading').textContent = t('Contacts.LoadFailed', err.message);
         });
 }
 
@@ -715,7 +733,7 @@ function populateDetails(d) {
     // Lifecycle
     const stage = STAGES[d.lifecycleStage] ?? STAGES[0];
     document.getElementById('cdLifecycle').innerHTML =
-        `<span class="badge-btn lc-${stage.cls}" style="cursor:default"><span class="badge-dot"></span>${escapeHtml(stage.name)}</span>`;
+        `<span class="badge-btn lc-${stage.cls}" style="cursor:default"><span class="badge-dot"></span>${escapeHtml(t(stage.key))}</span>`;
 
     // Channel
     document.getElementById('cdChannel').textContent = d.instanceDisplayName || '—';
@@ -723,31 +741,31 @@ function populateDetails(d) {
     // Country / Language with muted Unknown
     document.getElementById('cdCountry').innerHTML = d.country
         ? escapeHtml(d.country)
-        : '<span class="cell-muted">Unknown</span>';
+        : `<span class="cell-muted">${escapeHtml(t('Contacts.Unknown'))}</span>`;
     document.getElementById('cdLanguage').innerHTML = d.language
         ? escapeHtml(d.language)
-        : '<span class="cell-muted">Unknown</span>';
+        : `<span class="cell-muted">${escapeHtml(t('Contacts.Unknown'))}</span>`;
 
     // Assignee
     if (d.assignedUserName) {
         document.getElementById('cdAssigned').innerHTML =
             `<span class="cd-assignee"><span class="assignee-avatar">${escapeHtml(avatarInitials(d.assignedUserName))}</span>${escapeHtml(d.assignedUserName)}</span>`;
     } else {
-        document.getElementById('cdAssigned').innerHTML = '<span class="cell-muted">Unassigned</span>';
+        document.getElementById('cdAssigned').innerHTML = `<span class="cell-muted">${escapeHtml(t('Inbox.Unassigned'))}</span>`;
     }
 
     // Status
     const isClosed = d.conversationStatus === 2;
     document.getElementById('cdStatus').innerHTML =
         `<span class="badge-btn status-badge ${isClosed ? 'status-closed' : 'status-open'}" style="cursor:default">
-            <span class="status-dot-inline"></span>${isClosed ? 'Closed' : 'Open'}
+            <span class="status-dot-inline"></span>${escapeHtml(isClosed ? t('Inbox.Closed') : t('Inbox.Open'))}
         </span>`;
 
     // Other fields
     const blocked = d.isBlocked === true;
     document.getElementById('cdBlocked').innerHTML = blocked
-        ? '<span class="cell-blocked-tag">Blocked</span>'
-        : 'No';
+        ? `<span class="cell-blocked-tag">${escapeHtml(t('Contacts.Blocked'))}</span>`
+        : escapeHtml(t('Contacts.NotBlocked'));
     document.getElementById('cdCreated').textContent = fmtDate(d.contactCreatedAt) || '—';
     document.getElementById('cdMsgCount').textContent = d.messageCount ?? 0;
     document.getElementById('cdNoteCount').textContent = d.noteCount ?? 0;

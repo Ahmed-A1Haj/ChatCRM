@@ -39,7 +39,8 @@ namespace ChatCRM.MVC.Controllers
 
             _logger.LogInformation("Webhook received: event={Event}", payload.Event);
 
-            if (payload.Event is "messages.upsert" or "messages.received")
+            if (payload.Event is "messages.upsert" or "messages.received"
+                              or "messages.update" or "messages.edited" or "messages.delete")
             {
                 await _evolutionService.HandleIncomingWebhookAsync(payload, cancellationToken);
             }

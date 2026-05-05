@@ -1,6 +1,11 @@
 /* ─── Shell layout (left rail + 3-panel) ───────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Visibility helper used by the rail popovers, language switcher, and modals.
+   Defined here (in the foundational dashboard CSS) so every page that mounts
+   the rail gets it without needing to load Bootstrap. */
+.d-none { display: none !important; }
+
 body.inbox-shell {
     margin: 0;
     height: 100dvh;
@@ -1236,3 +1241,65 @@ body.inbox-shell {
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 .filter-select:focus { outline: none; border-color: var(--brand-200); box-shadow: 0 0 0 3px var(--brand-ring); }
+
+/* ─── Language switcher ──────────────────────────────────────────── */
+.lang-switcher { position: relative; display: inline-block; }
+
+.lang-switcher-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #475569;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+    padding: 0;
+}
+.lang-switcher-btn:hover { background: rgba(15, 23, 42, 0.06); color: #0f172a; }
+.lang-flag { font-size: 16px; line-height: 1; }
+.lang-code { letter-spacing: 0.5px; font-size: 9px; }
+.lang-chevron { display: none; }
+
+.lang-switcher-menu {
+    position: absolute;
+    bottom: 0;
+    left: calc(100% + 12px);
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.04);
+    padding: 6px;
+    z-index: 1100;
+    animation: msgMenuIn 0.14s cubic-bezier(.2,.8,.3,1);
+}
+.lang-switcher-form { display: block; margin: 0; }
+.lang-switcher-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 8px 10px;
+    border-radius: 6px;
+    text-align: left;
+    font: inherit;
+    font-size: 13px;
+    color: #1f2937;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+.lang-switcher-item:hover { background: #f1f5f9; }
+.lang-switcher-item.active { color: #4f46e5; background: rgba(79, 70, 229, 0.06); }
+.lang-switcher-item .lang-name { flex: 1; }
+.lang-switcher-item svg { color: #4f46e5; }

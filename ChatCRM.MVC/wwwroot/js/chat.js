@@ -1,3 +1,15 @@
+/* i18n fallback — guarantee t() is callable even if i18n.js failed to load. */
+if (typeof window.t !== 'function') {
+    window.t = function (key) {
+        var dict = window.__i18n__ || {};
+        var value = dict[key] != null ? dict[key] : key;
+        for (var i = 1; i < arguments.length; i++) {
+            value = value.split('{' + (i - 1) + '}').join(String(arguments[i]));
+        }
+        return value;
+    };
+}
+
 /* ─── State ─────────────────────────────────────────────────────────── */
 let activeConversationId = null;
 let atBottom = true;
@@ -41,6 +53,14 @@ connection.on('ReceiveMessage', (data) => {
 connection.on('ConversationRead', ({ conversationId, instanceId, instanceUnread }) => {
     updateBadge(conversationId, 0);
     if (instanceId) updateInstanceDropdownUnread(instanceId, instanceUnread);
+});
+
+connection.on('MessageEdited', ({ conversationId, messageId, body, editedAt }) => {
+    if (conversationId === activeConversationId) applyMessageEdit(messageId, body, editedAt);
+});
+
+connection.on('MessageDeleted', ({ conversationId, messageId }) => {
+    if (conversationId === activeConversationId) applyMessageDelete(messageId);
 });
 
 connection.on('InstanceStatusChanged', ({ id, status }) => {
@@ -181,7 +201,7 @@ async function assignTo(userId) {
 
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            showToast(err.error || 'Failed to update assignment.', 'error');
+            showToast(err.error || t('Toast.AssignFailed'), 'error');
             return;
         }
 
@@ -191,9 +211,9 @@ async function assignTo(userId) {
         document.getElementById('assignLabel').textContent = label;
         document.getElementById('assignMenu')?.classList.add('d-none');
         loadContactDetails(activeConversationId);
-        showToast(userId ? `Assigned to ${label}` : 'Conversation unassigned', 'success');
+        showToast(userId ? t('Toast.AssignedTo', label) : t('Toast.Unassigned'), 'success');
     } catch (e) {
-        showToast('Network error: ' + e.message, 'error');
+        showToast(t('Toast.NetworkError', e.message), 'error');
     }
 }
 
@@ -213,9 +233,9 @@ async function setStatus(status) {
         }
         applyStatusToHeader(status);
         document.getElementById('statusMenu')?.classList.add('d-none');
-        showToast(status === 0 ? 'Conversation reopened' : 'Conversation closed', 'success');
+        showToast(status === 0 ? t('Toast.ConversationReopened') : t('Toast.ConversationClosed'), 'success');
     } catch (e) {
-        showToast('Network error: ' + e.message, 'error');
+        showToast(t('Toast.NetworkError', e.message), 'error');
     }
 }
 
@@ -336,10 +356,10 @@ async function sendMessage(event) {
         input.value = '';
         if (composeMode === 'note') {
             loadContactDetails(activeConversationId);
-            showToast('Note added', 'success');
+            showToast(t('Toast.NoteAdded'), 'success');
         }
     } catch (err) {
-        showToast('Network error: ' + err.message, 'error');
+        showToast(t('Toast.NetworkError', err.message), 'error');
     } finally {
         btn.disabled = false;
         input.disabled = false;
@@ -348,6 +368,9 @@ async function sendMessage(event) {
 }
 
 /* ─── DOM helpers ───────────────────────────────────────────────────── */
+/* Message kinds — must mirror ChatCRM.Domain.Entities.MessageKind */
+const MSG_KIND = { TEXT: 0, IMAGE: 1, VIDEO: 2, AUDIO: 3, DOCUMENT: 4, STICKER: 5 };
+
 function buildBubble(msg) {
     const direction = msg.direction;
     const isOutgoing = direction === 1;
@@ -366,11 +389,89 @@ function buildBubble(msg) {
 
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
-    bubble.textContent = msg.body;
+
+    const kind = msg.kind ?? MSG_KIND.TEXT;
+    const mediaUrl = msg.mediaUrl;
+
+    if (msg.isDeleted) {
+        bubble.classList.add('msg-bubble-deleted');
+        bubble.innerHTML = `<span class="msg-deleted-icon">🚫</span> Message deleted`;
+    } else if (kind === MSG_KIND.TEXT || !mediaUrl) {
+        // Plain text — or media that hasn't been fetched yet (placeholder).
+        if (mediaUrl == null && kind !== MSG_KIND.TEXT) {
+            bubble.classList.add('msg-bubble-pending');
+            bubble.textContent = mediaPendingLabel(kind, msg.mediaFileName);
+        } else {
+            bubble.textContent = msg.body || '';
+        }
+    } else if (kind === MSG_KIND.IMAGE || kind === MSG_KIND.STICKER) {
+        bubble.classList.add('msg-bubble-media');
+        const img = document.createElement('img');
+        img.className = 'msg-image';
+        img.loading = 'lazy';
+        img.src = mediaUrl;
+        img.alt = msg.body || 'image';
+        img.addEventListener('click', () => openLightbox(mediaUrl));
+        bubble.appendChild(img);
+        if (msg.body) {
+            const cap = document.createElement('div');
+            cap.className = 'msg-caption';
+            cap.textContent = msg.body;
+            bubble.appendChild(cap);
+        }
+    } else if (kind === MSG_KIND.VIDEO) {
+        bubble.classList.add('msg-bubble-media');
+        const v = document.createElement('video');
+        v.className = 'msg-video';
+        v.controls = true;
+        v.preload = 'metadata';
+        v.src = mediaUrl;
+        bubble.appendChild(v);
+        if (msg.body) {
+            const cap = document.createElement('div');
+            cap.className = 'msg-caption';
+            cap.textContent = msg.body;
+            bubble.appendChild(cap);
+        }
+    } else if (kind === MSG_KIND.AUDIO) {
+        const a = document.createElement('audio');
+        a.className = 'msg-audio';
+        a.controls = true;
+        a.preload = 'metadata';
+        a.src = mediaUrl;
+        bubble.appendChild(a);
+    } else if (kind === MSG_KIND.DOCUMENT) {
+        bubble.classList.add('msg-bubble-doc');
+        const link = document.createElement('a');
+        link.className = 'msg-doc';
+        link.href = mediaUrl;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.download = msg.mediaFileName || '';
+        link.innerHTML = `<span class="msg-doc-icon">📄</span>`
+            + `<span class="msg-doc-meta">`
+            + `<span class="msg-doc-name">${escapeHtml(msg.mediaFileName || 'Document')}</span>`
+            + `<span class="msg-doc-hint">Click to download</span>`
+            + `</span>`;
+        bubble.appendChild(link);
+        if (msg.body) {
+            const cap = document.createElement('div');
+            cap.className = 'msg-caption';
+            cap.textContent = msg.body;
+            bubble.appendChild(cap);
+        }
+    }
 
     const meta = document.createElement('div');
     meta.className = 'msg-meta';
     meta.textContent = formatMsgTime(msg.sentAt);
+
+    if (msg.editedAt && !msg.isDeleted) {
+        const editedTag = document.createElement('span');
+        editedTag.className = 'msg-edited-tag';
+        editedTag.textContent = 'edited';
+        meta.appendChild(editedTag);
+    }
 
     if (isOutgoing) {
         const tick = document.createElement('span');
@@ -379,9 +480,399 @@ function buildBubble(msg) {
         meta.appendChild(tick);
     }
 
+    // Edit / delete-for-everyone on outgoing bubbles. WhatsApp-style:
+    //  • Right-click anywhere on the bubble → context menu at cursor (primary)
+    //  • Long-press on touch devices → same menu
+    //  • Hover kebab still present for discoverability + accessibility (keyboard / mouse-only users)
+    if (isOutgoing && !msg.isDeleted) {
+        wrapper.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            // Without stopPropagation, this event also bubbles up to the document-level
+            // close-listener registered by the previous menu, which would kill the menu we
+            // are about to open in the same tick.
+            e.stopPropagation();
+            openMessageActionMenuAt(msg, e.clientX, e.clientY);
+        });
+
+        // Long-press (mobile) — fires after 500ms of touch hold without movement.
+        let lpTimer = null;
+        let lpStart = null;
+        wrapper.addEventListener('touchstart', (e) => {
+            const t = e.touches[0];
+            lpStart = { x: t.clientX, y: t.clientY };
+            lpTimer = setTimeout(() => {
+                if (navigator.vibrate) navigator.vibrate(15);
+                openMessageActionMenuAt(msg, lpStart.x, lpStart.y);
+                lpTimer = null;
+            }, 500);
+        }, { passive: true });
+        const cancelLP = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+        wrapper.addEventListener('touchend',    cancelLP);
+        wrapper.addEventListener('touchcancel', cancelLP);
+        wrapper.addEventListener('touchmove',   (e) => {
+            if (!lpStart || !lpTimer) return;
+            const t = e.touches[0];
+            if (Math.hypot(t.clientX - lpStart.x, t.clientY - lpStart.y) > 8) cancelLP();
+        }, { passive: true });
+    }
+
     wrapper.appendChild(bubble);
     wrapper.appendChild(meta);
     return wrapper;
+}
+
+function openMessageActionMenuAt(msg, clientX, clientY) {
+    closeMessageActionMenus();
+    const menu = document.createElement('div');
+    menu.className = 'msg-action-menu';
+
+    // Edit only makes sense on text bubbles + bubbles that have a caption (image/video/document with body).
+    const canEdit = (msg.kind === MSG_KIND.TEXT) || (msg.body && msg.body.length > 0);
+    if (canEdit) {
+        const editItem = document.createElement('button');
+        editItem.type = 'button';
+        editItem.className = 'msg-action-item';
+        editItem.innerHTML = renderIcon('edit', 14) + '<span>' + escapeHtml(t('Action.Edit')) + '</span>';
+        editItem.addEventListener('click', () => { closeMessageActionMenus(); promptEdit(msg); });
+        menu.appendChild(editItem);
+    }
+
+    const deleteItem = document.createElement('button');
+    deleteItem.type = 'button';
+    deleteItem.className = 'msg-action-item msg-action-danger';
+    deleteItem.innerHTML = renderIcon('trash', 14) + '<span>' + escapeHtml(t('Action.Delete')) + '</span>';
+    deleteItem.addEventListener('click', () => { closeMessageActionMenus(); confirmDelete(msg); });
+    menu.appendChild(deleteItem);
+
+    // Render off-screen first so we can measure dimensions, then clamp into the viewport.
+    menu.style.position = 'fixed';
+    menu.style.left = '-9999px';
+    menu.style.top  = '-9999px';
+    document.body.appendChild(menu);
+
+    const pad = 8;
+    const mw = menu.offsetWidth;
+    const mh = menu.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let x = clientX;
+    let y = clientY;
+    if (x + mw + pad > vw) x = vw - mw - pad;     // would overflow right
+    if (y + mh + pad > vh) y = clientY - mh;      // flip above the cursor
+    if (x < pad) x = pad;
+    if (y < pad) y = pad;
+
+    menu.style.left = x + 'px';
+    menu.style.top  = y + 'px';
+
+    // Highlight the target bubble while its menu is open (WhatsApp-Web style).
+    const wrapper = document.querySelector(`.msg[data-msg-id="${msg.id}"]`);
+    wrapper?.classList.add('msg-menu-open');
+
+    // Lifecycle of the dismissal listeners: register on the next tick so the click/contextmenu
+    // that opened this menu doesn't immediately close it, then remove them ALL when the menu
+    // goes away (whether by user pick, click-outside, Esc, or another menu opening on top).
+    const dismiss = () => closeMessageActionMenus();
+    const onKey   = (e) => { if (e.key === 'Escape') closeMessageActionMenus(); };
+
+    let armed = false;
+    setTimeout(() => {
+        document.addEventListener('click',       dismiss);
+        document.addEventListener('contextmenu', dismiss);
+        document.addEventListener('keydown',     onKey);
+        window.addEventListener  ('blur',        dismiss);
+        armed = true;
+    }, 0);
+
+    menu._cleanup = () => {
+        wrapper?.classList.remove('msg-menu-open');
+        if (!armed) return;
+        document.removeEventListener('click',       dismiss);
+        document.removeEventListener('contextmenu', dismiss);
+        document.removeEventListener('keydown',     onKey);
+        window.removeEventListener  ('blur',        dismiss);
+    };
+}
+
+function closeMessageActionMenus() {
+    document.querySelectorAll('.msg-action-menu').forEach(m => {
+        try { m._cleanup?.(); } catch { /* noop */ }
+        m.remove();
+    });
+}
+
+async function promptEdit(msg) {
+    const trimmed = await openEditModal(msg.body || '');
+    if (trimmed == null || !trimmed || trimmed === (msg.body ?? '')) return;
+
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    try {
+        const resp = await fetch('/dashboard/chats/edit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({ messageId: msg.id, body: trimmed })
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.error || t('Toast.EditFailed'), 'error');
+            return;
+        }
+        // SignalR will broadcast MessageEdited to all tabs (including this one) — UI updates from there.
+    } catch (e) {
+        showToast(t('Toast.NetworkError', e.message), 'error');
+    }
+}
+
+async function confirmDelete(msg) {
+    const ok = await openConfirmModal({
+        title: t('Modal.Delete.Title'),
+        body: t('Modal.Delete.Body'),
+        confirmLabel: t('Action.Delete'),
+        cancelLabel: t('Action.Cancel'),
+        danger: true
+    });
+    if (!ok) return;
+
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    try {
+        const resp = await fetch('/dashboard/chats/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({ messageId: msg.id })
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.error || t('Toast.DeleteFailed'), 'error');
+            return;
+        }
+    } catch (e) {
+        showToast(t('Toast.NetworkError', e.message), 'error');
+    }
+}
+
+/* ─── In-app modals (replace window.prompt / window.confirm) ─────── */
+
+function openModalShell(content) {
+    const overlay = document.createElement('div');
+    overlay.className = 'app-modal-overlay';
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+    // Trap focus + clicks-outside-to-close
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.dataset.dismiss = 'true'; });
+    return overlay;
+}
+
+function openEditModal(initialText) {
+    return new Promise((resolve) => {
+        const dlg = document.createElement('div');
+        dlg.className = 'app-modal';
+        dlg.innerHTML = `
+            <div class="app-modal-head">
+                <h3>${escapeHtml(t('Modal.Edit.Title'))}</h3>
+                <button type="button" class="app-modal-close" aria-label="${escapeHtml(t('Action.Close'))}">×</button>
+            </div>
+            <div class="app-modal-body">
+                <textarea class="app-modal-textarea" rows="4"></textarea>
+                <p class="app-modal-hint">${escapeHtml(t('Modal.Edit.Hint'))}</p>
+            </div>
+            <div class="app-modal-foot">
+                <button type="button" class="app-modal-btn app-modal-btn-ghost" data-action="cancel">${escapeHtml(t('Action.Cancel'))}</button>
+                <button type="button" class="app-modal-btn app-modal-btn-primary" data-action="save">${escapeHtml(t('Action.Save'))}</button>
+            </div>
+        `;
+        const overlay = openModalShell(dlg);
+        const ta = dlg.querySelector('textarea');
+        ta.value = initialText;
+        setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 0);
+
+        const close = (val) => { overlay.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
+        const onKey = (e) => {
+            if (e.key === 'Escape') close(null);
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) close(ta.value.trim());
+        };
+        document.addEventListener('keydown', onKey);
+        dlg.querySelector('[data-action="save"]').onclick = () => close(ta.value.trim());
+        dlg.querySelector('[data-action="cancel"]').onclick = () => close(null);
+        dlg.querySelector('.app-modal-close').onclick = () => close(null);
+        const watchOverlay = setInterval(() => {
+            if (overlay.dataset.dismiss === 'true') { clearInterval(watchOverlay); close(null); }
+        }, 50);
+    });
+}
+
+function openConfirmModal({ title, body, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false }) {
+    return new Promise((resolve) => {
+        const dlg = document.createElement('div');
+        dlg.className = 'app-modal app-modal-narrow';
+        dlg.innerHTML = `
+            <div class="app-modal-head">
+                <h3></h3>
+                <button type="button" class="app-modal-close" aria-label="Close">×</button>
+            </div>
+            <div class="app-modal-body">
+                <p class="app-modal-text"></p>
+            </div>
+            <div class="app-modal-foot">
+                <button type="button" class="app-modal-btn app-modal-btn-ghost" data-action="cancel"></button>
+                <button type="button" class="app-modal-btn ${danger ? 'app-modal-btn-danger' : 'app-modal-btn-primary'}" data-action="ok"></button>
+            </div>
+        `;
+        dlg.querySelector('h3').textContent = title;
+        dlg.querySelector('.app-modal-text').textContent = body;
+        dlg.querySelector('[data-action="cancel"]').textContent = cancelLabel;
+        dlg.querySelector('[data-action="ok"]').textContent = confirmLabel;
+
+        const overlay = openModalShell(dlg);
+        const close = (val) => { overlay.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
+        const onKey = (e) => {
+            if (e.key === 'Escape') close(false);
+            if (e.key === 'Enter') close(true);
+        };
+        document.addEventListener('keydown', onKey);
+        dlg.querySelector('[data-action="ok"]').onclick = () => close(true);
+        dlg.querySelector('[data-action="cancel"]').onclick = () => close(false);
+        dlg.querySelector('.app-modal-close').onclick = () => close(false);
+        const watch = setInterval(() => {
+            if (overlay.dataset.dismiss === 'true') { clearInterval(watch); close(false); }
+        }, 50);
+    });
+}
+
+/// Caption modal used by the file picker AND the paste handler.
+/// Shows the file/preview, lets the user write a caption, returns either the caption (string,
+/// possibly empty) or null when the user cancels.
+function openCaptionModal(file) {
+    return new Promise((resolve) => {
+        const dlg = document.createElement('div');
+        dlg.className = 'app-modal';
+        dlg.innerHTML = `
+            <div class="app-modal-head">
+                <h3>${escapeHtml(t('Modal.Caption.Title'))}</h3>
+                <button type="button" class="app-modal-close" aria-label="${escapeHtml(t('Action.Close'))}">×</button>
+            </div>
+            <div class="app-modal-body">
+                <div class="app-modal-preview"></div>
+                <input type="text" class="app-modal-input" placeholder="${escapeHtml(t('Modal.Caption.Placeholder'))}" maxlength="1024" />
+            </div>
+            <div class="app-modal-foot">
+                <button type="button" class="app-modal-btn app-modal-btn-ghost" data-action="cancel">${escapeHtml(t('Action.Cancel'))}</button>
+                <button type="button" class="app-modal-btn app-modal-btn-primary" data-action="send">${escapeHtml(t('Action.Send'))}</button>
+            </div>
+        `;
+        const preview = dlg.querySelector('.app-modal-preview');
+        if (file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.onload = () => URL.revokeObjectURL(img.src);
+            preview.appendChild(img);
+        } else if (file.type.startsWith('video/')) {
+            const v = document.createElement('video');
+            v.src = URL.createObjectURL(file);
+            v.controls = true;
+            v.preload = 'metadata';
+            preview.appendChild(v);
+        } else {
+            preview.innerHTML = `<div class="app-modal-file-card">
+                <div class="app-modal-file-icon">📎</div>
+                <div>
+                    <div class="app-modal-file-name">${escapeHtml(file.name)}</div>
+                    <div class="app-modal-file-size">${(file.size / 1024).toFixed(1)} KB · ${escapeHtml(file.type || 'unknown')}</div>
+                </div>
+            </div>`;
+        }
+
+        const overlay = openModalShell(dlg);
+        const input = dlg.querySelector('input');
+        setTimeout(() => input.focus(), 0);
+
+        const close = (val) => { overlay.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
+        const onKey = (e) => {
+            if (e.key === 'Escape') close(null);
+            if (e.key === 'Enter') close(input.value.trim());
+        };
+        document.addEventListener('keydown', onKey);
+        dlg.querySelector('[data-action="send"]').onclick = () => close(input.value.trim());
+        dlg.querySelector('[data-action="cancel"]').onclick = () => close(null);
+        dlg.querySelector('.app-modal-close').onclick = () => close(null);
+        const watch = setInterval(() => {
+            if (overlay.dataset.dismiss === 'true') { clearInterval(watch); close(null); }
+        }, 50);
+    });
+}
+
+function applyMessageEdit(messageId, body, editedAtIso) {
+    const wrapper = document.querySelector(`.msg[data-msg-id="${messageId}"]`);
+    if (!wrapper) return;
+    const bubble = wrapper.querySelector('.msg-bubble');
+    if (!bubble) return;
+    // For text bubbles we replace .textContent. For media bubbles, the body is the caption —
+    // find or create a .msg-caption element instead of stomping the <img>/<video>/etc.
+    if (bubble.classList.contains('msg-bubble-media') || bubble.classList.contains('msg-bubble-doc')) {
+        let cap = bubble.querySelector('.msg-caption');
+        if (!cap) {
+            cap = document.createElement('div');
+            cap.className = 'msg-caption';
+            bubble.appendChild(cap);
+        }
+        cap.textContent = body;
+    } else {
+        bubble.textContent = body;
+    }
+    const meta = wrapper.querySelector('.msg-meta');
+    if (meta && !meta.querySelector('.msg-edited-tag')) {
+        const tag = document.createElement('span');
+        tag.className = 'msg-edited-tag';
+        tag.textContent = 'edited';
+        // Insert before the read-receipt tick if present
+        const tick = meta.querySelector('.msg-tick');
+        if (tick) meta.insertBefore(tag, tick);
+        else meta.appendChild(tag);
+    }
+}
+
+function applyMessageDelete(messageId) {
+    const wrapper = document.querySelector(`.msg[data-msg-id="${messageId}"]`);
+    if (!wrapper) return;
+    const bubble = wrapper.querySelector('.msg-bubble');
+    if (!bubble) return;
+    bubble.className = 'msg-bubble msg-bubble-deleted';
+    bubble.innerHTML = `<span class="msg-deleted-icon">🚫</span> Message deleted`;
+    // Strip any "edited" tag from the meta row.
+    wrapper.querySelector('.msg-edited-tag')?.remove();
+}
+
+function mediaPendingLabel(kind, fileName) {
+    switch (kind) {
+        case MSG_KIND.IMAGE:    return '📷 Photo (loading…)';
+        case MSG_KIND.VIDEO:    return '🎥 Video (loading…)';
+        case MSG_KIND.AUDIO:    return '🎤 Audio (loading…)';
+        case MSG_KIND.STICKER:  return '📌 Sticker';
+        case MSG_KIND.DOCUMENT: return '📎 ' + (fileName || 'Document');
+        default:                return '';
+    }
+}
+
+/* Sidebar preview — what to show under the contact name when the last message
+   is a media item with no caption. */
+function previewForMessage(msg) {
+    if (msg.body) return msg.body;
+    switch (msg.kind ?? MSG_KIND.TEXT) {
+        case MSG_KIND.IMAGE:    return '📷 Photo';
+        case MSG_KIND.VIDEO:    return '🎥 Video';
+        case MSG_KIND.AUDIO:    return '🎤 Audio';
+        case MSG_KIND.STICKER:  return '📌 Sticker';
+        case MSG_KIND.DOCUMENT: return '📎 ' + (msg.mediaFileName || 'Document');
+        default:                return '';
+    }
+}
+
+function openLightbox(src) {
+    const overlay = document.createElement('div');
+    overlay.className = 'msg-lightbox';
+    overlay.innerHTML = `<img src="${escapeHtml(src)}" alt="">`;
+    overlay.addEventListener('click', () => overlay.remove());
+    document.body.appendChild(overlay);
 }
 
 function escapeHtml(s) {
@@ -442,7 +933,7 @@ function updateSidebarRow(conversationId, message, unreadCount) {
 
     const preview = item.querySelector('.conv-preview');
     if (preview) {
-        const text = message.body ?? '';
+        const text = previewForMessage(message);
         preview.textContent = text.length > 55 ? text.slice(0, 55) + '…' : text;
     }
 
@@ -515,6 +1006,11 @@ function formatSidebarTime(iso) {
 const ICON_PATHS = {
     'check':         '<polyline points="20 6 9 17 4 12"/>',
     'check-double':  '<polyline points="7 11 11 15 17 9"/><polyline points="13 11 17 15 23 9"/>',
+    'more-vertical': '<circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>',
+    'more-horizontal':'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+    'edit':          '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+    'trash':         '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
+    'chevron-down':  '<polyline points="6 9 12 15 18 9"/>',
 };
 
 function renderIcon(name, size = 16) {
@@ -540,11 +1036,23 @@ function showToast(message, type = 'info') {
 }
 
 /* ─── Lifecycle stage ─────────────────────────────────────────────── */
-const LIFECYCLE_LABELS = [
-    'New Client', 'Not Responding', 'Interested', 'Thinking',
-    'Wants a Meeting', 'Waiting for Meeting', 'Discussed',
-    'Potential Client', 'Will Make Payment', 'Waiting for Contract', 'Our Client'
+/* Labels are pulled lazily from the i18n dictionary so a language switch
+   doesn't require a redeploy of the JS. Keys mirror Lifecycle.* in the
+   JSON resource files. */
+const LIFECYCLE_KEYS = [
+    'Lifecycle.NewClient', 'Lifecycle.NotResponding', 'Lifecycle.Interested', 'Lifecycle.Thinking',
+    'Lifecycle.WantsAMeeting', 'Lifecycle.WaitingForMeeting', 'Lifecycle.Discussed',
+    'Lifecycle.PotentialClient', 'Lifecycle.WillMakePayment', 'Lifecycle.WaitingForContract', 'Lifecycle.OurClient'
 ];
+const LIFECYCLE_LABELS = new Proxy(LIFECYCLE_KEYS, {
+    get(target, prop) {
+        if (typeof prop === 'string' && /^\d+$/.test(prop)) {
+            const key = target[Number(prop)];
+            return key ? (window.t ? window.t(key) : key.replace(/^Lifecycle\./, '')) : undefined;
+        }
+        return Reflect.get(target, prop);
+    }
+});
 
 const LIFECYCLE_COLORS = [
     '#94a3b8', '#ef4444', '#3b82f6', '#8b5cf6',
@@ -598,8 +1106,191 @@ async function setLifecycle(stage) {
 
         applyLifecycleToHeader(stage);
         document.getElementById('lifecycleMenu')?.classList.add('d-none');
-        showToast(`Lifecycle: ${LIFECYCLE_LABELS[stage]}`, 'success');
+        showToast(t('Toast.LifecycleUpdated', LIFECYCLE_LABELS[stage]), 'success');
     } catch (e) {
-        showToast('Network error: ' + e.message, 'error');
+        showToast(t('Toast.NetworkError', e.message), 'error');
     }
 }
+
+/* ─── Attach (image / file) ────────────────────────────────────────── */
+async function sendAttachment(event) {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // reset so the same file can be picked twice
+    if (!file) return;
+    const caption = await openCaptionModal(file);
+    if (caption == null) return; // user cancelled
+    await uploadMediaFile(file, caption);
+}
+
+/// Shared upload helper used by file picker, paste handler, and (eventually) drag-and-drop.
+async function uploadMediaFile(file, caption) {
+    if (!file || !activeConversationId) return;
+
+    if (file.size > 30 * 1024 * 1024) {
+        showToast(t('Toast.FileTooLarge'), 'error');
+        return;
+    }
+
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const fd = new FormData();
+    fd.append('conversationId', String(activeConversationId));
+    fd.append('file', file);
+    if (caption && caption.trim()) fd.append('caption', caption.trim());
+
+    showToast(t('Toast.Uploading'), 'info');
+    try {
+        const resp = await fetch('/dashboard/chats/send-media', {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': token },
+            body: fd
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.error || t('Toast.UploadFailed'), 'error');
+            return;
+        }
+        // SignalR delivers the new bubble back to this tab.
+    } catch (e) {
+        showToast(t('Toast.NetworkError', e.message), 'error');
+    }
+}
+
+/// Clipboard paste — picks up images copied from anywhere (browser, screenshot tool,
+/// file explorer) and sends them through the same upload pipeline.
+function setupPasteHandler() {
+    const handler = async (e) => {
+        if (!activeConversationId) return;
+        const items = e.clipboardData?.items;
+        if (!items || items.length === 0) return;
+
+        for (const item of items) {
+            if (item.kind === 'file' && (item.type.startsWith('image/') || item.type.startsWith('video/'))) {
+                const file = item.getAsFile();
+                if (!file) continue;
+                e.preventDefault();
+                // Browsers paste clipboard images as "image.png" — give it a friendlier name with a timestamp.
+                const ext = (file.type.split('/')[1] || 'png').split('+')[0];
+                const stamped = new File([file], `pasted-${Date.now()}.${ext}`, { type: file.type });
+                const caption = await openCaptionModal(stamped);
+                if (caption == null) return;
+                await uploadMediaFile(stamped, caption);
+                return;
+            }
+        }
+    };
+
+    // Listen on the message input (most natural place to paste) AND on the chat window
+    // (so paste works even when the input doesn't have focus).
+    document.getElementById('messageInput')?.addEventListener('paste', handler);
+    document.getElementById('chatMessages')?.addEventListener('paste', handler);
+    // Make chatMessages focusable so it can receive paste events at all.
+    document.getElementById('chatMessages')?.setAttribute('tabindex', '0');
+}
+
+document.addEventListener('DOMContentLoaded', setupPasteHandler);
+
+/* ─── Voice notes (click-to-toggle) ─────────────────────────────────
+   Single click on the mic starts recording; second click stops and sends.
+   Esc or the cancel button in the recording bar discards. */
+let voiceRecorder = null;
+let voiceChunks = [];
+let voiceStartTs = 0;
+let voiceTimer = null;
+let voiceCancelled = false;
+
+function setupVoiceButton() {
+    const btn = document.getElementById('voiceBtn');
+    if (!btn) return;
+    btn.addEventListener('click', toggleVoice);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && voiceRecorder) cancelVoice();
+    });
+    document.getElementById('voiceCancelBtn')?.addEventListener('click', cancelVoice);
+}
+
+function toggleVoice() {
+    if (voiceRecorder) stopVoice();
+    else startVoice();
+}
+
+async function startVoice() {
+    if (voiceRecorder || !activeConversationId) {
+        if (!activeConversationId) showToast(t('Toast.SelectConversation'), 'error');
+        return;
+    }
+    voiceCancelled = false;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // WebM/Opus is universally supported in Chromium/Firefox; iOS Safari falls back to mp4.
+        const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+                  : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus'
+                  : '';
+        voiceRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        voiceChunks = [];
+        voiceRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) voiceChunks.push(e.data); };
+        voiceRecorder.onstop = async () => {
+            stream.getTracks().forEach(t => t.stop());
+            document.getElementById('voiceRecordingBar')?.classList.add('d-none');
+            document.getElementById('voiceBtn')?.classList.remove('is-recording');
+            clearInterval(voiceTimer);
+            const wasCancelled = voiceCancelled;
+            const chunks = voiceChunks;
+            const recMime = voiceRecorder.mimeType || 'audio/webm';
+            voiceRecorder = null;
+            if (wasCancelled || chunks.length === 0) return;
+            await uploadVoice(new Blob(chunks, { type: recMime }));
+        };
+        voiceRecorder.start();
+        voiceStartTs = Date.now();
+        document.getElementById('voiceRecordingBar')?.classList.remove('d-none');
+        document.getElementById('voiceBtn')?.classList.add('is-recording');
+        document.getElementById('voiceRecTime').textContent = '0:00';
+        voiceTimer = setInterval(() => {
+            const s = Math.floor((Date.now() - voiceStartTs) / 1000);
+            document.getElementById('voiceRecTime').textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+        }, 250);
+    } catch (e) {
+        showToast(t('Toast.MicDenied'), 'error');
+        voiceRecorder = null;
+    }
+}
+
+function stopVoice() {
+    if (!voiceRecorder) return;
+    // Refuse to send a sub-half-second blip — likely an accidental double-click.
+    if (Date.now() - voiceStartTs < 500) {
+        cancelVoice();
+        return;
+    }
+    voiceRecorder.stop();
+}
+
+function cancelVoice() {
+    if (!voiceRecorder) return;
+    voiceCancelled = true;
+    voiceRecorder.stop();
+}
+
+async function uploadVoice(blob) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const fd = new FormData();
+    fd.append('conversationId', String(activeConversationId));
+    fd.append('audio', blob, 'voice.webm');
+
+    showToast(t('Toast.SendingVoice'), 'info');
+    try {
+        const resp = await fetch('/dashboard/chats/send-voice', {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': token },
+            body: fd
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.error || t('Toast.VoiceFailed'), 'error');
+        }
+    } catch (e) {
+        showToast(t('Toast.NetworkError', e.message), 'error');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', setupVoiceButton);

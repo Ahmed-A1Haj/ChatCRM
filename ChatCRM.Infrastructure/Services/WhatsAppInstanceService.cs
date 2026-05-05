@@ -215,7 +215,7 @@ namespace ChatCRM.Infrastructure.Services
                         url = webhookUrl,
                         webhookByEvents = false,
                         webhookBase64 = false,
-                        events = new[] { "MESSAGES_UPSERT" },
+                        events = new[] { "MESSAGES_UPSERT", "MESSAGES_UPDATE", "MESSAGES_DELETE" },
                         headers = new Dictionary<string, string> { ["x-webhook-secret"] = webhookSecret ?? "" }
                     }
                 };
