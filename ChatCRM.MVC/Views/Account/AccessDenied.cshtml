@@ -1,19 +1,13 @@
 @inject Microsoft.Extensions.Localization.IStringLocalizer T
 @{
+    Layout = "_AuthLayout";
     ViewData["Title"] = T["Auth.AccessDenied.Title"].Value;
 }
 
-<section class="auth-page">
-    <div class="auth-card text-center">
-        <div class="auth-copy">
-            <span class="eyebrow">@T["Auth.AccessDenied.Eyebrow"]</span>
-            <h1>@T["Auth.AccessDenied.Heading"]</h1>
-            <p>@T["Auth.AccessDenied.Sub"]</p>
-        </div>
+<h1 class="auth-heading">@T["Auth.AccessDenied.Heading"]</h1>
+<p class="auth-sub">@T["Auth.AccessDenied.Sub"]</p>
 
-        <div class="hero-actions justify-content-center">
-            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary">@T["Auth.AccessDenied.BackHome"]</a>
-            <a asp-action="Login" class="btn btn-accent">@T["Auth.AccessDenied.SignInOther"]</a>
-        </div>
-    </div>
-</section>
+<div class="auth-btn-row">
+    <a asp-action="Login" class="auth-btn auth-btn-primary">@T["Auth.AccessDenied.SignInOther"]</a>
+    <a href="/" class="auth-btn auth-btn-secondary">@T["Auth.AccessDenied.BackHome"]</a>
+</div>

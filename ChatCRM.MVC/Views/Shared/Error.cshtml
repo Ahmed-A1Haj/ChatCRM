@@ -1,23 +1,21 @@
 @model ErrorViewModel
 @inject Microsoft.Extensions.Localization.IStringLocalizer T
 @{
+    Layout = "_AuthLayout";
     ViewData["Title"] = T["Error.Title"].Value;
+    ViewData["AuthCardClass"] = "auth-card-wide";
 }
 
-<h1 class="text-danger">@T["Error.Heading"]</h1>
-<h2 class="text-danger">@T["Error.SubHeading"]</h2>
+<h1 class="auth-heading">@T["Error.Heading"]</h1>
+<p class="auth-sub">@T["Error.SubHeading"]</p>
 
-@if (Model.ShowRequestId)
-{
-    <p>
-        <strong>@T["Error.RequestId"]</strong> <code>@Model.RequestId</code>
-    </p>
-}
+<div class="auth-static-body">
+    @if (Model.ShowRequestId)
+    {
+        <p><strong>@T["Error.RequestId"]</strong> <code>@Model.RequestId</code></p>
+    }
+</div>
 
-<h3>@T["Error.DevModeHeading"]</h3>
-<p>
-    @Html.Raw(T["Error.DevModeBody1"].Value)
-</p>
-<p>
-    @Html.Raw(T["Error.DevModeBody2"].Value)
-</p>
+<div class="auth-btn-row">
+    <a href="/" class="auth-btn auth-btn-secondary">@T["Auth.AccessDenied.BackHome"]</a>
+</div>

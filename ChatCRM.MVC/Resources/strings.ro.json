@@ -10,21 +10,17 @@
   "Inbox.Snoozed": "Amânat",
   "Inbox.Open": "Deschis",
   "Inbox.Unassigned": "Neatribuit",
-
   "Inbox.Filter.All": "Toate",
   "Inbox.Filter.Mine": "Ale mele",
   "Inbox.Filter.Unassigned": "Neatribuite",
   "Inbox.Filter.Closed": "Închise",
-
   "Inbox.Channel.All": "Toate canalele",
   "Inbox.Channel.WhatsApp": "WhatsApp",
   "Inbox.Channel.Instagram": "Instagram",
   "Inbox.Channel.Messenger": "Messenger",
-
   "Inbox.SwitchNumber": "Schimbă numărul",
   "Inbox.ManageNumbers": "Gestionează numerele",
   "Inbox.ManageNumbersHint": "Adaugă, deconectează, configurează",
-
   "Compose.Reply": "Răspunde",
   "Compose.Note": "Notă internă",
   "Compose.TypeMessage": "Scrie un mesaj…",
@@ -34,7 +30,6 @@
   "Compose.RecordVoice": "Înregistrează un mesaj vocal (apasă o dată pentru a începe, încă o dată pentru a trimite)",
   "Compose.RecordingHint": "Apasă din nou microfonul pentru a trimite · Esc pentru a anula",
   "Compose.RecordingDiscard": "Renunță la înregistrare",
-
   "Action.Edit": "Editează",
   "Action.Delete": "Șterge pentru toți",
   "Action.Cancel": "Anulează",
@@ -48,20 +43,17 @@
   "Action.Done": "Gata",
   "Action.Back": "Înapoi",
   "Action.Refresh": "Reîmprospătează",
-
   "Modal.Edit.Title": "Editează mesajul",
   "Modal.Edit.Hint": "WhatsApp permite editări doar în primele ~15 minute după trimitere.",
   "Modal.Delete.Title": "Ștergi pentru toți?",
   "Modal.Delete.Body": "Acest mesaj va fi eliminat atât pentru tine, cât și pentru contact. Acțiune ireversibilă.",
   "Modal.Caption.Title": "Trimite fișier",
   "Modal.Caption.Placeholder": "Adaugă o descriere (opțional)…",
-
   "Header.Assign": "Atribuie",
   "Header.AssignTo": "Atribuie către",
   "Header.Status": "Stare",
   "Header.Lifecycle": "Etapă",
   "Header.ContactDetails": "Detalii contact",
-
   "Lifecycle.NewClient": "Client nou",
   "Lifecycle.NotResponding": "Nu răspunde",
   "Lifecycle.Interested": "Interesat",
@@ -73,7 +65,6 @@
   "Lifecycle.WillMakePayment": "Va plăti",
   "Lifecycle.WaitingForContract": "Așteaptă contract",
   "Lifecycle.OurClient": "Clientul nostru",
-
   "ContactPanel.Phone": "Telefon",
   "ContactPanel.Channel": "Canal",
   "ContactPanel.Assigned": "Atribuit",
@@ -84,11 +75,9 @@
   "ContactPanel.Tags": "Etichete",
   "ContactPanel.About": "Despre",
   "ContactPanel.Activity": "Activitate",
-
   "Date.Today": "Astăzi",
   "Date.Yesterday": "Ieri",
   "Time.JustNow": "acum",
-
   "Message.Deleted": "Mesaj șters",
   "Message.Edited": "editat",
   "Message.Photo": "Fotografie",
@@ -96,7 +85,6 @@
   "Message.Audio": "Audio",
   "Message.Sticker": "Sticker",
   "Message.Document": "Document",
-
   "Toast.Uploading": "Se încarcă…",
   "Toast.UploadFailed": "Încărcarea a eșuat.",
   "Toast.SendingVoice": "Se trimite mesajul vocal…",
@@ -114,7 +102,6 @@
   "Toast.AssignedTo": "Atribuit lui {0}",
   "Toast.Unassigned": "Atribuire eliminată",
   "Toast.LifecycleUpdated": "Etapă: {0}",
-
   "Rail.Inbox": "Mesaje",
   "Rail.Contacts": "Contacte",
   "Rail.Settings": "Setări",
@@ -123,13 +110,11 @@
   "Rail.PersonalSettings": "Setări personale",
   "Rail.Channels": "Canale",
   "Rail.UserManagement": "Utilizatori",
-
   "Language.Switch": "Limbă",
   "Language.English": "English",
   "Language.Russian": "Русский",
   "Language.Romanian": "Română",
   "Language.Turkish": "Türkçe",
-
   "Layout.Nav.Home": "Acasă",
   "Layout.Nav.Chats": "Chat-uri",
   "Layout.Nav.Privacy": "Confidențialitate",
@@ -140,7 +125,6 @@
   "Layout.Nav.AccountFallback": "Cont",
   "Layout.Footer.Copy": "© 2026 ChatCRM",
   "Layout.Footer.Privacy": "Confidențialitate",
-
   "Contacts.Title": "Contacte",
   "Contacts.Subtitle": "Răsfoiește și administrează pe toți cei care v-au contactat vreodată.",
   "Contacts.Export": "Exportă în Excel",
@@ -222,7 +206,6 @@
   "Contacts.Toast.ExportFailed": "Export eșuat: {0}",
   "Contacts.AssignToMe": "Atribuie-mi",
   "Contacts.ThisContact": "acest contact",
-
   "Users.Title": "Utilizatori",
   "Users.Subtitle": "Invită, editează și administrează pe toți cei care au acces la ChatCRM.",
   "Users.AddUser": "Adaugă utilizator",
@@ -268,7 +251,6 @@
   "Users.Confirm.Delete.Body": "<strong>{0}</strong> va fi eliminat permanent. Acțiune ireversibilă.",
   "Users.Confirm.Delete.Action": "Șterge",
   "Users.ThisUser": "acest utilizator",
-
   "Roles.Title": "Roluri și permisiuni",
   "Roles.Subtitle": "Definește ce poate face fiecare rol în sistem.",
   "Roles.AddRole": "Adaugă rol",
@@ -329,12 +311,10 @@
   "Roles.Confirm.Delete.BodyWithUsersMany": "Rolul <strong>{0}</strong> are <strong>{1}</strong> utilizatori atribuiți. Reatribuie-i înainte de ștergere.",
   "Roles.Confirm.Delete.CannotDelete": "Nu se poate șterge",
   "Roles.Confirm.Delete.Action": "Șterge",
-
   "SettingsNav.Title": "Setări",
   "SettingsNav.Channels": "Canale",
   "SettingsNav.Users": "Utilizatori",
   "SettingsNav.Roles": "Roluri și permisiuni",
-
   "Channels.Title": "Canale",
   "Channels.Subtitle": "Conectează platformele de mesagerie cu clienții la ChatCRM. Conversațiile din toate canalele conectate ajung în aceeași căsuță.",
   "Channels.Status.Active": "Activ",
@@ -348,7 +328,6 @@
   "Channels.ConnectedNumbersOne": "număr conectat",
   "Channels.ConnectedNumbersMany": "numere conectate",
   "Channels.Manage": "Gestionează →",
-
   "WhatsApp.Title": "Numere WhatsApp",
   "WhatsApp.Subtitle": "Conectează și gestionează toate liniile WhatsApp asociate.",
   "WhatsApp.AddNumber": "Adaugă număr",
@@ -407,7 +386,6 @@
   "WhatsApp.Error.Conflict": "Există deja un număr cu acest nume.",
   "WhatsApp.Error.CreateFailed": "Crearea instanței a eșuat (HTTP {0}).",
   "WhatsApp.Error.NetworkError": "Eroare de rețea: {0}",
-
   "Auth.Login.Title": "Conectare",
   "Auth.Login.Eyebrow": "Bine ai revenit",
   "Auth.Login.Heading": "Conectează-te la ChatCRM",
@@ -421,7 +399,6 @@
   "Auth.Login.Submit": "Conectare",
   "Auth.Login.Footer": "Ai nevoie de un cont?",
   "Auth.Login.CreateOne": "Creează unul aici",
-
   "Auth.Register.Title": "Creează cont",
   "Auth.Register.Eyebrow": "Începe",
   "Auth.Register.Heading": "Creează contul ChatCRM",
@@ -432,7 +409,6 @@
   "Auth.Register.Submit": "Creează cont",
   "Auth.Register.Footer": "Ai deja cont?",
   "Auth.Register.SignIn": "Conectare",
-
   "Auth.Forgot.Title": "Resetează parola",
   "Auth.Forgot.Eyebrow": "Recuperare cont",
   "Auth.Forgot.Heading": "Resetează-ți parola",
@@ -440,7 +416,6 @@
   "Auth.Forgot.Submit": "Trimite link de resetare",
   "Auth.Forgot.Footer": "Ți-ai amintit parola?",
   "Auth.Forgot.BackToSignIn": "Înapoi la conectare",
-
   "Auth.Reset.Title": "Alege o parolă nouă",
   "Auth.Reset.Eyebrow": "Finalizare resetare",
   "Auth.Reset.Heading": "Alege o parolă nouă",
@@ -448,7 +423,6 @@
   "Auth.Reset.PasswordPlaceholder": "Creează o parolă nouă",
   "Auth.Reset.ConfirmPlaceholder": "Repetă parola nouă",
   "Auth.Reset.Submit": "Actualizează parola",
-
   "Auth.Verify.Title": "Verifică email-ul",
   "Auth.Verify.Eyebrow": "Încă un pas",
   "Auth.Verify.Heading": "Verifică-ți adresa de email",
@@ -458,14 +432,12 @@
   "Auth.Verify.Submit": "Retrimite email de verificare",
   "Auth.Verify.Footer": "Deja verificat?",
   "Auth.Verify.SignIn": "Conectare",
-
   "Auth.AccessDenied.Title": "Acces refuzat",
   "Auth.AccessDenied.Eyebrow": "Permisiune necesară",
   "Auth.AccessDenied.Heading": "Acces refuzat",
   "Auth.AccessDenied.Sub": "Nu ai permisiunea de a vedea această pagină cu contul curent.",
   "Auth.AccessDenied.BackHome": "Înapoi acasă",
   "Auth.AccessDenied.SignInOther": "Conectează-te cu alt cont",
-
   "Profile.Title": "Profilul tău",
   "Profile.Eyebrow": "Profil cont",
   "Profile.Sub": "Actualizează datele de contact și alege o imagine de profil care apare în toată aplicația.",
@@ -488,7 +460,6 @@
   "Profile.SaveChanges": "Salvează modificările",
   "Profile.Saving": "Se salvează...",
   "Profile.BackHome": "Înapoi acasă",
-
   "Home.Title": "Bine ai venit",
   "Home.Eyebrow": "Conversații sigure cu clienții",
   "Home.Heading": "ChatCRM începe acum cu o conectare mai sigură și mai fluidă.",
@@ -502,10 +473,8 @@
   "Home.Stat.Recovery": "Resetare parolă self-service",
   "Home.Stat.ExperienceLabel": "Experiență",
   "Home.Stat.Experience": "Validare clară și îndrumare prietenoasă",
-
   "Privacy.Title": "Politică de confidențialitate",
   "Privacy.Body": "Folosește această pagină pentru a detalia politica de confidențialitate a site-ului.",
-
   "Error.Title": "Eroare",
   "Error.Heading": "Eroare.",
   "Error.SubHeading": "A apărut o eroare la procesarea cererii.",
@@ -513,11 +482,21 @@
   "Error.DevModeHeading": "Mod dezvoltare",
   "Error.DevModeBody1": "Trecerea la mediul <strong>Development</strong> va afișa informații mai detaliate despre eroarea apărută.",
   "Error.DevModeBody2": "<strong>Mediul Development nu trebuie activat în aplicațiile implementate.</strong> Poate duce la afișarea de informații sensibile din excepții către utilizatorii finali. Pentru depanare locală, activează mediul <strong>Development</strong> setând variabila <strong>ASPNETCORE_ENVIRONMENT</strong> la <strong>Development</strong> și repornește aplicația.",
-
   "Common.Confirm.Title": "Confirmă",
   "Common.Confirm.Cancel": "Anulează",
   "Common.Confirm.Action": "Confirmă",
   "Common.Close": "Închide",
   "Common.UnknownUser": "Utilizator necunoscut",
-  "Common.AssignedToTitle": "Atribuit lui {0}"
+  "Common.AssignedToTitle": "Atribuit lui {0}",
+  "Profile.Password.Title": "Schimbă parola",
+  "Profile.Password.Sub": "Folosește cel puțin 10 caractere cu litere mari, mici și cifre.",
+  "Profile.Password.Current": "Parola actuală",
+  "Profile.Password.CurrentPlaceholder": "Introdu parola actuală",
+  "Profile.Password.New": "Parolă nouă",
+  "Profile.Password.NewPlaceholder": "Parolă nouă",
+  "Profile.Password.Confirm": "Confirmă parola nouă",
+  "Profile.Password.ConfirmPlaceholder": "Reintrodu parola nouă",
+  "Profile.Password.Submit": "Actualizează parola",
+  "Profile.SignOut.Title": "Deconectare",
+  "Profile.SignOut.Sub": "Deconectează-te de pe acest dispozitiv. Datele tale rămân în siguranță."
 }

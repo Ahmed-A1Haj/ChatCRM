@@ -1,3 +1,6 @@
 ﻿@{
-    Layout = "_Layout";
+    // Default layout for any view that doesn't set Layout explicitly. The dashboard pages set
+    // `Layout = null` and render their own <html>; the auth/static pages opt into _AuthLayout
+    // explicitly. This default is just a safety net so a forgotten Layout never crashes the app.
+    Layout = "_AuthLayout";
 }

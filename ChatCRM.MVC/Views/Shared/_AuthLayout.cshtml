@@ -1,0 +1,76 @@
+@*
+    Auth / static-page layout. Adopts the dashboard's tokens (tokens.css) — indigo accent,
+    soft neutrals, white card on light gray, no Bootstrap navbar, no marketing copy.
+
+    Used by Login, Register, ForgotPassword, ResetPassword, VerifyEmail, AccessDenied,
+    Privacy, and Error.
+*@
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+
+@{
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+
+    var statusMessage = TempData["StatusMessage"] as string;
+    var statusType    = (TempData["StatusType"] as string ?? "info").ToLowerInvariant();
+    var alertClass    = statusType switch
+    {
+        "success" => "auth-alert-success",
+        "warning" => "auth-alert-warning",
+        "danger"  => "auth-alert-danger",
+        "error"   => "auth-alert-danger",
+        _          => "auth-alert-info"
+    };
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="auth-shell">
+
+    <header class="auth-topbar">
+        <a class="auth-brand" href="/" title="ChatCRM">
+            <span class="auth-brand-mark">
+                <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M9 11.5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-6.5l-3 3v-3H11a2 2 0 0 1-2-2v-6z" fill="white"/>
+                </svg>
+            </span>
+            <span>ChatCRM</span>
+        </a>
+    </header>
+
+    <main class="auth-main">
+        <div class="auth-card @ViewData["AuthCardClass"]">
+            @if (!string.IsNullOrWhiteSpace(statusMessage))
+            {
+                <div class="auth-alert @alertClass" role="alert">@statusMessage</div>
+            }
+
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer class="auth-footer-bar">
+        @await Html.PartialAsync("_LanguageSwitcher")
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

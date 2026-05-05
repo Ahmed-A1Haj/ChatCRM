@@ -1,0 +1,171 @@
+/* ─── Profile / Manage Profile (renders inside the dashboard layout — rail + page) ──── */
+
+.profile-main {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg-page);
+}
+
+.profile-container {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 32px 32px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.profile-page-head { margin-bottom: 4px; }
+
+.profile-page-title {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+}
+
+.profile-page-sub {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13.5px;
+}
+
+/* ── Card surface ──────────────────────────────────────────── */
+.profile-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    padding: 24px;
+}
+
+.profile-card-quiet { background: var(--bg-soft); }
+
+.profile-section-head { margin-bottom: 16px; }
+.profile-section-head h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+}
+.profile-section-head p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* ── Header card (avatar + name) ───────────────────────────── */
+.profile-card-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.profile-avatar {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    position: relative;
+}
+
+.profile-avatar-img {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.profile-avatar-fallback {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--brand-100);
+    color: var(--brand-text);
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.d-none { display: none !important; }
+
+.profile-card-head-text { flex: 1; min-width: 0; }
+
+.profile-card-name {
+    margin: 0 0 2px;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.profile-card-email {
+    margin: 0 0 8px;
+    color: var(--text-muted);
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.profile-email-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 500;
+}
+.profile-email-pill.is-verified { background: var(--ok-bg);   color: var(--ok-text); }
+.profile-email-pill.is-pending  { background: var(--warn-bg); color: var(--warn-text); }
+
+/* ── Form grid ─────────────────────────────────────────────── */
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+}
+
+.profile-grid .auth-field { margin-bottom: 0; }
+
+@media (max-width: 640px) {
+    .profile-grid { grid-template-columns: 1fr; }
+    .profile-card-head { flex-direction: column; align-items: flex-start; }
+    .profile-container { padding: 20px; }
+}
+
+/* ── Upload section ────────────────────────────────────────── */
+.profile-upload {
+    margin-top: 18px;
+    padding: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.profile-upload-text h3 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+.profile-upload-text p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12.5px;
+}
+
+/* ── Action row ────────────────────────────────────────────── */
+.profile-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+.profile-actions .auth-btn { width: auto; min-width: 160px; }
+
+.profile-signout-btn { width: auto; min-width: 160px; }

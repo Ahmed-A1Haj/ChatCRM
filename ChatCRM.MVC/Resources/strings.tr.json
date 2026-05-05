@@ -10,21 +10,17 @@
   "Inbox.Snoozed": "Ertelendi",
   "Inbox.Open": "Açık",
   "Inbox.Unassigned": "Atanmamış",
-
   "Inbox.Filter.All": "Tümü",
   "Inbox.Filter.Mine": "Benimkiler",
   "Inbox.Filter.Unassigned": "Atanmamış",
   "Inbox.Filter.Closed": "Kapalı",
-
   "Inbox.Channel.All": "Tüm kanallar",
   "Inbox.Channel.WhatsApp": "WhatsApp",
   "Inbox.Channel.Instagram": "Instagram",
   "Inbox.Channel.Messenger": "Messenger",
-
   "Inbox.SwitchNumber": "Numara değiştir",
   "Inbox.ManageNumbers": "Numaraları yönet",
   "Inbox.ManageNumbersHint": "Ekle, bağlantıyı kes, yapılandır",
-
   "Compose.Reply": "Yanıtla",
   "Compose.Note": "Dahili not",
   "Compose.TypeMessage": "Mesaj yazın…",
@@ -34,7 +30,6 @@
   "Compose.RecordVoice": "Sesli mesaj kaydet (başlatmak için tıklayın, göndermek için tekrar tıklayın)",
   "Compose.RecordingHint": "Göndermek için mikrofona tekrar tıkla · İptal için Esc",
   "Compose.RecordingDiscard": "Kaydı sil",
-
   "Action.Edit": "Düzenle",
   "Action.Delete": "Herkesten sil",
   "Action.Cancel": "İptal",
@@ -48,20 +43,17 @@
   "Action.Done": "Tamam",
   "Action.Back": "Geri",
   "Action.Refresh": "Yenile",
-
   "Modal.Edit.Title": "Mesajı düzenle",
   "Modal.Edit.Hint": "WhatsApp yalnızca gönderimden sonraki ilk ~15 dakika içinde düzenlemeye izin verir.",
   "Modal.Delete.Title": "Herkesten silinsin mi?",
   "Modal.Delete.Body": "Bu mesaj hem sizden hem de kişiden kaldırılacak. Bu işlem geri alınamaz.",
   "Modal.Caption.Title": "Dosya gönder",
   "Modal.Caption.Placeholder": "Açıklama ekle (isteğe bağlı)…",
-
   "Header.Assign": "Ata",
   "Header.AssignTo": "Şuna ata",
   "Header.Status": "Durum",
   "Header.Lifecycle": "Aşama",
   "Header.ContactDetails": "Kişi bilgileri",
-
   "Lifecycle.NewClient": "Yeni Müşteri",
   "Lifecycle.NotResponding": "Yanıt vermiyor",
   "Lifecycle.Interested": "İlgileniyor",
@@ -73,7 +65,6 @@
   "Lifecycle.WillMakePayment": "Ödeme yapacak",
   "Lifecycle.WaitingForContract": "Sözleşme bekliyor",
   "Lifecycle.OurClient": "Müşterimiz",
-
   "ContactPanel.Phone": "Telefon",
   "ContactPanel.Channel": "Kanal",
   "ContactPanel.Assigned": "Atanan",
@@ -84,11 +75,9 @@
   "ContactPanel.Tags": "Etiketler",
   "ContactPanel.About": "Hakkında",
   "ContactPanel.Activity": "Etkinlik",
-
   "Date.Today": "Bugün",
   "Date.Yesterday": "Dün",
   "Time.JustNow": "şimdi",
-
   "Message.Deleted": "Mesaj silindi",
   "Message.Edited": "düzenlendi",
   "Message.Photo": "Fotoğraf",
@@ -96,7 +85,6 @@
   "Message.Audio": "Ses",
   "Message.Sticker": "Çıkartma",
   "Message.Document": "Belge",
-
   "Toast.Uploading": "Yükleniyor…",
   "Toast.UploadFailed": "Yükleme başarısız.",
   "Toast.SendingVoice": "Sesli mesaj gönderiliyor…",
@@ -114,7 +102,6 @@
   "Toast.AssignedTo": "{0} kişisine atandı",
   "Toast.Unassigned": "Atama kaldırıldı",
   "Toast.LifecycleUpdated": "Aşama: {0}",
-
   "Rail.Inbox": "Gelen kutusu",
   "Rail.Contacts": "Kişiler",
   "Rail.Settings": "Ayarlar",
@@ -123,13 +110,11 @@
   "Rail.PersonalSettings": "Kişisel ayarlar",
   "Rail.Channels": "Kanallar",
   "Rail.UserManagement": "Kullanıcı yönetimi",
-
   "Language.Switch": "Dil",
   "Language.English": "English",
   "Language.Russian": "Русский",
   "Language.Romanian": "Română",
   "Language.Turkish": "Türkçe",
-
   "Layout.Nav.Home": "Ana sayfa",
   "Layout.Nav.Chats": "Sohbetler",
   "Layout.Nav.Privacy": "Gizlilik",
@@ -140,7 +125,6 @@
   "Layout.Nav.AccountFallback": "Hesap",
   "Layout.Footer.Copy": "© 2026 ChatCRM",
   "Layout.Footer.Privacy": "Gizlilik",
-
   "Contacts.Title": "Kişiler",
   "Contacts.Subtitle": "Sizinle iletişime geçen herkesi inceleyin ve yönetin.",
   "Contacts.Export": "Excel'e aktar",
@@ -222,7 +206,6 @@
   "Contacts.Toast.ExportFailed": "Dışa aktarım başarısız: {0}",
   "Contacts.AssignToMe": "Bana ata",
   "Contacts.ThisContact": "bu kişi",
-
   "Users.Title": "Kullanıcılar",
   "Users.Subtitle": "ChatCRM erişimi olan herkesi davet edin, düzenleyin ve yönetin.",
   "Users.AddUser": "Kullanıcı ekle",
@@ -268,7 +251,6 @@
   "Users.Confirm.Delete.Body": "<strong>{0}</strong> kalıcı olarak kaldırılacak. Bu işlem geri alınamaz.",
   "Users.Confirm.Delete.Action": "Sil",
   "Users.ThisUser": "bu kullanıcı",
-
   "Roles.Title": "Roller ve izinler",
   "Roles.Subtitle": "Her rolün sistemde neler yapabileceğini tanımlayın.",
   "Roles.AddRole": "Rol ekle",
@@ -329,12 +311,10 @@
   "Roles.Confirm.Delete.BodyWithUsersMany": "<strong>{0}</strong> rolüne şu anda <strong>{1}</strong> kullanıcı atanmış. Silmeden önce yeniden atayın.",
   "Roles.Confirm.Delete.CannotDelete": "Silinemez",
   "Roles.Confirm.Delete.Action": "Sil",
-
   "SettingsNav.Title": "Ayarlar",
   "SettingsNav.Channels": "Kanallar",
   "SettingsNav.Users": "Kullanıcılar",
   "SettingsNav.Roles": "Roller ve izinler",
-
   "Channels.Title": "Kanallar",
   "Channels.Subtitle": "Müşteriye yönelik mesajlaşma platformlarını ChatCRM'ye bağlayın. Bağlı her kanaldan gelen konuşmalar aynı gelen kutusunda toplanır.",
   "Channels.Status.Active": "Aktif",
@@ -348,7 +328,6 @@
   "Channels.ConnectedNumbersOne": "bağlı numara",
   "Channels.ConnectedNumbersMany": "bağlı numara",
   "Channels.Manage": "Yönet →",
-
   "WhatsApp.Title": "WhatsApp Numaraları",
   "WhatsApp.Subtitle": "Bağlı tüm WhatsApp hatlarınızı bağlayın ve yönetin.",
   "WhatsApp.AddNumber": "Numara ekle",
@@ -407,7 +386,6 @@
   "WhatsApp.Error.Conflict": "Bu adla bir numara zaten var.",
   "WhatsApp.Error.CreateFailed": "Örnek oluşturulamadı (HTTP {0}).",
   "WhatsApp.Error.NetworkError": "Ağ hatası: {0}",
-
   "Auth.Login.Title": "Giriş yap",
   "Auth.Login.Eyebrow": "Tekrar hoş geldiniz",
   "Auth.Login.Heading": "ChatCRM'ye giriş yapın",
@@ -421,7 +399,6 @@
   "Auth.Login.Submit": "Giriş yap",
   "Auth.Login.Footer": "Hesabınız mı yok?",
   "Auth.Login.CreateOne": "Buradan oluşturun",
-
   "Auth.Register.Title": "Hesap oluştur",
   "Auth.Register.Eyebrow": "Başlayın",
   "Auth.Register.Heading": "ChatCRM hesabınızı oluşturun",
@@ -432,7 +409,6 @@
   "Auth.Register.Submit": "Hesap oluştur",
   "Auth.Register.Footer": "Zaten kayıtlı mısınız?",
   "Auth.Register.SignIn": "Giriş yap",
-
   "Auth.Forgot.Title": "Parolayı sıfırla",
   "Auth.Forgot.Eyebrow": "Hesap kurtarma",
   "Auth.Forgot.Heading": "Parolanızı sıfırlayın",
@@ -440,7 +416,6 @@
   "Auth.Forgot.Submit": "Sıfırlama bağlantısı gönder",
   "Auth.Forgot.Footer": "Parolanızı hatırladınız mı?",
   "Auth.Forgot.BackToSignIn": "Girişe dön",
-
   "Auth.Reset.Title": "Yeni parola seçin",
   "Auth.Reset.Eyebrow": "Sıfırlamayı bitir",
   "Auth.Reset.Heading": "Yeni parola seçin",
@@ -448,7 +423,6 @@
   "Auth.Reset.PasswordPlaceholder": "Yeni parola oluşturun",
   "Auth.Reset.ConfirmPlaceholder": "Yeni parolayı tekrarlayın",
   "Auth.Reset.Submit": "Parolayı güncelle",
-
   "Auth.Verify.Title": "E-postanızı doğrulayın",
   "Auth.Verify.Eyebrow": "Bir adım daha",
   "Auth.Verify.Heading": "E-posta adresinizi doğrulayın",
@@ -458,14 +432,12 @@
   "Auth.Verify.Submit": "Doğrulama e-postasını yeniden gönder",
   "Auth.Verify.Footer": "Zaten doğruladınız mı?",
   "Auth.Verify.SignIn": "Giriş yap",
-
   "Auth.AccessDenied.Title": "Erişim reddedildi",
   "Auth.AccessDenied.Eyebrow": "İzin gerekli",
   "Auth.AccessDenied.Heading": "Erişim reddedildi",
   "Auth.AccessDenied.Sub": "Mevcut hesabınızla bu sayfayı görüntüleme izniniz yok.",
   "Auth.AccessDenied.BackHome": "Ana sayfaya dön",
   "Auth.AccessDenied.SignInOther": "Başka bir hesapla giriş yap",
-
   "Profile.Title": "Profiliniz",
   "Profile.Eyebrow": "Hesap profili",
   "Profile.Sub": "İletişim bilgilerinizi güncelleyin ve uygulamada görünen profil resminizi seçin.",
@@ -488,7 +460,6 @@
   "Profile.SaveChanges": "Değişiklikleri kaydet",
   "Profile.Saving": "Kaydediliyor...",
   "Profile.BackHome": "Ana sayfaya dön",
-
   "Home.Title": "Hoş geldiniz",
   "Home.Eyebrow": "Güvenli müşteri konuşmaları",
   "Home.Heading": "ChatCRM artık daha güvenli ve akıcı bir giriş deneyimiyle başlıyor.",
@@ -502,10 +473,8 @@
   "Home.Stat.Recovery": "Self-servis parola sıfırlama",
   "Home.Stat.ExperienceLabel": "Deneyim",
   "Home.Stat.Experience": "Net doğrulama ve dostane rehberlik",
-
   "Privacy.Title": "Gizlilik Politikası",
   "Privacy.Body": "Bu sayfayı sitenizin gizlilik politikasını ayrıntılandırmak için kullanın.",
-
   "Error.Title": "Hata",
   "Error.Heading": "Hata.",
   "Error.SubHeading": "İsteğiniz işlenirken bir hata oluştu.",
@@ -513,11 +482,21 @@
   "Error.DevModeHeading": "Geliştirme Modu",
   "Error.DevModeBody1": "<strong>Development</strong> ortamına geçmek, oluşan hata hakkında daha ayrıntılı bilgi görüntüler.",
   "Error.DevModeBody2": "<strong>Geliştirme ortamı, dağıtılmış uygulamalarda etkinleştirilmemelidir.</strong> Son kullanıcılara istisna ayrıntıları gibi hassas bilgileri ifşa edebilir. Yerel hata ayıklama için <strong>ASPNETCORE_ENVIRONMENT</strong> ortam değişkenini <strong>Development</strong> olarak ayarlayıp uygulamayı yeniden başlatın.",
-
   "Common.Confirm.Title": "Onayla",
   "Common.Confirm.Cancel": "İptal",
   "Common.Confirm.Action": "Onayla",
   "Common.Close": "Kapat",
   "Common.UnknownUser": "Bilinmeyen kullanıcı",
-  "Common.AssignedToTitle": "{0} kişisine atandı"
+  "Common.AssignedToTitle": "{0} kişisine atandı",
+  "Profile.Password.Title": "Parolayı değiştir",
+  "Profile.Password.Sub": "En az 10 karakter; büyük, küçük harf ve rakam içermelidir.",
+  "Profile.Password.Current": "Mevcut parola",
+  "Profile.Password.CurrentPlaceholder": "Mevcut parolanı gir",
+  "Profile.Password.New": "Yeni parola",
+  "Profile.Password.NewPlaceholder": "Yeni parola",
+  "Profile.Password.Confirm": "Yeni parolayı doğrula",
+  "Profile.Password.ConfirmPlaceholder": "Yeni parolayı tekrar gir",
+  "Profile.Password.Submit": "Parolayı güncelle",
+  "Profile.SignOut.Title": "Çıkış",
+  "Profile.SignOut.Sub": "Bu cihazdan çıkış yap. Verilerin güvende kalır."
 }

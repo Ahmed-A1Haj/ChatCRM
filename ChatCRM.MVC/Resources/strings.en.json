@@ -10,21 +10,17 @@
   "Inbox.Snoozed": "Snoozed",
   "Inbox.Open": "Open",
   "Inbox.Unassigned": "Unassigned",
-
   "Inbox.Filter.All": "All",
   "Inbox.Filter.Mine": "Mine",
   "Inbox.Filter.Unassigned": "Unassigned",
   "Inbox.Filter.Closed": "Closed",
-
   "Inbox.Channel.All": "All channels",
   "Inbox.Channel.WhatsApp": "WhatsApp",
   "Inbox.Channel.Instagram": "Instagram",
   "Inbox.Channel.Messenger": "Messenger",
-
   "Inbox.SwitchNumber": "Switch number",
   "Inbox.ManageNumbers": "Manage numbers",
   "Inbox.ManageNumbersHint": "Add, disconnect, configure",
-
   "Compose.Reply": "Reply",
   "Compose.Note": "Internal note",
   "Compose.TypeMessage": "Type a message…",
@@ -34,7 +30,6 @@
   "Compose.RecordVoice": "Record a voice note (click to start, click again to send)",
   "Compose.RecordingHint": "Click the mic again to send · Esc to cancel",
   "Compose.RecordingDiscard": "Discard recording",
-
   "Action.Edit": "Edit",
   "Action.Delete": "Delete for everyone",
   "Action.Cancel": "Cancel",
@@ -48,20 +43,17 @@
   "Action.Done": "Done",
   "Action.Back": "Back",
   "Action.Refresh": "Refresh",
-
   "Modal.Edit.Title": "Edit message",
   "Modal.Edit.Hint": "WhatsApp only allows edits within ~15 minutes of sending.",
   "Modal.Delete.Title": "Delete for everyone?",
   "Modal.Delete.Body": "This message will be removed for both you and the contact. This cannot be undone.",
   "Modal.Caption.Title": "Send file",
   "Modal.Caption.Placeholder": "Add a caption (optional)…",
-
   "Header.Assign": "Assign",
   "Header.AssignTo": "Assign to",
   "Header.Status": "Status",
   "Header.Lifecycle": "Lifecycle",
   "Header.ContactDetails": "Contact details",
-
   "Lifecycle.NewClient": "New Client",
   "Lifecycle.NotResponding": "Not Responding",
   "Lifecycle.Interested": "Interested",
@@ -73,7 +65,6 @@
   "Lifecycle.WillMakePayment": "Will Make Payment",
   "Lifecycle.WaitingForContract": "Waiting for Contract",
   "Lifecycle.OurClient": "Our Client",
-
   "ContactPanel.Phone": "Phone",
   "ContactPanel.Channel": "Channel",
   "ContactPanel.Assigned": "Assigned to",
@@ -84,11 +75,9 @@
   "ContactPanel.Tags": "Tags",
   "ContactPanel.About": "About",
   "ContactPanel.Activity": "Activity",
-
   "Date.Today": "Today",
   "Date.Yesterday": "Yesterday",
   "Time.JustNow": "now",
-
   "Message.Deleted": "Message deleted",
   "Message.Edited": "edited",
   "Message.Photo": "Photo",
@@ -96,7 +85,6 @@
   "Message.Audio": "Audio",
   "Message.Sticker": "Sticker",
   "Message.Document": "Document",
-
   "Toast.Uploading": "Uploading…",
   "Toast.UploadFailed": "Upload failed.",
   "Toast.SendingVoice": "Sending voice note…",
@@ -114,7 +102,6 @@
   "Toast.AssignedTo": "Assigned to {0}",
   "Toast.Unassigned": "Conversation unassigned",
   "Toast.LifecycleUpdated": "Lifecycle: {0}",
-
   "Rail.Inbox": "Inbox",
   "Rail.Contacts": "Contacts",
   "Rail.Settings": "Settings",
@@ -123,13 +110,11 @@
   "Rail.PersonalSettings": "Personal Settings",
   "Rail.Channels": "Channels",
   "Rail.UserManagement": "User Management",
-
   "Language.Switch": "Language",
   "Language.English": "English",
   "Language.Russian": "Русский",
   "Language.Romanian": "Română",
   "Language.Turkish": "Türkçe",
-
   "Layout.Nav.Home": "Home",
   "Layout.Nav.Chats": "Chats",
   "Layout.Nav.Privacy": "Privacy",
@@ -140,7 +125,6 @@
   "Layout.Nav.AccountFallback": "Account",
   "Layout.Footer.Copy": "© 2026 ChatCRM",
   "Layout.Footer.Privacy": "Privacy",
-
   "Contacts.Title": "Contacts",
   "Contacts.Subtitle": "Browse and manage everyone who has ever contacted you.",
   "Contacts.Export": "Export to Excel",
@@ -222,7 +206,6 @@
   "Contacts.Toast.ExportFailed": "Export failed: {0}",
   "Contacts.AssignToMe": "Assign to me",
   "Contacts.ThisContact": "this contact",
-
   "Users.Title": "Users",
   "Users.Subtitle": "Invite, edit, and manage everyone with access to ChatCRM.",
   "Users.AddUser": "Add user",
@@ -268,7 +251,6 @@
   "Users.Confirm.Delete.Body": "<strong>{0}</strong> will be permanently removed. This cannot be undone.",
   "Users.Confirm.Delete.Action": "Delete",
   "Users.ThisUser": "this user",
-
   "Roles.Title": "Roles & permissions",
   "Roles.Subtitle": "Define what each role can do across the system.",
   "Roles.AddRole": "Add role",
@@ -329,12 +311,10 @@
   "Roles.Confirm.Delete.BodyWithUsersMany": "<strong>{0}</strong> currently has <strong>{1}</strong> users assigned. Reassign them before deleting.",
   "Roles.Confirm.Delete.CannotDelete": "Cannot delete",
   "Roles.Confirm.Delete.Action": "Delete",
-
   "SettingsNav.Title": "Settings",
   "SettingsNav.Channels": "Channels",
   "SettingsNav.Users": "Users",
   "SettingsNav.Roles": "Roles & permissions",
-
   "Channels.Title": "Channels",
   "Channels.Subtitle": "Connect customer-facing messaging platforms to ChatCRM. Conversations from every connected channel land in the same inbox.",
   "Channels.Status.Active": "Active",
@@ -348,7 +328,6 @@
   "Channels.ConnectedNumbersOne": "connected number",
   "Channels.ConnectedNumbersMany": "connected numbers",
   "Channels.Manage": "Manage →",
-
   "WhatsApp.Title": "WhatsApp Numbers",
   "WhatsApp.Subtitle": "Connect and manage all your linked WhatsApp lines.",
   "WhatsApp.AddNumber": "Add Number",
@@ -407,7 +386,6 @@
   "WhatsApp.Error.Conflict": "A number with this name already exists.",
   "WhatsApp.Error.CreateFailed": "Failed to create instance (HTTP {0}).",
   "WhatsApp.Error.NetworkError": "Network error: {0}",
-
   "Auth.Login.Title": "Sign in",
   "Auth.Login.Eyebrow": "Welcome back",
   "Auth.Login.Heading": "Sign in to ChatCRM",
@@ -421,7 +399,6 @@
   "Auth.Login.Submit": "Sign in",
   "Auth.Login.Footer": "Need an account?",
   "Auth.Login.CreateOne": "Create one here",
-
   "Auth.Register.Title": "Create account",
   "Auth.Register.Eyebrow": "Get started",
   "Auth.Register.Heading": "Create your ChatCRM account",
@@ -432,7 +409,6 @@
   "Auth.Register.Submit": "Create account",
   "Auth.Register.Footer": "Already registered?",
   "Auth.Register.SignIn": "Sign in",
-
   "Auth.Forgot.Title": "Reset password",
   "Auth.Forgot.Eyebrow": "Account recovery",
   "Auth.Forgot.Heading": "Reset your password",
@@ -440,7 +416,6 @@
   "Auth.Forgot.Submit": "Send reset link",
   "Auth.Forgot.Footer": "Remembered your password?",
   "Auth.Forgot.BackToSignIn": "Go back to sign in",
-
   "Auth.Reset.Title": "Choose a new password",
   "Auth.Reset.Eyebrow": "Finish reset",
   "Auth.Reset.Heading": "Choose a new password",
@@ -448,7 +423,6 @@
   "Auth.Reset.PasswordPlaceholder": "Create a new password",
   "Auth.Reset.ConfirmPlaceholder": "Repeat your new password",
   "Auth.Reset.Submit": "Update password",
-
   "Auth.Verify.Title": "Verify your email",
   "Auth.Verify.Eyebrow": "One more step",
   "Auth.Verify.Heading": "Verify your email address",
@@ -458,14 +432,12 @@
   "Auth.Verify.Submit": "Resend verification email",
   "Auth.Verify.Footer": "Already verified?",
   "Auth.Verify.SignIn": "Sign in",
-
   "Auth.AccessDenied.Title": "Access denied",
   "Auth.AccessDenied.Eyebrow": "Permission required",
   "Auth.AccessDenied.Heading": "Access denied",
   "Auth.AccessDenied.Sub": "You do not have permission to view this page with the current account.",
   "Auth.AccessDenied.BackHome": "Back to home",
   "Auth.AccessDenied.SignInOther": "Sign in with another account",
-
   "Profile.Title": "Your profile",
   "Profile.Eyebrow": "Account profile",
   "Profile.Sub": "Update your contact details and choose a profile image that appears across the app.",
@@ -488,7 +460,6 @@
   "Profile.SaveChanges": "Save changes",
   "Profile.Saving": "Saving...",
   "Profile.BackHome": "Back to home",
-
   "Home.Title": "Welcome",
   "Home.Eyebrow": "Secure customer conversations",
   "Home.Heading": "ChatCRM now starts with a safer, smoother sign-in experience.",
@@ -502,10 +473,8 @@
   "Home.Stat.Recovery": "Self-service password reset",
   "Home.Stat.ExperienceLabel": "Experience",
   "Home.Stat.Experience": "Clear validation and friendlier guidance",
-
   "Privacy.Title": "Privacy Policy",
   "Privacy.Body": "Use this page to detail your site's privacy policy.",
-
   "Error.Title": "Error",
   "Error.Heading": "Error.",
   "Error.SubHeading": "An error occurred while processing your request.",
@@ -513,11 +482,21 @@
   "Error.DevModeHeading": "Development Mode",
   "Error.DevModeBody1": "Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.",
   "Error.DevModeBody2": "<strong>The Development environment shouldn't be enabled for deployed applications.</strong> It can result in displaying sensitive information from exceptions to end users. For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong> and restarting the app.",
-
   "Common.Confirm.Title": "Confirm",
   "Common.Confirm.Cancel": "Cancel",
   "Common.Confirm.Action": "Confirm",
   "Common.Close": "Close",
   "Common.UnknownUser": "Unknown user",
-  "Common.AssignedToTitle": "Assigned to {0}"
+  "Common.AssignedToTitle": "Assigned to {0}",
+  "Profile.Password.Title": "Change password",
+  "Profile.Password.Sub": "Use at least 10 characters with a mix of upper-case, lower-case, and numbers.",
+  "Profile.Password.Current": "Current password",
+  "Profile.Password.CurrentPlaceholder": "Enter your current password",
+  "Profile.Password.New": "New password",
+  "Profile.Password.NewPlaceholder": "New password",
+  "Profile.Password.Confirm": "Confirm new password",
+  "Profile.Password.ConfirmPlaceholder": "Re-type your new password",
+  "Profile.Password.Submit": "Update password",
+  "Profile.SignOut.Title": "Sign out",
+  "Profile.SignOut.Sub": "Sign out of this device. Your data stays safe."
 }
