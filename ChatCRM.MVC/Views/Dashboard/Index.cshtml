@@ -110,6 +110,7 @@
             <h1>@T["Dashboard.Title"]</h1>
         </div>
         <div class="dash-topbar-right">
+            @await Html.PartialAsync("_BalancePill")
             <nav class="dash-range" aria-label="@T["Dashboard.Range.Aria"]">
                 <a href="?range=today" class="@(Model.Range == DashboardRange.Today ? "is-active" : "")">@T["Dashboard.Range.Today"]</a>
                 <a href="?range=week"  class="@(Model.Range == DashboardRange.Week  ? "is-active" : "")">@T["Dashboard.Range.Week"]</a>

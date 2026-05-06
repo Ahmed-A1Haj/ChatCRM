@@ -7,11 +7,21 @@
         @await Html.PartialAsync("_DashboardRail", "numbers")      // /dashboard/whatsapp
         @await Html.PartialAsync("_DashboardRail", "settings")     // /dashboard/settings
 *@
+@using ChatCRM.Domain.Entities
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthZ
 @model string
 @inject Microsoft.Extensions.Localization.IStringLocalizer T
 @{
     var active = (Model ?? string.Empty).ToLowerInvariant();
     string Cls(string name) => active == name ? "rail-link active" : "rail-link";
+
+    // Billing nav item is gated on the BillingView claim — Agents shouldn't see it at all.
+    var canSeeBilling = User.Identity?.IsAuthenticated == true
+        && (await AuthZ.AuthorizeAsync(User, null, new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.BillingView) })).Succeeded;
+    var canSeeTemplates = User.Identity?.IsAuthenticated == true
+        && (await AuthZ.AuthorizeAsync(User, null, new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.TemplatesView) })).Succeeded;
+    var canSeePlatformAdmin = User.Identity?.IsAuthenticated == true
+        && (await AuthZ.AuthorizeAsync(User, null, new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.PlatformAdmin) })).Succeeded;
 }
 
 <aside class="rail">
@@ -33,6 +43,27 @@
         <a class="@Cls("contacts")" href="/dashboard/contacts" title="@T["Rail.Contacts"]">
             @await Html.PartialAsync("_Icon", new IconModel("users", size: 22, ariaLabel: T["Rail.Contacts"].Value))
         </a>
+        @if (canSeeBilling)
+        {
+            <a class="@Cls("billing")" href="/dashboard/billing" title="@T["Rail.Billing"]">
+                @await Html.PartialAsync("_Icon", new IconModel("wallet", size: 22, ariaLabel: T["Rail.Billing"].Value))
+            </a>
+        }
+        @if (canSeeTemplates)
+        {
+            <a class="@Cls("templates")" href="/dashboard/templates" title="@T["Rail.Templates"]">
+                @await Html.PartialAsync("_Icon", new IconModel("file-text", size: 22, ariaLabel: T["Rail.Templates"].Value))
+            </a>
+        }
+        @if (canSeePlatformAdmin)
+        {
+            <a class="@Cls("platform-admin")" href="/dashboard/platform-admin" title="@T["Rail.PlatformAdmin"]">
+                @await Html.PartialAsync("_Icon", new IconModel("shield", size: 22, ariaLabel: T["Rail.PlatformAdmin"].Value))
+            </a>
+            <a class="@Cls("audit")" href="/dashboard/audit" title="@T["Rail.Audit"]">
+                @await Html.PartialAsync("_Icon", new IconModel("eye", size: 22, ariaLabel: T["Rail.Audit"].Value))
+            </a>
+        }
         <div class="rail-link-wrap" id="settingsRailWrap">
             <button type="button"
                     class="@Cls("settings")"

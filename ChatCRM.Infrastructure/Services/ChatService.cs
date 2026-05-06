@@ -15,6 +15,7 @@ namespace ChatCRM.Infrastructure.Services
         private readonly IEvolutionService _evolutionService;
         private readonly IHubContext<ChatHub> _hub;
         private readonly IWebHostEnvironment _env;
+        private readonly IBillingGate _billing;
         private readonly ILogger<ChatService> _logger;
 
         public ChatService(
@@ -22,12 +23,14 @@ namespace ChatCRM.Infrastructure.Services
             IEvolutionService evolutionService,
             IHubContext<ChatHub> hub,
             IWebHostEnvironment env,
+            IBillingGate billing,
             ILogger<ChatService> logger)
         {
             _db = db;
             _evolutionService = evolutionService;
             _hub = hub;
             _env = env;
+            _billing = billing;
             _logger = logger;
         }
 
@@ -125,7 +128,7 @@ namespace ChatCRM.Infrastructure.Services
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<MessageDto> SendMessageAsync(SendMessageDto dto, CancellationToken cancellationToken = default)
+        public async Task<MessageDto> SendMessageAsync(SendMessageDto dto, string actingUserId, CancellationToken cancellationToken = default)
         {
             var conversation = await _db.Conversations
                 .Include(c => c.Contact)
@@ -133,28 +136,54 @@ namespace ChatCRM.Infrastructure.Services
                 .FirstOrDefaultAsync(c => c.Id == dto.ConversationId, cancellationToken)
                 ?? throw new InvalidOperationException($"Conversation {dto.ConversationId} not found.");
 
+            // Billing gate: quote, validate the 24h service window, reserve the funds. Throws
+            // InsufficientBalanceException / ServiceWindowExpiredException for the controller to
+            // translate into friendly errors. Returns null for Personal/Baileys instances which
+            // bypass billing entirely.
+            var reservation = await _billing.ReserveAsync(conversation, actingUserId, cancellationToken);
+
             var message = new Message
             {
                 ConversationId = conversation.Id,
                 Body = dto.Body,
                 Direction = MessageDirection.Outgoing,
                 Status = MessageStatus.Sent,
-                SentAt = DateTime.UtcNow
+                SentAt = DateTime.UtcNow,
+                AuthorUserId = actingUserId
             };
 
             _db.Messages.Add(message);
             conversation.LastMessageAt = message.SentAt;
             await _db.SaveChangesAsync(cancellationToken);
 
-            var result = await _evolutionService.SendMessageAsync(
-                conversation.Instance.InstanceName,
-                conversation.Contact.PhoneNumber,
-                dto.Body,
-                cancellationToken);
+            EvolutionSendResult result;
+            try
+            {
+                result = await _evolutionService.SendMessageAsync(
+                    conversation.Instance.InstanceName,
+                    conversation.Contact.PhoneNumber,
+                    dto.Body,
+                    cancellationToken);
+            }
+            catch
+            {
+                if (reservation is not null)
+                    await _billing.ReleaseAsync(reservation, "evolution-throw", CancellationToken.None);
+                throw;
+            }
 
             if (!result.Success)
+            {
                 _logger.LogWarning("Evolution API failed to deliver message {MessageId} via {Instance} to {Phone}",
                     message.Id, conversation.Instance.InstanceName, conversation.Contact.PhoneNumber);
+
+                if (reservation is not null)
+                    await _billing.ReleaseAsync(reservation, "evolution-failure", CancellationToken.None);
+            }
+            else if (reservation is not null)
+            {
+                await _billing.CommitAsync(reservation, message.Id, cancellationToken);
+            }
 
             // Capture the Baileys message ID + remoteJid so the agent can edit/delete this later.
             if (!string.IsNullOrEmpty(result.ExternalId))
@@ -370,6 +399,8 @@ namespace ChatCRM.Infrastructure.Services
                 LifecycleStage = (byte)c.Contact.LifecycleStage,
                 MessageCount = msgCount,
                 NoteCount = noteCount,
+                LastIncomingAtUtc = c.LastIncomingAt,
+                Integration = (byte)c.Instance.Integration,
                 Tags = c.Tags.Select(t => new TagDto { Id = t.TagId, Name = t.Tag.Name, Color = t.Tag.Color }).ToList()
             };
         }
@@ -495,6 +526,7 @@ namespace ChatCRM.Infrastructure.Services
             string fileName,
             string mimeType,
             string? caption,
+            string actingUserId,
             CancellationToken cancellationToken = default)
         {
             var conversation = await _db.Conversations
@@ -502,6 +534,8 @@ namespace ChatCRM.Infrastructure.Services
                 .Include(c => c.Instance)
                 .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken)
                 ?? throw new InvalidOperationException($"Conversation {conversationId} not found.");
+
+            var reservation = await _billing.ReserveAsync(conversation, actingUserId, cancellationToken);
 
             var (kind, evolutionMediaType) = ClassifyMedia(mimeType);
 
@@ -524,6 +558,7 @@ namespace ChatCRM.Infrastructure.Services
                 Direction = MessageDirection.Outgoing,
                 Status = MessageStatus.Sent,
                 SentAt = DateTime.UtcNow,
+                AuthorUserId = actingUserId,
                 Kind = kind,
                 MediaUrl = $"/media/{diskName}",
                 MediaMimeType = mimeType,
@@ -534,18 +569,36 @@ namespace ChatCRM.Infrastructure.Services
             conversation.LastMessageAt = message.SentAt;
             await _db.SaveChangesAsync(cancellationToken);
 
-            var result = await _evolutionService.SendMediaAsync(
-                conversation.Instance.InstanceName,
-                conversation.Contact.PhoneNumber,
-                evolutionMediaType,
-                data,
-                mimeType,
-                fileName,
-                caption,
-                cancellationToken);
+            EvolutionSendResult result;
+            try
+            {
+                result = await _evolutionService.SendMediaAsync(
+                    conversation.Instance.InstanceName,
+                    conversation.Contact.PhoneNumber,
+                    evolutionMediaType,
+                    data,
+                    mimeType,
+                    fileName,
+                    caption,
+                    cancellationToken);
+            }
+            catch
+            {
+                if (reservation is not null)
+                    await _billing.ReleaseAsync(reservation, "evolution-throw", CancellationToken.None);
+                throw;
+            }
 
             if (!result.Success)
+            {
                 _logger.LogWarning("Evolution failed to deliver media message {Id}", message.Id);
+                if (reservation is not null)
+                    await _billing.ReleaseAsync(reservation, "evolution-failure", CancellationToken.None);
+            }
+            else if (reservation is not null)
+            {
+                await _billing.CommitAsync(reservation, message.Id, cancellationToken);
+            }
 
             if (!string.IsNullOrEmpty(result.ExternalId))
             {
@@ -564,6 +617,7 @@ namespace ChatCRM.Infrastructure.Services
             int conversationId,
             byte[] data,
             string mimeType,
+            string actingUserId,
             CancellationToken cancellationToken = default)
         {
             var conversation = await _db.Conversations
@@ -571,6 +625,8 @@ namespace ChatCRM.Infrastructure.Services
                 .Include(c => c.Instance)
                 .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken)
                 ?? throw new InvalidOperationException($"Conversation {conversationId} not found.");
+
+            var reservation = await _billing.ReserveAsync(conversation, actingUserId, cancellationToken);
 
             var rootForMedia = string.IsNullOrWhiteSpace(_env.WebRootPath)
                 ? Path.Combine(_env.ContentRootPath, "wwwroot")
@@ -589,6 +645,7 @@ namespace ChatCRM.Infrastructure.Services
                 Direction = MessageDirection.Outgoing,
                 Status = MessageStatus.Sent,
                 SentAt = DateTime.UtcNow,
+                AuthorUserId = actingUserId,
                 Kind = MessageKind.Audio,
                 MediaUrl = $"/media/{diskName}",
                 MediaMimeType = mimeType
@@ -598,14 +655,32 @@ namespace ChatCRM.Infrastructure.Services
             conversation.LastMessageAt = message.SentAt;
             await _db.SaveChangesAsync(cancellationToken);
 
-            var result = await _evolutionService.SendVoiceNoteAsync(
-                conversation.Instance.InstanceName,
-                conversation.Contact.PhoneNumber,
-                data,
-                cancellationToken);
+            EvolutionSendResult result;
+            try
+            {
+                result = await _evolutionService.SendVoiceNoteAsync(
+                    conversation.Instance.InstanceName,
+                    conversation.Contact.PhoneNumber,
+                    data,
+                    cancellationToken);
+            }
+            catch
+            {
+                if (reservation is not null)
+                    await _billing.ReleaseAsync(reservation, "evolution-throw", CancellationToken.None);
+                throw;
+            }
 
             if (!result.Success)
+            {
                 _logger.LogWarning("Evolution failed to deliver voice note message {Id}", message.Id);
+                if (reservation is not null)
+                    await _billing.ReleaseAsync(reservation, "evolution-failure", CancellationToken.None);
+            }
+            else if (reservation is not null)
+            {
+                await _billing.CommitAsync(reservation, message.Id, cancellationToken);
+            }
 
             if (!string.IsNullOrEmpty(result.ExternalId))
             {
@@ -618,6 +693,106 @@ namespace ChatCRM.Infrastructure.Services
             await BroadcastOutgoingAsync(conversation, message, cancellationToken);
 
             return ToDto(message);
+        }
+
+        public async Task<MessageDto> SendTemplateMessageAsync(
+            int conversationId, int templateId,
+            IReadOnlyList<string> variables, string actingUserId,
+            CancellationToken cancellationToken = default)
+        {
+            var conversation = await _db.Conversations
+                .Include(c => c.Contact)
+                .Include(c => c.Instance)
+                .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken)
+                ?? throw new InvalidOperationException($"Conversation {conversationId} not found.");
+
+            var template = await _db.WhatsAppTemplates
+                .FirstOrDefaultAsync(t => t.Id == templateId, cancellationToken)
+                ?? throw new InvalidOperationException("Template not found.");
+
+            if (template.Status != WhatsAppTemplateStatus.Approved)
+                throw new InvalidOperationException("Only approved templates can be sent.");
+
+            // Defensive: variables must satisfy the template's variable count exactly. Render
+            // the body locally for storage so the chat history shows what was sent — Meta does
+            // its own substitution server-side using the parameters we pass.
+            var expected = ChatCRM.Application.Templates.Validation.TemplateContentValidator.CountVariables(template.Body);
+            var supplied = variables ?? Array.Empty<string>();
+            if (supplied.Count != expected)
+                throw new InvalidOperationException(
+                    $"Template '{template.Name}' expects {expected} variable(s) but {supplied.Count} were supplied.");
+
+            var renderedBody = RenderTemplateBody(template.Body, supplied);
+
+            // Reserve under the template's category (Marketing/Utility/Authentication) — never
+            // Service. The template-aware path skips the 24h window check.
+            var reservation = await _billing.ReserveForTemplateAsync(
+                conversation, template.Category, actingUserId, cancellationToken);
+
+            var message = new Message
+            {
+                ConversationId = conversation.Id,
+                Body = renderedBody,
+                Direction = MessageDirection.Outgoing,
+                Status = MessageStatus.Sent,
+                SentAt = DateTime.UtcNow,
+                AuthorUserId = actingUserId
+            };
+            _db.Messages.Add(message);
+            conversation.LastMessageAt = message.SentAt;
+            await _db.SaveChangesAsync(cancellationToken);
+
+            EvolutionSendResult result;
+            try
+            {
+                result = await _evolutionService.SendTemplateAsync(
+                    conversation.Instance.InstanceName,
+                    conversation.Contact.PhoneNumber,
+                    template.Name,
+                    template.LanguageCode,
+                    supplied,
+                    cancellationToken);
+            }
+            catch
+            {
+                if (reservation is not null)
+                    await _billing.ReleaseAsync(reservation, "evolution-throw", CancellationToken.None);
+                throw;
+            }
+
+            if (!result.Success)
+            {
+                _logger.LogWarning("Evolution failed to deliver template {Name} for message {Id}.", template.Name, message.Id);
+                if (reservation is not null)
+                    await _billing.ReleaseAsync(reservation, "evolution-failure", CancellationToken.None);
+            }
+            else if (reservation is not null)
+            {
+                await _billing.CommitAsync(reservation, message.Id, cancellationToken);
+            }
+
+            if (!string.IsNullOrEmpty(result.ExternalId))
+            {
+                message.ExternalId = result.ExternalId;
+                if (!string.IsNullOrEmpty(result.RemoteJid) && conversation.Contact.RemoteJid != result.RemoteJid)
+                    conversation.Contact.RemoteJid = result.RemoteJid;
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+
+            await BroadcastOutgoingAsync(conversation, message, cancellationToken);
+            return ToDto(message);
+        }
+
+        private static string RenderTemplateBody(string body, IReadOnlyList<string> values)
+        {
+            // Substitute {{1}}, {{2}}, … in order. We've already validated that body variables
+            // are sequential from {{1}} so a simple loop is safe.
+            var rendered = body;
+            for (var i = 0; i < values.Count; i++)
+            {
+                rendered = rendered.Replace("{{" + (i + 1) + "}}", values[i] ?? string.Empty, StringComparison.Ordinal);
+            }
+            return rendered;
         }
 
         // ── Helpers ─────────────────────────────────────────────────────────

@@ -286,9 +286,124 @@ async function loadContactDetails(conversationId) {
         document.getElementById('assignLabel').textContent = d.assignedUserName || 'Unassigned';
         applyStatusToHeader(d.conversationStatus);
         applyLifecycleToHeader(d.lifecycleStage ?? 0);
+        applyServiceWindow(d);    // 24h window pill + composer state (phase 5)
     } catch (e) {
         console.error('Contact details load failed:', e);
     }
+}
+
+/* ─── 24h customer-service window (phase 5) ─────────────────────────────
+   The pill in the chat header says "Service window active — Xh left" while we're inside
+   the 24-hour window after the most recent incoming message, or "Service window expired —
+   template required" once it lapses. Updates every 60 seconds via the ticker so the UI
+   transitions automatically without a refresh.
+
+   Only Cloud-API (Business) instances care about the window — Personal/Baileys instances
+   bypass Meta's window rules entirely, so we hide the indicator for those.
+
+   d.integration: 0 = Personal, 1 = Business (matches WhatsAppIntegration enum). */
+const INTEGRATION_BUSINESS = 1;
+const SERVICE_WINDOW_HOURS = 24;
+let serviceWindowTickerHandle = null;
+
+function applyServiceWindow(details) {
+    const pill = document.getElementById('serviceWindowPill');
+    const banner = document.getElementById('serviceWindowExpiredBar');
+    const composer = document.getElementById('chatForm');
+    if (!pill || !banner) return;
+
+    // Cancel any previous ticker; new conversation = new clock.
+    if (serviceWindowTickerHandle) { clearInterval(serviceWindowTickerHandle); serviceWindowTickerHandle = null; }
+
+    if (details.integration !== INTEGRATION_BUSINESS) {
+        // Personal instance — Meta's window rules don't apply. Hide pill + banner.
+        pill.classList.add('d-none');
+        banner.classList.add('d-none');
+        composer?.classList.remove('compose-locked');
+        return;
+    }
+
+    const renderOnce = () => {
+        const state = computeServiceWindowState(details.lastIncomingAtUtc);
+        renderServiceWindowPill(pill, state);
+        renderServiceWindowBanner(banner, composer, state);
+    };
+
+    renderOnce();
+    // 60-second tick is plenty — humans don't notice sub-minute label drift.
+    serviceWindowTickerHandle = setInterval(renderOnce, 60_000);
+}
+
+function computeServiceWindowState(lastIncomingAtUtc) {
+    if (!lastIncomingAtUtc) return { kind: 'never' };
+
+    const last = new Date(lastIncomingAtUtc).getTime();
+    const ageMs = Date.now() - last;
+    const windowMs = SERVICE_WINDOW_HOURS * 3_600_000;
+
+    if (ageMs >= windowMs) return { kind: 'expired' };
+
+    const remainingMin = Math.max(1, Math.floor((windowMs - ageMs) / 60_000));
+    return { kind: 'active', remainingMin };
+}
+
+function renderServiceWindowPill(pill, state) {
+    pill.classList.remove('is-active', 'is-expired', 'is-never');
+    pill.classList.remove('d-none');
+    const label = pill.querySelector('[data-service-window-label]');
+    const T = window.t || ((k) => k);
+
+    if (state.kind === 'never') {
+        pill.classList.add('is-never');
+        if (label) label.textContent = T('Window.Never');
+        pill.title = T('Window.Never.Tooltip');
+        return;
+    }
+    if (state.kind === 'expired') {
+        pill.classList.add('is-expired');
+        if (label) label.textContent = T('Window.Expired.Pill');
+        pill.title = T('Window.Expired.Tooltip');
+        return;
+    }
+    pill.classList.add('is-active');
+    if (label) {
+        const remaining = formatRemaining(state.remainingMin);
+        label.textContent = T('Window.Active.PillFmt').replace('{0}', remaining);
+    }
+    pill.title = T('Window.Active.Tooltip');
+}
+
+function renderServiceWindowBanner(banner, composer, state) {
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    if (state.kind === 'expired' || state.kind === 'never') {
+        banner.classList.remove('d-none');
+        composer?.classList.add('compose-locked');
+        if (messageInput) {
+            messageInput.disabled = true;
+            messageInput.placeholder = (window.t || ((k)=>k))('Window.Expired.ComposerPlaceholder');
+        }
+        if (sendBtn) sendBtn.disabled = true;
+        return;
+    }
+    // Active window — full free-form reply allowed.
+    banner.classList.add('d-none');
+    composer?.classList.remove('compose-locked');
+    if (messageInput) {
+        messageInput.disabled = false;
+        messageInput.placeholder = (window.t || ((k)=>k))('Compose.TypeMessage');
+    }
+    if (sendBtn) sendBtn.disabled = false;
+}
+
+function formatRemaining(minutes) {
+    if (minutes >= 60) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return m === 0 ? `${h}h` : `${h}h ${m}m`;
+    }
+    return `${minutes}m`;
 }
 
 /* ─── Load messages ─────────────────────────────────────────────────── */
@@ -1294,3 +1409,188 @@ async function uploadVoice(blob) {
 }
 
 document.addEventListener('DOMContentLoaded', setupVoiceButton);
+
+// ── Template picker (phase 7) ───────────────────────────────────────────
+// Opens from #pickTemplateBtn in the service-window-expired bar. Lists Approved
+// templates, lets the agent fill variables, and posts to /dashboard/chats/send-template.
+
+let _tplCache = null;
+let _tplSelected = null;
+
+async function loadApprovedTemplates() {
+    if (_tplCache) return _tplCache;
+    try {
+        const resp = await fetch('/dashboard/templates/approved');
+        if (!resp.ok) return [];
+        _tplCache = await resp.json();
+        return _tplCache;
+    } catch {
+        return [];
+    }
+}
+
+function renderTemplateList(list, query) {
+    const ul = document.getElementById('tplPickerList');
+    const empty = document.getElementById('tplPickerEmpty');
+    const q = (query || '').toLowerCase().trim();
+    const filtered = q
+        ? list.filter(t => t.name.toLowerCase().includes(q) || t.body.toLowerCase().includes(q))
+        : list;
+
+    ul.innerHTML = '';
+    if (!filtered.length) {
+        empty.classList.remove('d-none');
+        return;
+    }
+    empty.classList.add('d-none');
+    filtered.forEach(tpl => {
+        const li = document.createElement('li');
+        li.className = 'tpl-picker-item';
+        li.dataset.id = tpl.id;
+        const cat = tpl.category === 1 ? t('Templates.Category.Utility')
+                  : tpl.category === 2 ? t('Templates.Category.Authentication')
+                  : tpl.category === 3 ? t('Templates.Category.Marketing')
+                  : '—';
+        li.innerHTML = `
+            <div class="tpl-picker-item-head">
+                <span class="tpl-picker-item-name">${escapeHtml(tpl.name)}</span>
+                <span class="tpl-picker-item-meta">${escapeHtml(cat)} · ${escapeHtml(tpl.languageCode)}</span>
+            </div>
+            <div class="tpl-picker-item-body">${escapeHtml(tpl.body.length > 140 ? tpl.body.slice(0, 140) + '…' : tpl.body)}</div>
+        `;
+        li.addEventListener('click', () => selectTemplate(tpl));
+        ul.appendChild(li);
+    });
+}
+
+function selectTemplate(tpl) {
+    _tplSelected = tpl;
+    document.querySelector('.tpl-picker-body').classList.add('d-none');
+    document.getElementById('tplPickerDetail').classList.remove('d-none');
+    document.getElementById('tplPickerDetailName').textContent = tpl.name + ' · ' + tpl.languageCode;
+    const cat = tpl.category === 1 ? t('Templates.Category.Utility')
+              : tpl.category === 2 ? t('Templates.Category.Authentication')
+              : tpl.category === 3 ? t('Templates.Category.Marketing')
+              : '—';
+    document.getElementById('tplPickerDetailCat').textContent = cat;
+
+    // Render variable inputs.
+    const vars = document.getElementById('tplPickerVars');
+    vars.innerHTML = '';
+    for (let i = 1; i <= tpl.variableCount; i++) {
+        const row = document.createElement('div');
+        row.className = 'tpl-picker-var';
+        row.innerHTML = `
+            <label>{{${i}}}</label>
+            <input type="text" data-var-index="${i}" maxlength="200" />
+        `;
+        vars.appendChild(row);
+    }
+
+    renderTemplatePreview();
+    vars.querySelectorAll('input[data-var-index]').forEach(inp => {
+        inp.addEventListener('input', renderTemplatePreview);
+    });
+    if (tpl.variableCount > 0) {
+        vars.querySelector('input')?.focus();
+    }
+}
+
+function renderTemplatePreview() {
+    if (!_tplSelected) return;
+    let body = _tplSelected.body;
+    document.querySelectorAll('#tplPickerVars input[data-var-index]').forEach(inp => {
+        const i = inp.dataset.varIndex;
+        const value = inp.value || `{{${i}}}`;
+        body = body.split(`{{${i}}}`).join(value);
+    });
+    let html = escapeHtml(body).replace(/\n/g, '<br>');
+    if (_tplSelected.footer) {
+        html += '<div class="tpl-picker-preview-footer">' + escapeHtml(_tplSelected.footer) + '</div>';
+    }
+    document.getElementById('tplPickerPreview').innerHTML = html;
+}
+
+function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+async function openTemplatePicker() {
+    if (!activeConversationId) {
+        showToast(t('Toast.SelectConversation'), 'error');
+        return;
+    }
+    const modal = document.getElementById('tplPickerModal');
+    modal.classList.remove('d-none');
+    document.querySelector('.tpl-picker-body').classList.remove('d-none');
+    document.getElementById('tplPickerDetail').classList.add('d-none');
+    document.getElementById('tplPickerSearch').value = '';
+    _tplSelected = null;
+
+    const list = await loadApprovedTemplates();
+    renderTemplateList(list, '');
+    document.getElementById('tplPickerSearch').focus();
+}
+
+function closeTemplatePicker() {
+    document.getElementById('tplPickerModal').classList.add('d-none');
+    _tplSelected = null;
+}
+
+async function sendSelectedTemplate() {
+    if (!_tplSelected || !activeConversationId) return;
+    const inputs = Array.from(document.querySelectorAll('#tplPickerVars input[data-var-index]'));
+    const variables = inputs.map(i => i.value.trim());
+    if (variables.some(v => !v)) {
+        showToast(t('TemplatePicker.MissingVars'), 'error');
+        return;
+    }
+
+    const btn = document.getElementById('tplPickerSend');
+    btn.disabled = true;
+    try {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+        const resp = await fetch('/dashboard/chats/send-template', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({
+                conversationId: activeConversationId,
+                templateId: _tplSelected.id,
+                variables
+            })
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.error || t('TemplatePicker.SendFailed'), 'error');
+            return;
+        }
+        closeTemplatePicker();
+        showToast(t('TemplatePicker.Sent'), 'success');
+    } catch (e) {
+        showToast(t('Toast.NetworkError', e.message), 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('pickTemplateBtn')?.addEventListener('click', openTemplatePicker);
+    document.getElementById('tplPickerClose')?.addEventListener('click', closeTemplatePicker);
+    document.getElementById('tplPickerCancel')?.addEventListener('click', closeTemplatePicker);
+    document.getElementById('tplPickerBack')?.addEventListener('click', () => {
+        document.querySelector('.tpl-picker-body').classList.remove('d-none');
+        document.getElementById('tplPickerDetail').classList.add('d-none');
+        _tplSelected = null;
+    });
+    document.getElementById('tplPickerSend')?.addEventListener('click', sendSelectedTemplate);
+    document.getElementById('tplPickerSearch')?.addEventListener('input', e => {
+        renderTemplateList(_tplCache || [], e.target.value);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !document.getElementById('tplPickerModal')?.classList.contains('d-none')) {
+            closeTemplatePicker();
+        }
+    });
+});

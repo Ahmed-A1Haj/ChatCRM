@@ -273,6 +273,11 @@
                 <div class="chat-header-info">
                     <strong id="chatHeaderName"></strong>
                     <span id="chatHeaderPhone"></span>
+                    @* 24h customer-service window indicator. Hidden until loadContactDetails() fills it. *@
+                    <span class="service-window-pill d-none" id="serviceWindowPill" data-service-window-pill>
+                        <span class="service-window-dot" aria-hidden="true"></span>
+                        <span data-service-window-label></span>
+                    </span>
                 </div>
                 <div class="chat-header-actions">
                     @* Assign dropdown *@
@@ -347,6 +352,51 @@
             <div class="chat-messages" id="chatMessages">
                 <div class="messages-loading" id="messagesLoading">
                     <div class="spinner"></div>
+                </div>
+            </div>
+
+            @* Service-window expired banner — sits above the composer for Cloud-API instances
+               outside the 24h window. Hidden by default; toggled by chat.js. *@
+            <div class="service-window-expired-bar d-none" id="serviceWindowExpiredBar" data-service-window-expired role="alert">
+                <span class="service-window-expired-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                </span>
+                <div class="service-window-expired-text">
+                    <strong>@T["Window.Expired.Title"]</strong>
+                    <span>@T["Window.Expired.Sub"]</span>
+                </div>
+                <button type="button" class="auth-btn auth-btn-secondary service-window-template-btn" id="pickTemplateBtn">
+                    @T["Window.PickTemplate"]
+                </button>
+            </div>
+
+            @* Template picker modal — opened from #pickTemplateBtn or the inline composer button. *@
+            <div class="tpl-picker-modal d-none" id="tplPickerModal" role="dialog" aria-modal="true" aria-labelledby="tplPickerTitle">
+                <div class="tpl-picker-inner">
+                    <header class="tpl-picker-head">
+                        <h2 id="tplPickerTitle">@T["Window.PickTemplate"]</h2>
+                        <button type="button" class="tpl-picker-close" id="tplPickerClose" aria-label="@T["Templates.Editor.CloseAria"]">×</button>
+                    </header>
+                    <div class="tpl-picker-body">
+                        <input type="text" id="tplPickerSearch" class="tpl-picker-search" placeholder="@T["TemplatePicker.SearchPlaceholder"]" autocomplete="off" />
+                        <div class="tpl-picker-empty d-none" id="tplPickerEmpty">@T["TemplatePicker.Empty"]</div>
+                        <ul class="tpl-picker-list" id="tplPickerList"></ul>
+                    </div>
+                    <div class="tpl-picker-detail d-none" id="tplPickerDetail">
+                        <div class="tpl-picker-detail-head">
+                            <button type="button" class="tpl-picker-back" id="tplPickerBack">←</button>
+                            <h3 id="tplPickerDetailName"></h3>
+                            <span class="tpl-picker-cat" id="tplPickerDetailCat"></span>
+                        </div>
+                        <div class="tpl-picker-preview" id="tplPickerPreview"></div>
+                        <div class="tpl-picker-vars" id="tplPickerVars"></div>
+                        <footer class="tpl-picker-foot">
+                            <button type="button" class="auth-btn auth-btn-ghost" id="tplPickerCancel">@T["Templates.Editor.Cancel"]</button>
+                            <button type="button" class="auth-btn" id="tplPickerSend">@T["TemplatePicker.SendBtn"]</button>
+                        </footer>
+                    </div>
                 </div>
             </div>
 

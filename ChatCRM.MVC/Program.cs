@@ -120,6 +120,50 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IWhatsAppInstanceService, WhatsAppInstanceService>();
 builder.Services.AddScoped<IContactsService, ContactsService>();
 
+// Billing — pricing engine (phase 1) + wallet read/admin surface (phase 2) + Stripe top-up
+// flow (phase 3) + per-message billing gate (phase 4: reserve → send → commit/release).
+builder.Services.AddScoped<IPricingService, PricingService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<IBillingGate, ChatCRM.Infrastructure.Services.Billing.BillingGate>();
+
+// Templates (phase 6) — direct Meta Graph API integration. The named HttpClient lets us
+// add Polly / DefaultRequestHeaders later without touching the provider.
+builder.Services.Configure<ChatCRM.Infrastructure.Services.Templates.MetaGraphOptions>(
+    builder.Configuration.GetSection("Meta:Graph"));
+builder.Services.AddHttpClient(ChatCRM.Infrastructure.Services.Templates.MetaGraphTemplateProvider.HttpClientName);
+builder.Services.AddScoped<IWhatsAppTemplateProvider, ChatCRM.Infrastructure.Services.Templates.MetaGraphTemplateProvider>();
+// Singleton: in-process tracker for the last Meta auth failure so the UI preflight can
+// surface "rotate the token" without making every request hit Meta first.
+builder.Services.AddSingleton<ITemplateProviderHealth, ChatCRM.Infrastructure.Services.Templates.TemplateProviderHealth>();
+builder.Services.AddScoped<ITemplateService, ChatCRM.Infrastructure.Services.Templates.TemplateService>();
+// Adaptive-cadence poller that keeps Submitted templates in sync with Meta. Self-paced
+// (≤30m: 2m / ≤6h: 10m / ≤24h: 30m / >24h: 2h, gives up at 7d).
+builder.Services.AddHostedService<ChatCRM.Infrastructure.Services.Templates.TemplateStatusSyncService>();
+
+// Invoicing (phase 9) — monthly statements rendered via QuestPDF on demand.
+builder.Services.AddScoped<ChatCRM.Infrastructure.Services.Invoices.IInvoicePdfRenderer,
+    ChatCRM.Infrastructure.Services.Invoices.QuestPdfInvoiceRenderer>();
+builder.Services.AddScoped<IInvoiceService, ChatCRM.Infrastructure.Services.Invoices.InvoiceService>();
+
+// Platform admin (phase 10) — cross-workspace finance reporting.
+builder.Services.AddScoped<IPlatformAdminService, ChatCRM.Infrastructure.Services.Admin.PlatformAdminService>();
+
+// Auto-recharge worker (phase 11) — ticks every 5 min; charges saved card off-session
+// when the wallet falls below its trigger threshold. Self-disables on charge failure.
+builder.Services.AddHostedService<ChatCRM.Infrastructure.Services.Payments.AutoRechargeWorker>();
+
+// Audit log (phase 12) — read-only paged query over BillingAuditLog.
+builder.Services.AddScoped<IAuditLogService, ChatCRM.Infrastructure.Services.Audit.AuditLogService>();
+
+// Stripe configuration — keys live in environment / appsettings.Development.json.
+// The provider self-checks IsConfigured before any Stripe API call so missing keys
+// surface as a friendly "Payment processing is not configured" message rather than a 500.
+builder.Services.Configure<ChatCRM.Infrastructure.Services.Payments.StripeOptions>(
+    builder.Configuration.GetSection("Stripe"));
+builder.Services.AddScoped<IPaymentProvider, ChatCRM.Infrastructure.Services.Payments.StripePaymentProvider>();
+builder.Services.AddScoped<IBillingEmailSender, ChatCRM.MVC.Services.BillingEmailSender>();
+builder.Services.AddMemoryCache(); // for top-up rate limiting
+
 builder.Services.Configure<SmtpEmailOptions>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
 builder.Services.AddScoped<IEmailSender<User>, SmtpEmailSender>();
@@ -159,6 +203,12 @@ using (var scope = app.Services.CreateScope())
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = services.GetRequiredService<UserManager<User>>();
         await RoleSeeder.SeedAsync(roleManager, userManager, logger);
+
+        // Billing — ensure the singleton workspace wallet, billing settings, and Meta pricing
+        // rules exist. Idempotent on subsequent boots; the JSON file is read on first run only,
+        // after which the DB is the source of truth (admin UI edits in phase 10).
+        var pricingJsonPath = Path.Combine(builder.Environment.ContentRootPath, "Resources", "billing", "meta-pricing.json");
+        await BillingSeeder.SeedAsync(dbContext, logger, pricingJsonPath);
     }
     catch (Exception ex)
     {
@@ -173,9 +223,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// Skip HTTPS redirect for webhook so external senders (Evolution API) can POST over HTTP.
+// Skip HTTPS redirect for webhook senders that POST over plain HTTP — Evolution API
+// (WhatsApp messages) and Stripe (when proxied via ngrok in dev).
 app.UseWhen(
-    ctx => !ctx.Request.Path.StartsWithSegments("/api/evolution"),
+    ctx => !ctx.Request.Path.StartsWithSegments("/api/evolution")
+        && !ctx.Request.Path.StartsWithSegments("/api/webhooks/stripe"),
     branch => branch.UseHttpsRedirection());
 
 app.UseStaticFiles();

@@ -73,6 +73,34 @@ namespace ChatCRM.Infrastructure.Services
             return PostSendAsync($"/message/sendWhatsAppAudio/{instanceName}", payload, instanceName, phone, cancellationToken);
         }
 
+        public Task<EvolutionSendResult> SendTemplateAsync(
+            string instanceName,
+            string phone,
+            string templateName,
+            string languageCode,
+            IReadOnlyList<string> bodyVariables,
+            CancellationToken cancellationToken = default)
+        {
+            // Meta's template send wraps body parameters in a `body` component. Even templates
+            // with zero variables need the components array — Evolution forwards it verbatim.
+            var bodyParams = (bodyVariables ?? Array.Empty<string>())
+                .Select(v => new { type = "text", text = v ?? string.Empty })
+                .ToArray();
+
+            var components = bodyParams.Length == 0
+                ? Array.Empty<object>()
+                : new object[] { new { type = "body", parameters = bodyParams } };
+
+            var payload = new
+            {
+                number = phone,
+                name = templateName,
+                language = new { code = languageCode },
+                components
+            };
+            return PostSendAsync($"/message/sendTemplate/{instanceName}", payload, instanceName, phone, cancellationToken);
+        }
+
         public async Task<bool> EditMessageAsync(
             string instanceName,
             string remoteJid,
@@ -368,7 +396,14 @@ namespace ChatCRM.Infrastructure.Services
             _db.Messages.Add(message);
             conversation.LastMessageAt = sentAt;
             // Only inbound messages count toward unread — outbound (fromMe) doesn't.
-            if (!isOutgoing) conversation.UnreadCount += 1;
+            if (!isOutgoing)
+            {
+                conversation.UnreadCount += 1;
+                // Reset the 24h customer-service-window clock. Phase 5: agents on Cloud-API
+                // instances can free-form reply for 24h after this timestamp; outside that,
+                // only approved templates are allowed.
+                conversation.LastIncomingAt = sentAt;
+            }
 
             await _db.SaveChangesAsync(cancellationToken);
 

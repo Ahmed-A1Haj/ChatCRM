@@ -28,6 +28,22 @@ namespace ChatCRM.Domain.Entities
         // ── Settings ───────────────────────────────────────────────────
         public const string SettingsView = "settings.view";
 
+        // ── Billing & wallet ───────────────────────────────────────────
+        public const string BillingView         = "billing.view";          // see balance, transactions, invoices
+        public const string BillingTopUp        = "billing.topup";         // initiate top-ups (Manager+)
+        public const string BillingAdminRefund  = "billing.admin.refund";  // issue manual refunds (Admin only)
+
+        // ── WhatsApp templates ─────────────────────────────────────────
+        public const string TemplatesView   = "templates.view";
+        public const string TemplatesCreate = "templates.create";
+        public const string TemplatesSubmit = "templates.submit";          // send to Meta for approval
+        public const string TemplatesDelete = "templates.delete";
+
+        // ── Platform-level admin (cross-workspace, controlled by config "Platform:Admins") ──
+        // This claim is only granted to a synthetic "Platform Admin" role seeded for accounts
+        // listed in appsettings under Platform:Admins. It gates /admin/* routes.
+        public const string PlatformAdmin = "platform.admin";
+
         /// <summary>All permissions, used for seeding the Admin role.</summary>
         public static readonly string[] All =
         {
@@ -35,7 +51,11 @@ namespace ChatCRM.Domain.Entities
             ContactsView, ContactsEdit, ContactsDelete,
             ConversationsAssign, ConversationsClose,
             ChannelsManage,
-            SettingsView
+            SettingsView,
+            BillingView, BillingTopUp, BillingAdminRefund,
+            TemplatesView, TemplatesCreate, TemplatesSubmit, TemplatesDelete
+            // Note: PlatformAdmin is intentionally NOT in `All` — even workspace Admins
+            // shouldn't get it by default. It's granted only via the Platform:Admins config list.
         };
 
         /// <summary>Logical groupings used by the role-editor UI to render checkboxes.</summary>
@@ -45,7 +65,9 @@ namespace ChatCRM.Domain.Entities
             ["Contacts"]       = new[] { ContactsView, ContactsEdit, ContactsDelete },
             ["Conversations"]  = new[] { ConversationsAssign, ConversationsClose },
             ["Channels"]       = new[] { ChannelsManage },
-            ["Settings"]       = new[] { SettingsView }
+            ["Settings"]       = new[] { SettingsView },
+            ["Billing"]        = new[] { BillingView, BillingTopUp, BillingAdminRefund },
+            ["Templates"]      = new[] { TemplatesView, TemplatesCreate, TemplatesSubmit, TemplatesDelete }
         };
 
         public static readonly Dictionary<string, string> Labels = new()
@@ -59,7 +81,15 @@ namespace ChatCRM.Domain.Entities
             [ConversationsAssign]  = "Assign conversations",
             [ConversationsClose]   = "Close / reopen conversations",
             [ChannelsManage]       = "Manage channels (WhatsApp numbers)",
-            [SettingsView]         = "Access settings"
+            [SettingsView]         = "Access settings",
+            [BillingView]          = "View billing balance, transactions, invoices",
+            [BillingTopUp]         = "Top up the wallet",
+            [BillingAdminRefund]   = "Issue manual refunds & balance adjustments",
+            [TemplatesView]        = "View WhatsApp templates",
+            [TemplatesCreate]      = "Create & edit templates",
+            [TemplatesSubmit]      = "Submit templates to Meta for approval",
+            [TemplatesDelete]      = "Delete templates",
+            [PlatformAdmin]        = "Platform admin (cross-workspace)"
         };
     }
 

@@ -22,6 +22,15 @@ namespace ChatCRM.Domain.Entities
 
         public DateTime LastMessageAt { get; set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// Timestamp of the most recent INCOMING (contact → us) message. Drives the WhatsApp
+        /// 24-hour customer-service window: while &lt; 24h ago, we can free-form-reply to
+        /// Cloud-API conversations; outside the window, only approved templates are allowed.
+        /// Maintained denormalized so we don't need a MAX(...) per render. Null means the
+        /// contact has never sent us a message yet (we initiated the conversation).
+        /// </summary>
+        public DateTime? LastIncomingAt { get; set; }
+
         public int UnreadCount { get; set; } = 0;
 
         public bool IsArchived { get; set; } = false;

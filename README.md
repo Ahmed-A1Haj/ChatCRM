@@ -304,6 +304,91 @@ Send a WhatsApp message to your linked number from any phone. Within ~1 second, 
 
 ---
 
+## 💳 Stripe top-up (development testing)
+
+ChatCRM bills WhatsApp Cloud-API messages from a per-workspace wallet. Top-ups go through Stripe Checkout. To test the flow locally without a real card:
+
+### 1. Get test-mode keys
+
+Sign up at <https://dashboard.stripe.com/register> (free, no business verification needed for test mode). Then in the dashboard, switch to **Test mode** (toggle in the top right) and grab two values from **Developers → API keys**:
+
+- **Publishable key** — starts with `pk_test_…`
+- **Secret key** — starts with `sk_test_…`
+
+Paste them into `ChatCRM.MVC/appsettings.Development.json`:
+
+```json
+"Stripe": {
+  "PublishableKey": "pk_test_...",
+  "SecretKey": "sk_test_...",
+  "WebhookSecret": "",
+  "MinAmountUsd": 10,
+  "MaxAmountUsd": 1000
+}
+```
+
+Leave `WebhookSecret` blank for now — we'll fill it from the Stripe CLI in step 3.
+
+### 2. Install the Stripe CLI
+
+It forwards Stripe webhooks to your localhost so you don't need a public URL just for billing testing.
+
+- macOS: `brew install stripe/stripe-cli/stripe`
+- Windows: `scoop install stripe` (or download from <https://github.com/stripe/stripe-cli/releases>)
+- Linux: see <https://docs.stripe.com/stripe-cli>
+
+Log in once: `stripe login`.
+
+### 3. Forward webhooks to your local app
+
+In a terminal, run:
+
+```bash
+stripe listen --forward-to https://localhost:7224/api/webhooks/stripe
+```
+
+The first line of output will be:
+
+```
+Ready! Your webhook signing secret is whsec_… (^C to quit)
+```
+
+Copy that `whsec_…` value into `Stripe:WebhookSecret` in `appsettings.Development.json`. Restart ChatCRM. Keep `stripe listen` running in the background — every event Stripe generates is forwarded to your local webhook URL with a real signature you can verify.
+
+### 4. Make a test top-up
+
+1. Sign in to ChatCRM as an Admin or Manager (the only roles with `billing.topup` by default).
+2. Click the **balance pill** in the dashboard topbar → **Top up** → pick `$50` → **Continue to payment**.
+3. You'll land on Stripe Checkout. Use one of Stripe's test cards:
+   - **Success**: `4242 4242 4242 4242` · any future expiry · any CVC · any ZIP
+   - **3-D Secure required**: `4000 0027 6000 3184`
+   - **Decline**: `4000 0000 0000 0002`
+4. After paying, Stripe redirects to `/dashboard/billing/topup/success`. Within seconds the webhook lands, the wallet credits, and the balance pill updates.
+
+Verify:
+
+```sql
+SELECT BalanceUsd FROM Wallets WHERE WorkspaceId = 1;
+SELECT TOP 1 Status, AmountUsd, BalanceAfterUsd, Reference FROM WalletTransactions ORDER BY Id DESC;
+SELECT TOP 1 Action, AfterJson FROM BillingAuditLogs ORDER BY Id DESC;
+```
+
+Expected: balance went up by $50, latest transaction is `Status=Succeeded` with the Stripe `cs_test_…` session id, audit log entry is `topup.succeeded`.
+
+### 5. Replay an event
+
+If you want to test idempotency or a handler change:
+
+```bash
+stripe events resend evt_1Nxxxxxxxxxxxx
+```
+
+Re-delivered events are ignored (the `ProcessedStripeEvents` table short-circuits).
+
+> 💡 **Don't put live keys (`sk_live_…`) in `appsettings.Development.json`.** Use environment variables in production: `Stripe__SecretKey`, `Stripe__PublishableKey`, `Stripe__WebhookSecret`.
+
+---
+
 ## 🗄️ Database schema
 
 Auto-applied at startup via `dbContext.Database.Migrate()`.
