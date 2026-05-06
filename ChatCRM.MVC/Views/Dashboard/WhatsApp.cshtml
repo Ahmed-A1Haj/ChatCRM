@@ -1,20 +1,34 @@
 @model List<ChatCRM.Application.Chats.DTOs.InstanceDto>
 @using ChatCRM.Domain.Entities
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
 @{
-    ViewData["Title"] = "WhatsApp Numbers";
+    ViewData["Title"] = T["WhatsApp.Title"].Value;
     Layout = null;
+
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@htmlLang" dir="@htmlDir">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WhatsApp Numbers — ChatCRM</title>
+    <title>@T["WhatsApp.Title"] — ChatCRM</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/chat.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <script>
+        window.__i18n__ = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
 </head>
 <body class="inbox-shell">
 
@@ -26,13 +40,13 @@
         <div>
             <h1 class="instances-title has-icon">
                 @await Html.PartialAsync("_Icon", new IconModel("smartphone", size: 24))
-                <span>WhatsApp Numbers</span>
+                <span>@T["WhatsApp.Title"]</span>
             </h1>
-            <p class="instances-sub">Connect and manage all your linked WhatsApp lines.</p>
+            <p class="instances-sub">@T["WhatsApp.Subtitle"]</p>
         </div>
         <button class="btn-primary-round has-icon" onclick="openAddModal()">
             @await Html.PartialAsync("_Icon", new IconModel("plus", size: 16))
-            <span>Add Number</span>
+            <span>@T["WhatsApp.AddNumber"]</span>
         </button>
     </div>
 
@@ -48,31 +62,31 @@
                     @(string.IsNullOrWhiteSpace(inst.PhoneNumber) ? "—" : "+" + inst.PhoneNumber)
                 </div>
                 <div class="instance-meta">
-                    <span class="meta-pill status-pill-@inst.Status.ToString().ToLowerInvariant()" data-status-pill>@FormatStatus(inst.Status)</span>
+                    <span class="meta-pill status-pill-@inst.Status.ToString().ToLowerInvariant()" data-status-pill>@FormatStatus(inst.Status, T)</span>
                     <span class="meta-dim" data-last-connected="@(inst.LastConnectedAt?.ToString("o") ?? "")">
                         @if (inst.LastConnectedAt.HasValue)
-                        { @($"Connected {Relative(inst.LastConnectedAt.Value)}") }
+                        { @(T["WhatsApp.Connected.Relative", Relative(inst.LastConnectedAt.Value, T)].Value) }
                         else
-                        { @("Never connected") }
+                        { @T["WhatsApp.NeverConnected"] }
                     </span>
                 </div>
                 <div class="instance-stats">
-                    <div><strong data-conv-count>@inst.ConversationCount</strong> <span>chats</span></div>
-                    <div><strong data-unread-count>@inst.UnreadCount</strong> <span>unread</span></div>
+                    <div><strong data-conv-count>@inst.ConversationCount</strong> <span>@T["WhatsApp.Stats.Chats"]</span></div>
+                    <div><strong data-unread-count>@inst.UnreadCount</strong> <span>@T["WhatsApp.Stats.Unread"]</span></div>
                 </div>
                 <div class="instance-actions">
-                    <a href="/dashboard/chats?instance=@inst.Id" class="btn-ghost action-when-connected">Open inbox</a>
+                    <a href="/dashboard/chats?instance=@inst.Id" class="btn-ghost action-when-connected">@T["WhatsApp.OpenInbox"]</a>
                     <button class="btn-ghost has-icon action-when-pending" onclick="openQr(@inst.Id)">
                         @await Html.PartialAsync("_Icon", new IconModel("qr-code", size: 14))
-                        <span>Show QR</span>
+                        <span>@T["WhatsApp.ShowQR"]</span>
                     </button>
                     <button class="btn-ghost has-icon action-when-disconnected" onclick="openQr(@inst.Id)">
                         @await Html.PartialAsync("_Icon", new IconModel("refresh-cw", size: 14))
-                        <span>Reconnect</span>
+                        <span>@T["WhatsApp.Reconnect"]</span>
                     </button>
-                    <button class="btn-ghost btn-danger action-when-connected" onclick="openDisconnect(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">Disconnect</button>
-                    <button class="btn-ghost btn-danger action-when-pending" onclick="openDisconnect(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">Cancel</button>
-                    <button class="btn-icon btn-icon-danger" title="Delete permanently" aria-label="Delete @inst.DisplayName" onclick="openDelete(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">
+                    <button class="btn-ghost btn-danger action-when-connected" onclick="openDisconnect(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">@T["WhatsApp.Disconnect"]</button>
+                    <button class="btn-ghost btn-danger action-when-pending" onclick="openDisconnect(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">@T["WhatsApp.Cancel"]</button>
+                    <button class="btn-icon btn-icon-danger" title="@T["WhatsApp.DeletePermanently"]" aria-label="@T["WhatsApp.DeleteAria", inst.DisplayName]" onclick="openDelete(@inst.Id, '@Html.Raw(Html.Encode(inst.DisplayName))')">
                         @await Html.PartialAsync("_Icon", new IconModel("trash", size: 16))
                     </button>
                 </div>
@@ -81,7 +95,7 @@
 
         <div class="instance-card instance-card-add" onclick="openAddModal()">
             <div class="add-card-plus">＋</div>
-            <div class="add-card-label">Add New Number</div>
+            <div class="add-card-label">@T["WhatsApp.AddNew"]</div>
         </div>
     </div>
 </main>
@@ -90,22 +104,22 @@
 <div class="modal-backdrop d-none" id="addModal" onclick="if(event.target===this) closeAddModal()">
     <div class="modal-panel">
         <div class="modal-header">
-            <h3 id="modalTitle">Add WhatsApp Number</h3>
+            <h3 id="modalTitle">@T["WhatsApp.AddModal.Title"]</h3>
             <button class="modal-close" onclick="closeAddModal()">✕</button>
         </div>
 
         <!-- Step 1 -->
         <div class="modal-step" id="step1">
-            <label class="form-label" for="displayNameInput">Display name</label>
-            <input type="text" id="displayNameInput" class="form-input" placeholder="e.g. Sales Line" maxlength="100" autocomplete="off" />
-            <p class="form-hint">Shown in your dashboard sidebar.</p>
+            <label class="form-label" for="displayNameInput">@T["WhatsApp.Field.DisplayName"]</label>
+            <input type="text" id="displayNameInput" class="form-input" placeholder="@T["WhatsApp.Placeholder.DisplayName"]" maxlength="100" autocomplete="off" />
+            <p class="form-hint">@T["WhatsApp.Hint.DisplayName"]</p>
 
             <div class="form-error d-none" id="createError" role="alert"></div>
 
             <div class="modal-actions">
-                <button class="btn-ghost" onclick="closeAddModal()" id="cancelCreateBtn">Cancel</button>
+                <button class="btn-ghost" onclick="closeAddModal()" id="cancelCreateBtn">@T["Action.Cancel"]</button>
                 <button class="btn-primary-round" onclick="submitCreate()" id="submitCreateBtn">
-                    <span class="btn-label">Next →</span>
+                    <span class="btn-label">@T["Action.Next"]</span>
                     <span class="btn-spinner d-none" aria-hidden="true"></span>
                 </button>
             </div>
@@ -119,13 +133,13 @@
                 </div>
                 <div class="qr-instructions">
                     <ol>
-                        <li>Open <b>WhatsApp</b> on your phone</li>
-                        <li>Tap <b>⋮ / Settings → Linked Devices</b></li>
-                        <li>Tap <b>Link a Device</b></li>
-                        <li>Scan the code on the left</li>
+                        <li>@Html.Raw(T["WhatsApp.QR.Step1"].Value)</li>
+                        <li>@Html.Raw(T["WhatsApp.QR.Step2"].Value)</li>
+                        <li>@Html.Raw(T["WhatsApp.QR.Step3"].Value)</li>
+                        <li>@Html.Raw(T["WhatsApp.QR.Step4"].Value)</li>
                     </ol>
                     <div class="waiting-indicator" id="waitingIndicator">
-                        <span class="dot-pulse"></span> Waiting for scan…
+                        <span class="dot-pulse"></span> @T["WhatsApp.QR.Waiting"]
                     </div>
                 </div>
             </div>
@@ -133,9 +147,9 @@
             <div class="modal-actions">
                 <button class="btn-ghost has-icon" onclick="refreshQr()">
                     @await Html.PartialAsync("_Icon", new IconModel("refresh-cw", size: 14))
-                    <span>Refresh QR</span>
+                    <span>@T["WhatsApp.QR.Refresh"]</span>
                 </button>
-                <button class="btn-ghost" onclick="closeAddModal()">Close</button>
+                <button class="btn-ghost" onclick="closeAddModal()">@T["Action.Close"]</button>
             </div>
         </div>
 
@@ -143,11 +157,11 @@
         <div class="modal-step d-none" id="step3">
             <div class="success-card">
                 <div class="success-icon">@await Html.PartialAsync("_Icon", new IconModel("check", size: 28))</div>
-                <h3>Connected!</h3>
-                <p id="successDetails">Your WhatsApp number is now linked.</p>
+                <h3>@T["WhatsApp.Success.Title"]</h3>
+                <p id="successDetails">@T["WhatsApp.Success.Default"]</p>
             </div>
             <div class="modal-actions">
-                <button class="btn-primary-round" onclick="location.reload()">Done</button>
+                <button class="btn-primary-round" onclick="location.reload()">@T["Action.Done"]</button>
             </div>
         </div>
     </div>
@@ -157,19 +171,19 @@
 <div class="modal-backdrop d-none" id="disconnectModal" onclick="if(event.target===this) closeDisconnect()">
     <div class="modal-panel modal-panel-small">
         <div class="modal-header">
-            <h3>Disconnect <span id="disconnectName"></span>?</h3>
+            <h3 id="disconnectTitle">@T["WhatsApp.Disconnect"]</h3>
             <button class="modal-close" onclick="closeDisconnect()">✕</button>
         </div>
         <div class="modal-body">
             <ul class="disconnect-bullets">
-                <li>The number will be unlinked from WhatsApp</li>
-                <li>Conversation history stays saved</li>
-                <li>No new messages will be received</li>
+                <li>@T["WhatsApp.Disconnect.Bullet1"]</li>
+                <li>@T["WhatsApp.Disconnect.Bullet2"]</li>
+                <li>@T["WhatsApp.Disconnect.Bullet3"]</li>
             </ul>
         </div>
         <div class="modal-actions">
-            <button class="btn-ghost" onclick="closeDisconnect()">Cancel</button>
-            <button class="btn-ghost btn-danger" onclick="confirmDisconnect()">Disconnect</button>
+            <button class="btn-ghost" onclick="closeDisconnect()">@T["Action.Cancel"]</button>
+            <button class="btn-ghost btn-danger" onclick="confirmDisconnect()">@T["WhatsApp.Disconnect"]</button>
         </div>
     </div>
 </div>
@@ -178,22 +192,22 @@
 <div class="modal-backdrop d-none" id="deleteModal" onclick="if(event.target===this) closeDelete()">
     <div class="modal-panel modal-panel-small">
         <div class="modal-header">
-            <h3>Delete <span id="deleteName"></span> permanently?</h3>
+            <h3 id="deleteTitle">@T["WhatsApp.DeletePermanently"]</h3>
             <button class="modal-close" onclick="closeDelete()">✕</button>
         </div>
         <div class="modal-body">
             <ul class="disconnect-bullets">
-                <li><strong>All conversations and messages</strong> for this number will be deleted</li>
-                <li>The number will be unlinked from WhatsApp</li>
-                <li>The Evolution API instance will be deleted</li>
-                <li class="text-danger"><strong>This cannot be undone.</strong></li>
+                <li>@Html.Raw(T["WhatsApp.Delete.Bullet1"].Value)</li>
+                <li>@T["WhatsApp.Delete.Bullet2"]</li>
+                <li>@T["WhatsApp.Delete.Bullet3"]</li>
+                <li class="text-danger">@Html.Raw(T["WhatsApp.Delete.Bullet4"].Value)</li>
             </ul>
-            <label class="form-label" style="margin-top:14px;">Type <code>DELETE</code> to confirm:</label>
+            <label class="form-label" style="margin-top:14px;">@Html.Raw(T["WhatsApp.Delete.ConfirmInstruction"].Value)</label>
             <input type="text" id="deleteConfirmInput" class="form-input" oninput="updateDeleteButton()" autocomplete="off" />
         </div>
         <div class="modal-actions">
-            <button class="btn-ghost" onclick="closeDelete()">Cancel</button>
-            <button class="btn-ghost btn-danger" id="deleteConfirmBtn" onclick="confirmDelete()" disabled>Delete forever</button>
+            <button class="btn-ghost" onclick="closeDelete()">@T["Action.Cancel"]</button>
+            <button class="btn-ghost btn-danger" id="deleteConfirmBtn" onclick="confirmDelete()" disabled>@T["WhatsApp.Delete.Action"]</button>
         </div>
     </div>
 </div>
@@ -208,21 +222,21 @@
 </html>
 
 @functions {
-    static string FormatStatus(InstanceStatus s) => s switch
+    static string FormatStatus(InstanceStatus s, Microsoft.Extensions.Localization.IStringLocalizer T) => s switch
     {
-        InstanceStatus.Connected => "Connected",
-        InstanceStatus.Connecting => "Connecting",
-        InstanceStatus.Pending => "Awaiting QR scan",
-        InstanceStatus.Disconnected => "Disconnected",
+        InstanceStatus.Connected => T["WhatsApp.Status.Connected"].Value,
+        InstanceStatus.Connecting => T["WhatsApp.Status.Connecting"].Value,
+        InstanceStatus.Pending => T["WhatsApp.Status.Pending"].Value,
+        InstanceStatus.Disconnected => T["WhatsApp.Status.Disconnected"].Value,
         _ => s.ToString()
     };
 
-    static string Relative(DateTime dt)
+    static string Relative(DateTime dt, Microsoft.Extensions.Localization.IStringLocalizer T)
     {
         var diff = DateTime.UtcNow - dt;
-        if (diff.TotalMinutes < 1) return "just now";
-        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes} min ago";
-        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours} hr ago";
-        return $"{(int)diff.TotalDays} days ago";
+        if (diff.TotalMinutes < 1) return T["WhatsApp.Time.JustNow"].Value;
+        if (diff.TotalHours < 1) return T["WhatsApp.Time.MinutesAgo", (int)diff.TotalMinutes].Value;
+        if (diff.TotalDays < 1) return T["WhatsApp.Time.HoursAgo", (int)diff.TotalHours].Value;
+        return T["WhatsApp.Time.DaysAgo", (int)diff.TotalDays].Value;
     }
 }

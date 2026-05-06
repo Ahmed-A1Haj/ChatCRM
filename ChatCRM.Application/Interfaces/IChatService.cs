@@ -14,5 +14,11 @@ namespace ChatCRM.Application.Interfaces
         Task SetLifecycleStageAsync(SetLifecycleDto dto, CancellationToken cancellationToken = default);
         Task<ContactDetailsDto?> GetContactDetailsAsync(int conversationId, CancellationToken cancellationToken = default);
         Task<List<TeamMemberDto>> GetTeamMembersAsync(CancellationToken cancellationToken = default);
+
+        Task<MessageDto> EditMessageAsync(int messageId, string newBody, CancellationToken cancellationToken = default);
+        Task DeleteMessageAsync(int messageId, CancellationToken cancellationToken = default);
+
+        Task<MessageDto> SendMediaMessageAsync(int conversationId, byte[] data, string fileName, string mimeType, string? caption, CancellationToken cancellationToken = default);
+        Task<MessageDto> SendVoiceNoteAsync(int conversationId, byte[] data, string mimeType, CancellationToken cancellationToken = default);
     }
 }

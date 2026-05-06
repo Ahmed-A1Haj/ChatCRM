@@ -17,9 +17,33 @@ namespace ChatCRM.Infrastructure.Services
             _logger = logger;
         }
 
-        public Task<bool> SendMessageAsync(string instanceName, string phone, string message, CancellationToken cancellationToken = default)
+        public Task<EvolutionSendResult> SendMessageAsync(string instanceName, string phone, string message, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("[MOCK] Would send via {Instance} to {Phone}: {Message}", instanceName, phone, message);
+            return Task.FromResult(new EvolutionSendResult(true, $"mock-{Guid.NewGuid():N}", $"{phone}@s.whatsapp.net"));
+        }
+
+        public Task<EvolutionSendResult> SendMediaAsync(string instanceName, string phone, string mediaType, byte[] data, string? mimeType, string? fileName, string? caption, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("[MOCK] Would send {Type} ({Bytes} bytes) via {Instance} to {Phone}", mediaType, data.Length, instanceName, phone);
+            return Task.FromResult(new EvolutionSendResult(true, $"mock-{Guid.NewGuid():N}", $"{phone}@s.whatsapp.net"));
+        }
+
+        public Task<EvolutionSendResult> SendVoiceNoteAsync(string instanceName, string phone, byte[] data, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("[MOCK] Would send voice ({Bytes} bytes) via {Instance} to {Phone}", data.Length, instanceName, phone);
+            return Task.FromResult(new EvolutionSendResult(true, $"mock-{Guid.NewGuid():N}", $"{phone}@s.whatsapp.net"));
+        }
+
+        public Task<bool> EditMessageAsync(string instanceName, string remoteJid, string externalMessageId, string newText, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("[MOCK] Would edit {Id} via {Instance} to: {Text}", externalMessageId, instanceName, newText);
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteMessageAsync(string instanceName, string remoteJid, string externalMessageId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("[MOCK] Would delete {Id} via {Instance}", externalMessageId, instanceName);
             return Task.FromResult(true);
         }
 

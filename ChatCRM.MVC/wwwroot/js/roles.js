@@ -1,3 +1,15 @@
+/* i18n fallback — guarantee t() is callable even if i18n.js failed to load. */
+if (typeof window.t !== 'function') {
+    window.t = function (key) {
+        var dict = window.__i18n__ || {};
+        var value = dict[key] != null ? dict[key] : key;
+        for (var i = 1; i < arguments.length; i++) {
+            value = value.split('{' + (i - 1) + '}').join(String(arguments[i]));
+        }
+        return value;
+    };
+}
+
 /* ─── Constants ──────────────────────────────────────────────────── */
 const token = () => document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
 const BUILTIN = new Set(['Admin', 'Manager', 'Agent']);
@@ -28,11 +40,11 @@ const state = {
 function showToast(message, type = 'info') {
     const stack = document.getElementById('toastStack');
     if (!stack) return;
-    const t = document.createElement('div');
-    t.className = `toast toast-${type}`;
-    t.textContent = message;
-    stack.appendChild(t);
-    setTimeout(() => { t.classList.add('toast-out'); setTimeout(() => t.remove(), 200); }, 2400);
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.textContent = message;
+    stack.appendChild(el);
+    setTimeout(() => { el.classList.add('toast-out'); setTimeout(() => el.remove(), 200); }, 2400);
 }
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
@@ -71,7 +83,7 @@ function visualForRole(name) {
 /* ─── Fetch ──────────────────────────────────────────────────────── */
 async function loadRoles() {
     const list = document.getElementById('rolesList');
-    list.innerHTML = '<div class="contacts-empty">Loading…</div>';
+    list.innerHTML = `<div class="contacts-empty">${escapeHtml(t('Action.Loading'))}</div>`;
 
     try {
         const resp = await fetch('/api/roles');
@@ -79,7 +91,7 @@ async function loadRoles() {
         state.cache = await resp.json();
         applyFiltersAndRender();
     } catch (err) {
-        list.innerHTML = `<div class="contacts-empty">Failed to load: ${escapeHtml(err.message)}</div>`;
+        list.innerHTML = `<div class="contacts-empty">${escapeHtml(t('Roles.LoadFailed', err.message))}</div>`;
     }
 }
 
@@ -133,8 +145,8 @@ function renderRoles(items) {
         list.innerHTML = `
             <div class="contacts-empty empty-state">
                 <div class="empty-icon">${svg('lock', 32)}</div>
-                <p class="empty-title">No roles match your filter</p>
-                <p class="empty-sub">Try a different search or clear the filter.</p>
+                <p class="empty-title">${escapeHtml(t('Roles.NoMatch'))}</p>
+                <p class="empty-sub">${escapeHtml(t('Roles.NoMatchSub'))}</p>
             </div>`;
         return;
     }
@@ -146,10 +158,10 @@ function renderEmptyAllRoles() {
     return `
         <div class="contacts-empty empty-state empty-state-full">
             <div class="empty-icon">${svg('inbox-empty', 40)}</div>
-            <p class="empty-title">No roles yet</p>
-            <p class="empty-sub">Create your first custom role to fine-tune access for your team.</p>
+            <p class="empty-title">${escapeHtml(t('Roles.Empty.Title'))}</p>
+            <p class="empty-sub">${escapeHtml(t('Roles.Empty.Sub'))}</p>
             <button class="btn-primary-soft has-icon" type="button" onclick="openCreateRole()">
-                ${svg('plus', 14)}<span>Add role</span>
+                ${svg('plus', 14)}<span>${escapeHtml(t('Roles.AddRole'))}</span>
             </button>
         </div>`;
 }
@@ -167,18 +179,25 @@ function renderCard(r) {
         ? visiblePerms.map(p =>
             `<span class="role-perm-chip" title="${escapeHtml(p)}">${escapeHtml(permLabel(p))}</span>`
           ).join('')
-        : '<span class="role-perm-empty">No permissions assigned</span>';
+        : `<span class="role-perm-empty">${escapeHtml(t('Roles.NoPermissions'))}</span>`;
 
     const moreBtn = hiddenCount > 0
         ? `<button class="role-perm-more" type="button" data-show-all="${escapeHtml(r.id)}"
-                   aria-label="Show ${hiddenCount} more permissions">+${hiddenCount} more</button>`
+                   aria-label="${escapeHtml(t('Roles.Action.ShowMore', hiddenCount))}">${escapeHtml(t('Roles.More', hiddenCount))}</button>`
         : '';
 
+    const userCountText = r.userCount === 1
+        ? t('Roles.UsersOne', r.userCount)
+        : t('Roles.UsersMany', r.userCount);
     const userCountLine = r.userCount > 0
-        ? `<strong>${r.userCount}</strong> user${r.userCount === 1 ? '' : 's'}`
-        : `<a href="/dashboard/settings/users" class="role-cta">Assign users ${svg('arrow-right', 11)}</a>`;
+        ? `<strong>${escapeHtml(userCountText)}</strong>`
+        : `<a href="/dashboard/settings/users" class="role-cta">${escapeHtml(t('Roles.AssignUsers'))} ${svg('arrow-right', 11)}</a>`;
 
-    const editLabel = isBuiltin ? 'Customize' : 'Edit';
+    const permsText = perms.length === 1
+        ? t('Roles.PermsOne', perms.length)
+        : t('Roles.PermsMany', perms.length);
+
+    const editLabel = isBuiltin ? t('Roles.Action.Customize') : t('Roles.Action.Edit');
     const editIcon  = isBuiltin ? 'eye' : 'edit';
 
     return `
@@ -188,14 +207,14 @@ function renderCard(r) {
             <div class="role-card-title">
                 <h3>${escapeHtml(r.name)}</h3>
                 <div class="role-card-tags">
-                    ${isBuiltin ? '<span class="role-tag role-tag-builtin">Built-in</span>' : '<span class="role-tag role-tag-custom">Custom</span>'}
-                    ${isMyRole ? '<span class="role-tag role-tag-mine">Your role</span>' : ''}
+                    ${isBuiltin ? `<span class="role-tag role-tag-builtin">${escapeHtml(t('Roles.Tag.Builtin'))}</span>` : `<span class="role-tag role-tag-custom">${escapeHtml(t('Roles.Tag.Custom'))}</span>`}
+                    ${isMyRole ? `<span class="role-tag role-tag-mine">${escapeHtml(t('Roles.Tag.Mine'))}</span>` : ''}
                 </div>
             </div>
         </header>
 
         <p class="role-card-meta">
-            ${userCountLine} · <strong>${perms.length}</strong> permission${perms.length === 1 ? '' : 's'}
+            ${userCountLine} · <strong>${escapeHtml(permsText)}</strong>
         </p>
 
         <div class="role-perms" data-role-id="${escapeHtml(r.id)}">
@@ -208,8 +227,8 @@ function renderCard(r) {
         </div>
 
         <footer class="role-card-actions">
-            <button class="btn-ghost has-icon" type="button" data-action="edit" data-id="${escapeHtml(r.id)}" aria-label="${editLabel} ${escapeHtml(r.name)}">
-                ${svg(editIcon, 13)}<span>${editLabel}</span>
+            <button class="btn-ghost has-icon" type="button" data-action="edit" data-id="${escapeHtml(r.id)}" aria-label="${escapeHtml(editLabel + ' ' + r.name)}">
+                ${svg(editIcon, 13)}<span>${escapeHtml(editLabel)}</span>
             </button>
 
             ${isBuiltin ? '' : renderKebab(r.id, r.name)}
@@ -221,7 +240,7 @@ function renderKebab(id, name) {
     return `
     <div class="kebab-wrap">
         <button class="btn-icon-square" type="button" data-action="kebab" data-id="${escapeHtml(id)}"
-                aria-haspopup="true" aria-expanded="false" aria-label="More actions for ${escapeHtml(name)}">
+                aria-haspopup="true" aria-expanded="false" aria-label="${escapeHtml(t('Roles.Action.MoreFor', name))}">
             ${svg('more', 14)}
         </button>
     </div>`;
@@ -257,9 +276,9 @@ document.addEventListener('click', (e) => {
     const name = card.dataset.name;
 
     wrap.insertAdjacentHTML('beforeend', `
-        <div class="kebab-popover" role="menu" aria-label="Role actions">
+        <div class="kebab-popover" role="menu" aria-label="${escapeHtml(t('Roles.Action.ActionsAria'))}">
             <button class="kebab-item is-danger" type="button" data-confirm-delete data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" role="menuitem">
-                ${svg('trash', 13)}<span>Delete role</span>
+                ${svg('trash', 13)}<span>${escapeHtml(t('Roles.Action.Delete'))}</span>
             </button>
         </div>`);
 });
@@ -291,14 +310,19 @@ document.addEventListener('click', async (e) => {
         const userCount = role?.userCount ?? 0;
         closeKebab();
 
-        const body = userCount > 0
-            ? `<strong>${escapeHtml(name)}</strong> currently has <strong>${userCount}</strong> user${userCount === 1 ? '' : 's'} assigned. Reassign them before deleting.`
-            : `<strong>${escapeHtml(name)}</strong> will be permanently removed.`;
+        let body;
+        if (userCount > 0) {
+            body = userCount === 1
+                ? t('Roles.Confirm.Delete.BodyWithUsersOne', escapeHtml(name), userCount)
+                : t('Roles.Confirm.Delete.BodyWithUsersMany', escapeHtml(name), userCount);
+        } else {
+            body = t('Roles.Confirm.Delete.Body', escapeHtml(name));
+        }
 
         openConfirm({
-            title: 'Delete role?',
+            title: t('Roles.Confirm.Delete.Title'),
             body,
-            confirmLabel: userCount > 0 ? 'Cannot delete' : 'Delete',
+            confirmLabel: userCount > 0 ? t('Roles.Confirm.Delete.CannotDelete') : t('Roles.Confirm.Delete.Action'),
             isDanger: true,
             disabled: userCount > 0,
             onConfirm: async () => {
@@ -308,10 +332,10 @@ document.addEventListener('click', async (e) => {
                 });
                 if (!resp.ok) {
                     const err = await resp.json().catch(() => ({}));
-                    showToast(err.error || 'Failed.', 'error');
+                    showToast(err.error || t('Roles.Toast.Failed'), 'error');
                     return;
                 }
-                showToast('Role deleted', 'success');
+                showToast(t('Roles.Toast.Deleted'), 'success');
                 loadRoles();
             }
         });
@@ -321,7 +345,7 @@ document.addEventListener('click', async (e) => {
 /* ─── Modal — create / edit ───────────────────────────────────────── */
 function openCreateRole() {
     state.editingId = null;
-    document.getElementById('roleModalTitle').textContent = 'Add role';
+    document.getElementById('roleModalTitle').textContent = t('Roles.Modal.AddTitle');
     document.getElementById('roleName').value = '';
     document.getElementById('roleName').disabled = false;
     document.getElementById('roleNameHint').textContent = '';
@@ -343,11 +367,13 @@ async function openEditRole(id) {
         const r = await resp.json();
         const isBuiltin = BUILTIN.has(r.name);
 
-        document.getElementById('roleModalTitle').textContent = isBuiltin ? `Customize "${r.name}"` : `Edit "${r.name}"`;
+        document.getElementById('roleModalTitle').textContent = isBuiltin
+            ? t('Roles.Modal.CustomizeTitle', r.name)
+            : t('Roles.Modal.EditNamedTitle', r.name);
         document.getElementById('roleName').value = r.name;
         document.getElementById('roleName').disabled = isBuiltin;
         document.getElementById('roleNameHint').textContent = isBuiltin
-            ? "Built-in role names can't be changed, but you can adjust their permissions."
+            ? t('Roles.Hint.Builtin')
             : '';
 
         const perms = new Set(r.permissions);
@@ -355,7 +381,7 @@ async function openEditRole(id) {
             cb.checked = perms.has(cb.dataset.permission);
         });
     } catch (err) {
-        showToast('Failed to load role: ' + err.message, 'error');
+        showToast(t('Roles.LoadRoleFailed', err.message), 'error');
         closeRoleModal();
     }
 }
@@ -381,14 +407,14 @@ document.getElementById('roleSaveBtn').addEventListener('click', async () => {
     const labelEl = btn.querySelector('.btn-label');
 
     const name = document.getElementById('roleName').value.trim();
-    if (!name) { showRoleError('Role name is required.'); return; }
+    if (!name) { showRoleError(t('Roles.Validation.NameRequired')); return; }
 
     const checked = Array.from(document.querySelectorAll('input[data-permission]:checked'))
         .map(cb => cb.dataset.permission);
 
     btn.disabled = true;
     spinner.classList.remove('d-none');
-    labelEl.textContent = 'Saving…';
+    labelEl.textContent = t('Action.Saving');
 
     try {
         const resp = await fetch('/api/roles', {
@@ -398,18 +424,18 @@ document.getElementById('roleSaveBtn').addEventListener('click', async () => {
         });
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            showRoleError(err.error || 'Failed to save role.');
+            showRoleError(err.error || t('Roles.Toast.SaveFailed'));
             return;
         }
-        showToast(state.editingId ? 'Role updated' : 'Role created', 'success');
+        showToast(state.editingId ? t('Roles.Toast.Updated') : t('Roles.Toast.Created'), 'success');
         closeRoleModal();
         loadRoles();
     } catch (err) {
-        showRoleError('Network error: ' + err.message);
+        showRoleError(t('Roles.Toast.NetworkError', err.message));
     } finally {
         btn.disabled = false;
         spinner.classList.add('d-none');
-        labelEl.textContent = 'Save';
+        labelEl.textContent = t('Action.Save');
     }
 });
 
@@ -431,7 +457,7 @@ function openConfirm({ title, body, confirmLabel, isDanger, disabled, onConfirm 
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmBody').innerHTML = body || '';
     const btn = document.getElementById('confirmAction');
-    btn.textContent = confirmLabel || 'Confirm';
+    btn.textContent = confirmLabel || t('Common.Confirm.Action');
     btn.className = 'btn-ghost ' + (isDanger ? 'btn-danger' : '');
     btn.disabled = !!disabled;
     document.getElementById('confirmModal').classList.remove('d-none');
@@ -452,8 +478,8 @@ document.getElementById('confirmAction')?.addEventListener('click', async () => 
 
 /* ─── Toolbar wiring ──────────────────────────────────────────────── */
 function debounce(fn, ms) {
-    let t;
-    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
 }
 
 document.getElementById('roleSearch').addEventListener('input', debounce((e) => {

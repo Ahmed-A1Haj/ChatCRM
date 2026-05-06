@@ -1,19 +1,33 @@
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
 @{
-    ViewData["Title"] = "Channels — Settings";
+    ViewData["Title"] = T["Channels.Title"].Value;
     Layout = null;
     var whatsappCount = (int?)ViewBag.WhatsAppCount ?? 0;
+
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@htmlLang" dir="@htmlDir">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Channels — ChatCRM</title>
+    <title>@T["Channels.Title"] — ChatCRM</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/settings.css" asp-append-version="true" />
+    <script>
+        window.__i18n__ = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
 </head>
 <body class="inbox-shell">
 
@@ -27,8 +41,8 @@
     <main class="settings-main">
 
         <div class="settings-header">
-            <h1 class="settings-title">Channels</h1>
-            <p class="settings-sub">Connect customer-facing messaging platforms to ChatCRM. Conversations from every connected channel land in the same inbox.</p>
+            <h1 class="settings-title">@T["Channels.Title"]</h1>
+            <p class="settings-sub">@T["Channels.Subtitle"]</p>
         </div>
 
         <div class="channel-grid">
@@ -41,14 +55,14 @@
                     </span>
                     <span class="channel-status-pill channel-status-active">
                         @await Html.PartialAsync("_Icon", new IconModel("check", size: 11))
-                        <span>Active</span>
+                        <span>@T["Channels.Status.Active"]</span>
                     </span>
                 </div>
                 <h3 class="channel-name">WhatsApp</h3>
-                <p class="channel-desc">Connect WhatsApp numbers via Evolution API or WhatsApp Business Cloud.</p>
+                <p class="channel-desc">@T["Channels.WhatsApp.Desc"]</p>
                 <div class="channel-card-foot">
-                    <strong>@whatsappCount</strong>&nbsp;<span>connected number@(whatsappCount == 1 ? "" : "s")</span>
-                    <span class="channel-action">Manage →</span>
+                    <strong>@whatsappCount</strong>&nbsp;<span>@(whatsappCount == 1 ? T["Channels.ConnectedNumbersOne"].Value : T["Channels.ConnectedNumbersMany"].Value)</span>
+                    <span class="channel-action">@T["Channels.Manage"]</span>
                 </div>
             </a>
 
@@ -58,12 +72,12 @@
                     <span class="channel-icon channel-icon-instagram">
                         @await Html.PartialAsync("_Icon", new IconModel("channel-instagram", size: 26))
                     </span>
-                    <span class="channel-status-pill channel-status-soon">Coming soon</span>
+                    <span class="channel-status-pill channel-status-soon">@T["Channels.Status.ComingSoon"]</span>
                 </div>
-                <h3 class="channel-name">Instagram</h3>
-                <p class="channel-desc">Reply to DMs and story replies from your Instagram Business account.</p>
+                <h3 class="channel-name">@T["Channels.Instagram.Name"]</h3>
+                <p class="channel-desc">@T["Channels.Instagram.Desc"]</p>
                 <div class="channel-card-foot">
-                    <span class="channel-foot-muted">Not yet available</span>
+                    <span class="channel-foot-muted">@T["Channels.NotAvailable"]</span>
                 </div>
             </div>
 
@@ -73,12 +87,12 @@
                     <span class="channel-icon channel-icon-messenger">
                         @await Html.PartialAsync("_Icon", new IconModel("channel-messenger", size: 26))
                     </span>
-                    <span class="channel-status-pill channel-status-soon">Coming soon</span>
+                    <span class="channel-status-pill channel-status-soon">@T["Channels.Status.ComingSoon"]</span>
                 </div>
-                <h3 class="channel-name">Facebook Messenger</h3>
-                <p class="channel-desc">Manage Messenger conversations from your Facebook Page in the same inbox.</p>
+                <h3 class="channel-name">@T["Channels.Messenger.Name"]</h3>
+                <p class="channel-desc">@T["Channels.Messenger.Desc"]</p>
                 <div class="channel-card-foot">
-                    <span class="channel-foot-muted">Not yet available</span>
+                    <span class="channel-foot-muted">@T["Channels.NotAvailable"]</span>
                 </div>
             </div>
 

@@ -1,14 +1,23 @@
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
 @{
-    ViewData["Title"] = "Users — Settings";
+    ViewData["Title"] = T["Users.Title"].Value + " — " + T["SettingsNav.Title"].Value;
     Layout = null;
     var roles = (List<ChatCRM.Application.Users.DTOS.RoleListItemDto>)ViewBag.Roles;
+
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@htmlLang" dir="@htmlDir">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Users — ChatCRM</title>
+    <title>@T["Users.Title"] — ChatCRM</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
@@ -16,6 +25,11 @@
     <link rel="stylesheet" href="~/css/settings.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/contacts.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/users.css" asp-append-version="true" />
+    <script>
+        window.__i18n__ = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
 </head>
 <body class="inbox-shell">
 
@@ -28,19 +42,19 @@
     <main class="settings-main">
         <div class="settings-header">
             <div>
-                <h1 class="settings-title">Users</h1>
-                <p class="settings-sub">Invite, edit, and manage everyone with access to ChatCRM.</p>
+                <h1 class="settings-title">@T["Users.Title"]</h1>
+                <p class="settings-sub">@T["Users.Subtitle"]</p>
             </div>
             <button class="btn-primary-soft has-icon" id="addUserBtn" type="button">
                 @await Html.PartialAsync("_Icon", new IconModel("plus", size: 14))
-                <span>Add user</span>
+                <span>@T["Users.AddUser"]</span>
             </button>
         </div>
 
         <div class="contacts-filters" style="border-bottom:none;padding-left:0;padding-right:0;">
             <div class="filter-search">
                 @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
-                <input type="search" id="userSearch" placeholder="Search by name or email…" />
+                <input type="search" id="userSearch" placeholder="@T["Users.SearchPlaceholder"]" />
             </div>
         </div>
 
@@ -48,16 +62,16 @@
             <table class="contacts-table" id="usersTable">
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Created</th>
+                        <th>@T["Users.Column.Name"]</th>
+                        <th>@T["Users.Column.Email"]</th>
+                        <th>@T["Users.Column.Role"]</th>
+                        <th>@T["Users.Column.Status"]</th>
+                        <th>@T["Users.Column.Created"]</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody id="usersBody">
-                    <tr><td colspan="6" class="contacts-empty">Loading…</td></tr>
+                    <tr><td colspan="6" class="contacts-empty">@T["Action.Loading"]</td></tr>
                 </tbody>
             </table>
         </section>
@@ -68,7 +82,7 @@
 <div class="modal-backdrop d-none" id="userModal" onclick="if(event.target===this) closeUserModal()">
     <div class="modal-panel">
         <div class="modal-header">
-            <h3 id="userModalTitle">Add user</h3>
+            <h3 id="userModalTitle">@T["Users.Modal.AddTitle"]</h3>
             <button class="modal-close" type="button" onclick="closeUserModal()">✕</button>
         </div>
         <div class="modal-body">
@@ -76,29 +90,29 @@
 
             <div class="form-grid-2">
                 <label class="form-field">
-                    <span>First name</span>
+                    <span>@T["Users.Field.FirstName"]</span>
                     <input type="text" id="userFirstName" class="form-input" />
                 </label>
                 <label class="form-field">
-                    <span>Last name</span>
+                    <span>@T["Users.Field.LastName"]</span>
                     <input type="text" id="userLastName" class="form-input" />
                 </label>
             </div>
 
             <label class="form-field">
-                <span>Email <em>*</em></span>
+                <span>@T["Users.Field.Email"] <em>*</em></span>
                 <input type="email" id="userEmail" class="form-input" autocomplete="off" />
             </label>
 
             <label class="form-field">
-                <span id="passwordLabel">Password <em>*</em></span>
+                <span id="passwordLabel">@T["Users.Field.Password"] <em>*</em></span>
                 <input type="password" id="userPassword" class="form-input" autocomplete="new-password" />
-                <small class="form-hint" id="passwordHint">Min 10 characters, mixed case, with a digit.</small>
+                <small class="form-hint" id="passwordHint">@T["Users.Hint.Password"]</small>
             </label>
 
             <div class="form-grid-2">
                 <label class="form-field">
-                    <span>Role</span>
+                    <span>@T["Users.Field.Role"]</span>
                     <select id="userRole" class="form-input">
                         @foreach (var r in roles)
                         {
@@ -107,7 +121,7 @@
                     </select>
                 </label>
                 <label class="form-field form-toggle-field">
-                    <span>Active</span>
+                    <span>@T["Users.Field.Active"]</span>
                     <label class="switch">
                         <input type="checkbox" id="userIsActive" checked />
                         <span class="slider"></span>
@@ -116,9 +130,9 @@
             </div>
         </div>
         <div class="modal-actions">
-            <button class="btn-ghost" type="button" onclick="closeUserModal()">Cancel</button>
+            <button class="btn-ghost" type="button" onclick="closeUserModal()">@T["Action.Cancel"]</button>
             <button class="btn-primary-round" type="button" id="userSaveBtn">
-                <span class="btn-label">Save</span>
+                <span class="btn-label">@T["Action.Save"]</span>
                 <span class="btn-spinner d-none" aria-hidden="true"></span>
             </button>
         </div>
@@ -129,15 +143,15 @@
 <div class="modal-backdrop d-none" id="confirmModal" onclick="if(event.target===this) closeConfirmModal()">
     <div class="modal-panel modal-panel-small">
         <div class="modal-header">
-            <h3 id="confirmTitle">Confirm</h3>
+            <h3 id="confirmTitle">@T["Common.Confirm.Title"]</h3>
             <button class="modal-close" type="button" onclick="closeConfirmModal()">✕</button>
         </div>
         <div class="modal-body">
             <p id="confirmBody" style="margin:0;font-size:13.5px;color:#374151;"></p>
         </div>
         <div class="modal-actions">
-            <button class="btn-ghost" type="button" onclick="closeConfirmModal()">Cancel</button>
-            <button class="btn-ghost btn-danger" type="button" id="confirmAction">Confirm</button>
+            <button class="btn-ghost" type="button" onclick="closeConfirmModal()">@T["Action.Cancel"]</button>
+            <button class="btn-ghost btn-danger" type="button" id="confirmAction">@T["Common.Confirm.Action"]</button>
         </div>
     </div>
 </div>

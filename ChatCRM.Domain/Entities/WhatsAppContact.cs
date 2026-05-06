@@ -6,6 +6,12 @@ namespace ChatCRM.Domain.Entities
 
         public string PhoneNumber { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Full Baileys/WhatsApp JID (e.g. "972595276896@s.whatsapp.net" or "...@lid").
+        /// Captured from incoming webhooks and required for Evolution edit/delete API calls.
+        /// </summary>
+        public string? RemoteJid { get; set; }
+
         public string? DisplayName { get; set; }
 
         public string? AvatarUrl { get; set; }

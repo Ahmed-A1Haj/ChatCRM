@@ -1,6 +1,15 @@
-﻿@{
-    ViewData["Title"] = "Privacy Policy";
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = T["Privacy.Title"].Value;
+    ViewData["AuthCardClass"] = "auth-card-wide";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<h1 class="auth-heading">@T["Privacy.Title"]</h1>
+<div class="auth-static-body">
+    <p>@T["Privacy.Body"]</p>
+</div>
+
+<div class="auth-btn-row">
+    <a href="/" class="auth-btn auth-btn-secondary">@T["Auth.AccessDenied.BackHome"]</a>
+</div>
