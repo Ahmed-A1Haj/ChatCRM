@@ -20,6 +20,8 @@
         && (await AuthZ.AuthorizeAsync(User, null, new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.BillingView) })).Succeeded;
     var canSeeTemplates = User.Identity?.IsAuthenticated == true
         && (await AuthZ.AuthorizeAsync(User, null, new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.TemplatesView) })).Succeeded;
+    var canSeeAgents = User.Identity?.IsAuthenticated == true
+        && (await AuthZ.AuthorizeAsync(User, null, new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.AgentsView) })).Succeeded;
     var canSeePlatformAdmin = User.Identity?.IsAuthenticated == true
         && (await AuthZ.AuthorizeAsync(User, null, new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.PlatformAdmin) })).Succeeded;
 }
@@ -53,6 +55,12 @@
         {
             <a class="@Cls("templates")" href="/dashboard/templates" title="@T["Rail.Templates"]">
                 @await Html.PartialAsync("_Icon", new IconModel("file-text", size: 22, ariaLabel: T["Rail.Templates"].Value))
+            </a>
+        }
+        @if (canSeeAgents)
+        {
+            <a class="@Cls("agents")" href="/dashboard/agents" title="@T["Rail.Agents"]">
+                @await Html.PartialAsync("_Icon", new IconModel("smile-plus", size: 22, ariaLabel: T["Rail.Agents"].Value))
             </a>
         }
         @if (canSeePlatformAdmin)

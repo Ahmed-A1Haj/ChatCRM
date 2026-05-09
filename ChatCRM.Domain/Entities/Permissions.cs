@@ -39,6 +39,10 @@ namespace ChatCRM.Domain.Entities
         public const string TemplatesSubmit = "templates.submit";          // send to Meta for approval
         public const string TemplatesDelete = "templates.delete";
 
+        // ── AI Agents ──────────────────────────────────────────────────
+        public const string AgentsView   = "agents.view";    // see the agents list + per-conversation assignment
+        public const string AgentsManage = "agents.manage";  // create/edit/delete/set-default/toggle-active
+
         // ── Platform-level admin (cross-workspace, controlled by config "Platform:Admins") ──
         // This claim is only granted to a synthetic "Platform Admin" role seeded for accounts
         // listed in appsettings under Platform:Admins. It gates /admin/* routes.
@@ -53,7 +57,8 @@ namespace ChatCRM.Domain.Entities
             ChannelsManage,
             SettingsView,
             BillingView, BillingTopUp, BillingAdminRefund,
-            TemplatesView, TemplatesCreate, TemplatesSubmit, TemplatesDelete
+            TemplatesView, TemplatesCreate, TemplatesSubmit, TemplatesDelete,
+            AgentsView, AgentsManage
             // Note: PlatformAdmin is intentionally NOT in `All` — even workspace Admins
             // shouldn't get it by default. It's granted only via the Platform:Admins config list.
         };
@@ -67,7 +72,8 @@ namespace ChatCRM.Domain.Entities
             ["Channels"]       = new[] { ChannelsManage },
             ["Settings"]       = new[] { SettingsView },
             ["Billing"]        = new[] { BillingView, BillingTopUp, BillingAdminRefund },
-            ["Templates"]      = new[] { TemplatesView, TemplatesCreate, TemplatesSubmit, TemplatesDelete }
+            ["Templates"]      = new[] { TemplatesView, TemplatesCreate, TemplatesSubmit, TemplatesDelete },
+            ["AI Agents"]      = new[] { AgentsView, AgentsManage }
         };
 
         public static readonly Dictionary<string, string> Labels = new()
@@ -89,6 +95,8 @@ namespace ChatCRM.Domain.Entities
             [TemplatesCreate]      = "Create & edit templates",
             [TemplatesSubmit]      = "Submit templates to Meta for approval",
             [TemplatesDelete]      = "Delete templates",
+            [AgentsView]           = "View AI agents and conversation assignments",
+            [AgentsManage]         = "Create, edit, delete, and configure AI agents",
             [PlatformAdmin]        = "Platform admin (cross-workspace)"
         };
     }

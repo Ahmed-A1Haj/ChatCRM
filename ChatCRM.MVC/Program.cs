@@ -155,6 +155,9 @@ builder.Services.AddHostedService<ChatCRM.Infrastructure.Services.Payments.AutoR
 // Audit log (phase 12) — read-only paged query over BillingAuditLog.
 builder.Services.AddScoped<IAuditLogService, ChatCRM.Infrastructure.Services.Audit.AuditLogService>();
 
+// AI Agents (phase 13) — workspace-scoped agents + per-conversation assignment.
+builder.Services.AddScoped<IAgentService, ChatCRM.Infrastructure.Services.Agents.AgentService>();
+
 // Stripe configuration — keys live in environment / appsettings.Development.json.
 // The provider self-checks IsConfigured before any Stripe API call so missing keys
 // surface as a friendly "Payment processing is not configured" message rather than a 500.

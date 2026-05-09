@@ -1,0 +1,187 @@
+@using ChatCRM.Domain.Entities
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthZ
+
+@{
+    Layout = null;
+    ViewData["Title"] = T["Agents.Title"].Value;
+
+    var culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+
+    var canManage = (await AuthZ.AuthorizeAsync(User, null,
+        new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.AgentsManage) })).Succeeded;
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/agents.css" asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+        window.__caps__        = { canManage: @(canManage.ToString().ToLowerInvariant()) };
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "agents")
+@Html.AntiForgeryToken()
+
+<section class="agents-shell">
+    <main class="agents-main">
+        <div class="agents-container">
+
+            <header class="agents-page-head">
+                <div class="agents-page-title-wrap">
+                    <span class="agents-page-icon" aria-hidden="true">
+                        @await Html.PartialAsync("_Icon", new IconModel("smile-plus", size: 28))
+                    </span>
+                    <div>
+                        <h1 class="agents-page-title">@T["Agents.Title"]</h1>
+                        <p class="agents-page-sub">@T["Agents.Sub"]</p>
+                    </div>
+                </div>
+                @if (canManage)
+                {
+                    <button type="button" class="agents-create-btn" id="createBtn">
+                        <span class="agents-plus" aria-hidden="true">+</span>
+                        @T["Agents.CreateBtn"]
+                    </button>
+                }
+            </header>
+
+            <div class="agents-toolbar">
+                <nav class="agents-tabs" role="tablist" aria-label="@T["Agents.TabsAria"]">
+                    <button type="button" class="agents-tab is-active" data-tab="all" role="tab" aria-selected="true">
+                        @T["Agents.Tab.All"] <span class="agents-tab-count" id="countAll">0</span>
+                    </button>
+                    <button type="button" class="agents-tab" data-tab="active" role="tab" aria-selected="false">
+                        @T["Agents.Tab.Active"] <span class="agents-tab-count" id="countActive">0</span>
+                    </button>
+                    <button type="button" class="agents-tab" data-tab="inactive" role="tab" aria-selected="false">
+                        @T["Agents.Tab.Inactive"] <span class="agents-tab-count" id="countInactive">0</span>
+                    </button>
+                </nav>
+                <div class="agents-search">
+                    @await Html.PartialAsync("_Icon", new IconModel("search", size: 16, cssClass: "agents-search-icon"))
+                    <input type="text" id="searchInput" placeholder="@T["Agents.SearchPlaceholder"]" autocomplete="off" />
+                </div>
+            </div>
+
+            <section class="agents-grid" id="agentsGrid"></section>
+
+            <div id="emptyState" class="agents-empty d-none">
+                <h3 id="emptyTitle">@T["Agents.Empty.Title"]</h3>
+                <p id="emptySub">@T["Agents.Empty.Sub"]</p>
+            </div>
+
+            <div class="agents-howitworks" id="howItWorks">
+                <span class="agents-howitworks-icon" aria-hidden="true">
+                    @await Html.PartialAsync("_Icon", new IconModel("info", size: 18))
+                </span>
+                <div class="agents-howitworks-text">
+                    <strong>@T["Agents.HowItWorks.Title"]</strong>
+                    <span>@T["Agents.HowItWorks.Body"]</span>
+                </div>
+            </div>
+        </div>
+    </main>
+</section>
+
+@if (canManage)
+{
+    @* ── Create / Edit modal ─────────────────────────────────────────── *@
+    <div class="ag-modal d-none" id="editModal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+        <div class="ag-modal-inner">
+            <header class="ag-modal-head">
+                <h2 id="editTitle">@T["Agents.Editor.Title"]</h2>
+                <button type="button" class="ag-modal-close" id="editClose" aria-label="@T["Agents.Editor.CloseAria"]">×</button>
+            </header>
+            <form id="editForm" novalidate>
+                <input type="hidden" id="editId" value="" />
+
+                <div class="ag-avatar-row">
+                    <div class="ag-avatar-preview" id="avatarPreview">
+                        <span class="ag-avatar-placeholder" id="avatarPlaceholder">🤖</span>
+                        <img id="avatarImg" alt="" class="d-none" />
+                    </div>
+                    <div class="ag-avatar-actions">
+                        <label for="avatarFile" class="auth-btn auth-btn-secondary ag-avatar-btn">
+                            @T["Agents.Field.UploadAvatar"]
+                            <input type="file" id="avatarFile" accept="image/png,image/jpeg,image/webp" class="d-none" />
+                        </label>
+                        <small class="ag-help">@T["Agents.Field.AvatarHelp"]</small>
+                    </div>
+                </div>
+
+                <div class="ag-field">
+                    <label for="editName">@T["Agents.Field.Name"]</label>
+                    <input type="text" id="editName" required maxlength="80" autocomplete="off" />
+                    <small class="ag-error" data-error-for="Name"></small>
+                </div>
+
+                <div class="ag-field">
+                    <label for="editDescription">@T["Agents.Field.Description"]</label>
+                    <textarea id="editDescription" rows="3" maxlength="500"></textarea>
+                    <small class="ag-help">@T["Agents.Field.DescriptionHelp"]</small>
+                    <small class="ag-error" data-error-for="Description"></small>
+                </div>
+
+                <div class="ag-field-row">
+                    <label class="ag-toggle">
+                        <input type="checkbox" id="editIsActive" checked />
+                        <span class="ag-switch"><span class="ag-switch-knob"></span></span>
+                        <span class="ag-toggle-label">@T["Agents.Field.IsActive"]</span>
+                    </label>
+                    <label class="ag-toggle" id="makeDefaultRow">
+                        <input type="checkbox" id="editMakeDefault" />
+                        <span class="ag-switch"><span class="ag-switch-knob"></span></span>
+                        <span class="ag-toggle-label">@T["Agents.Field.MakeDefault"]</span>
+                    </label>
+                </div>
+
+                <footer class="ag-modal-foot">
+                    <button type="button" class="auth-btn auth-btn-ghost" id="editCancel">@T["Agents.Editor.Cancel"]</button>
+                    <button type="submit" class="auth-btn">@T["Agents.Editor.Save"]</button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    @* ── Delete confirmation modal ────────────────────────────────────── *@
+    <div class="ag-modal d-none" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+        <div class="ag-modal-inner ag-modal-narrow">
+            <header class="ag-modal-head">
+                <h2 id="deleteTitle">@T["Agents.Delete.Title"]</h2>
+                <button type="button" class="ag-modal-close" id="deleteClose" aria-label="@T["Agents.Editor.CloseAria"]">×</button>
+            </header>
+            <div class="ag-modal-body">
+                <p id="deleteBody"></p>
+                <div class="ag-modal-warning d-none" id="deleteWarning">
+                    @T["Agents.Delete.DefaultWarning"]
+                </div>
+            </div>
+            <footer class="ag-modal-foot">
+                <button type="button" class="auth-btn auth-btn-ghost" id="deleteCancel">@T["Agents.Editor.Cancel"]</button>
+                <button type="button" class="auth-btn auth-btn-danger" id="deleteConfirm">@T["Agents.Delete.Confirm"]</button>
+            </footer>
+        </div>
+    </div>
+}
+
+<div class="ag-toast d-none" id="toast" role="status" aria-live="polite"></div>
+
+<script src="~/js/agents.js" asp-append-version="true"></script>
+</body>
+</html>

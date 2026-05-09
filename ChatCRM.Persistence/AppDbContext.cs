@@ -27,6 +27,7 @@ namespace ChatCRM.Persistence
         public DbSet<MessageBillingRecord> MessageBillingRecords => Set<MessageBillingRecord>();
         public DbSet<WhatsAppTemplate> WhatsAppTemplates => Set<WhatsAppTemplate>();
         public DbSet<Invoice> Invoices => Set<Invoice>();
+        public DbSet<Agent> Agents => Set<Agent>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -78,6 +79,11 @@ namespace ChatCRM.Persistence
                 builder.HasOne(x => x.AssignedUser)
                     .WithMany()
                     .HasForeignKey(x => x.AssignedUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                builder.HasOne(x => x.AssignedAgent)
+                    .WithMany()
+                    .HasForeignKey(x => x.AssignedAgentId)
                     .OnDelete(DeleteBehavior.SetNull);
 
                 builder.HasIndex(x => x.LastMessageAt);
@@ -198,6 +204,33 @@ namespace ChatCRM.Persistence
                 builder.HasIndex(x => x.MessageId).IsUnique();
                 // Hot path: month-to-date aggregation by category for the admin reports.
                 builder.HasIndex(x => new { x.Category, x.CreatedAt });
+            });
+
+            modelBuilder.Entity<Agent>(builder =>
+            {
+                builder.Property(x => x.Name).HasMaxLength(80).IsRequired();
+                builder.Property(x => x.Description).HasMaxLength(500);
+                builder.Property(x => x.AvatarPath).HasMaxLength(260);
+
+                builder.HasOne(x => x.CreatedByUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Name uniqueness per workspace — fail fast at insert rather than letting two
+                // agents share the display name.
+                builder.HasIndex(x => new { x.WorkspaceId, x.Name }).IsUnique();
+
+                // Filtered unique index: at most one row per workspace can have IsDefault = 1.
+                // Postgres calls this a partial index; SQL Server supports it via HasFilter.
+                // The service layer also enforces this, but the index is the authoritative guard
+                // against race conditions on concurrent set-default calls.
+                builder.HasIndex(x => x.WorkspaceId)
+                    .HasFilter("[IsDefault] = 1")
+                    .IsUnique()
+                    .HasDatabaseName("IX_Agents_WorkspaceId_DefaultUnique");
+
+                builder.HasIndex(x => new { x.WorkspaceId, x.IsActive });
             });
 
             modelBuilder.Entity<Invoice>(builder =>

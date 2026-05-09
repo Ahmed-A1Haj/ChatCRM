@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/chat.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/agents.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
     <script>
@@ -373,6 +374,12 @@
             </div>
 
             @* Template picker modal — opened from #pickTemplateBtn or the inline composer button. *@
+            @* AI Agent picker popover — small dropdown anchored to #cpAgentBtn. *@
+            <div class="ag-picker-popover d-none" id="agentPickerPopover" role="menu" aria-labelledby="cpAgentBtn">
+                <ul class="ag-picker-list" id="agentPickerList"></ul>
+                <div class="ag-picker-empty d-none" id="agentPickerEmpty">@T["Agents.Picker.Empty"]</div>
+            </div>
+
             <div class="tpl-picker-modal d-none" id="tplPickerModal" role="dialog" aria-modal="true" aria-labelledby="tplPickerTitle">
                 <div class="tpl-picker-inner">
                     <header class="tpl-picker-head">
@@ -463,6 +470,15 @@
                     <div class="cp-row">
                         <span class="cp-row-key">Assigned to</span>
                         <span class="cp-row-val" id="cpAssigned">Unassigned</span>
+                    </div>
+                    <div class="cp-row">
+                        <span class="cp-row-key">@T["Agents.Card.AssignedAgent"]</span>
+                        <span class="cp-row-val">
+                            <button type="button" class="chat-agent-picker" id="cpAgentBtn">
+                                <span class="chat-agent-picker-avatar" id="cpAgentAvatar">🤖</span>
+                                <span class="chat-agent-picker-name" id="cpAgentName">@T["Agents.Card.None"]</span>
+                            </button>
+                        </span>
                     </div>
                     <div class="cp-row">
                         <span class="cp-row-key">Status</span>

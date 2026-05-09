@@ -20,6 +20,14 @@ namespace ChatCRM.Domain.Entities
         public string? AssignedUserId { get; set; }
         public User? AssignedUser { get; set; }
 
+        /// <summary>
+        /// AI agent handling this conversation. Auto-populated from the workspace's default
+        /// agent at conversation creation time; agents can be reassigned manually from the
+        /// chat panel. Null when no agents exist in the workspace.
+        /// </summary>
+        public int? AssignedAgentId { get; set; }
+        public Agent? AssignedAgent { get; set; }
+
         public DateTime LastMessageAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>

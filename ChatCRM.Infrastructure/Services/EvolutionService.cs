@@ -370,10 +370,20 @@ namespace ChatCRM.Infrastructure.Services
 
             if (conversation is null)
             {
+                // Auto-assign the workspace's default AI agent to brand-new conversations.
+                // Null when no agents are configured yet — that's fine, the picker can fill
+                // it in later. We only auto-assign on the *first* incoming message; reassignment
+                // afterwards is a user action.
+                var defaultAgentId = await _db.Agents.AsNoTracking()
+                    .Where(a => a.WorkspaceId == 1 && a.IsDefault && a.IsActive)
+                    .Select(a => (int?)a.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
+
                 conversation = new Conversation
                 {
                     ContactId = contact.Id,
                     WhatsAppInstanceId = instance.Id,
+                    AssignedAgentId = defaultAgentId,
                     CreatedAt = DateTime.UtcNow
                 };
                 _db.Conversations.Add(conversation);

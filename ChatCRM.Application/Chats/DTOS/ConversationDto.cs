@@ -55,6 +55,11 @@ namespace ChatCRM.Application.Chats.DTOs
         /// pill at all.
         /// </summary>
         public byte Integration { get; set; }
+
+        // ── AI agent assignment ────────────────────────────────────────────
+        public int? AssignedAgentId { get; set; }
+        public string? AssignedAgentName { get; set; }
+        public string? AssignedAgentAvatarPath { get; set; }
     }
 
     public class SetLifecycleDto

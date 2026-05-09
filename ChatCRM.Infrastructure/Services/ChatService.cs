@@ -371,6 +371,7 @@ namespace ChatCRM.Infrastructure.Services
                 .Include(x => x.Contact)
                 .Include(x => x.Instance)
                 .Include(x => x.AssignedUser)
+                .Include(x => x.AssignedAgent)
                 .Include(x => x.Tags).ThenInclude(t => t.Tag)
                 .FirstOrDefaultAsync(x => x.Id == conversationId, cancellationToken);
 
@@ -401,6 +402,9 @@ namespace ChatCRM.Infrastructure.Services
                 NoteCount = noteCount,
                 LastIncomingAtUtc = c.LastIncomingAt,
                 Integration = (byte)c.Instance.Integration,
+                AssignedAgentId = c.AssignedAgentId,
+                AssignedAgentName = c.AssignedAgent?.Name,
+                AssignedAgentAvatarPath = c.AssignedAgent?.AvatarPath,
                 Tags = c.Tags.Select(t => new TagDto { Id = t.TagId, Name = t.Tag.Name, Color = t.Tag.Color }).ToList()
             };
         }

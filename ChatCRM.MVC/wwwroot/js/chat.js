@@ -287,6 +287,7 @@ async function loadContactDetails(conversationId) {
         applyStatusToHeader(d.conversationStatus);
         applyLifecycleToHeader(d.lifecycleStage ?? 0);
         applyServiceWindow(d);    // 24h window pill + composer state (phase 5)
+        renderAssignedAgent(d);   // AI agent assignment + popover (phase 13)
     } catch (e) {
         console.error('Contact details load failed:', e);
     }
@@ -1592,5 +1593,141 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape' && !document.getElementById('tplPickerModal')?.classList.contains('d-none')) {
             closeTemplatePicker();
         }
+    });
+});
+
+// ── AI Agent assignment (phase 13) ───────────────────────────────────────
+// Renders the assigned-agent button on the contact panel and opens a small
+// popover that lists active agents. Selecting an agent (or "Unassign") POSTs
+// to /dashboard/conversations/{id}/agent.
+
+let _agentCache = null;
+
+function renderAssignedAgent(d) {
+    const btn = document.getElementById('cpAgentBtn');
+    if (!btn) return;
+    const avatar = document.getElementById('cpAgentAvatar');
+    const name = document.getElementById('cpAgentName');
+    if (d.assignedAgentId && d.assignedAgentName) {
+        if (d.assignedAgentAvatarPath) {
+            avatar.innerHTML = `<img src="${d.assignedAgentAvatarPath}" alt="" />`;
+        } else {
+            avatar.textContent = '🤖';
+        }
+        name.textContent = d.assignedAgentName;
+    } else {
+        avatar.textContent = '🤖';
+        name.textContent = t('Agents.Card.None');
+    }
+}
+
+async function openAgentPicker() {
+    if (!activeConversationId) return;
+    const popover = document.getElementById('agentPickerPopover');
+    const btn = document.getElementById('cpAgentBtn');
+    if (!popover || !btn) return;
+
+    if (!_agentCache) {
+        try {
+            const resp = await fetch('/dashboard/agents/picker');
+            _agentCache = resp.ok ? await resp.json() : [];
+        } catch { _agentCache = []; }
+    }
+
+    renderAgentPickerList();
+
+    // Anchor below the button.
+    const r = btn.getBoundingClientRect();
+    popover.style.top = (r.bottom + 6) + 'px';
+    popover.style.left = (r.left) + 'px';
+    popover.classList.remove('d-none');
+}
+
+function closeAgentPicker() {
+    document.getElementById('agentPickerPopover')?.classList.add('d-none');
+}
+
+function renderAgentPickerList() {
+    const list = document.getElementById('agentPickerList');
+    const empty = document.getElementById('agentPickerEmpty');
+    if (!list) return;
+    list.innerHTML = '';
+    const items = _agentCache || [];
+    if (!items.length) {
+        empty.classList.remove('d-none');
+        return;
+    }
+    empty.classList.add('d-none');
+
+    const currentId = contactDetails?.assignedAgentId;
+
+    items.forEach(a => {
+        const li = document.createElement('li');
+        li.className = (a.id === currentId) ? 'is-selected' : '';
+        li.dataset.id = a.id;
+        const avatar = a.avatarPath
+            ? `<img src="${a.avatarPath}" alt="" />`
+            : `🤖`;
+        li.innerHTML = `
+            <span class="ag-picker-row-avatar">${avatar}</span>
+            <span class="ag-picker-row-name">${escapePickHtml(a.name)}</span>
+            ${a.isDefault ? `<span class="ag-picker-row-default">${escapePickHtml(t('Agents.Status.Default'))}</span>` : ''}
+        `;
+        li.addEventListener('click', () => assignAgent(a.id));
+        list.appendChild(li);
+    });
+
+    // "Unassign" entry.
+    const unassign = document.createElement('li');
+    unassign.className = 'is-unassign' + (currentId == null ? ' is-selected' : '');
+    unassign.innerHTML = `<span class="ag-picker-row-name">${escapePickHtml(t('Agents.Picker.Unassign'))}</span>`;
+    unassign.addEventListener('click', () => assignAgent(null));
+    list.appendChild(unassign);
+}
+
+function escapePickHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+async function assignAgent(agentId) {
+    if (!activeConversationId) return;
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    try {
+        const resp = await fetch(`/dashboard/conversations/${activeConversationId}/agent`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({ agentId })
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.error || t('Agents.Toast.AssignFailed'), 'error');
+            return;
+        }
+        closeAgentPicker();
+        await loadContactDetails(activeConversationId);
+        showToast(agentId == null ? t('Agents.Toast.Unassigned') : t('Agents.Toast.Assigned'), 'success');
+    } catch (e) {
+        showToast(t('Toast.NetworkError', e.message), 'error');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('cpAgentBtn')?.addEventListener('click', e => {
+        e.stopPropagation();
+        const popover = document.getElementById('agentPickerPopover');
+        if (popover && !popover.classList.contains('d-none')) closeAgentPicker();
+        else openAgentPicker();
+    });
+    document.addEventListener('click', e => {
+        const popover = document.getElementById('agentPickerPopover');
+        if (!popover || popover.classList.contains('d-none')) return;
+        if (popover.contains(e.target)) return;
+        if (e.target.closest('#cpAgentBtn')) return;
+        closeAgentPicker();
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeAgentPicker();
     });
 });
