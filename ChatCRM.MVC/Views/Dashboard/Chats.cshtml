@@ -268,18 +268,23 @@
 
         <div class="chat-window d-none" id="chatWindow">
 
-            @* Chat header — name + actions *@
+            @* Chat header — name + actions. The avatar + name area double as a click target
+               for the contact-details panel (same handler as the dedicated toggle button on
+               the right). Wrapped in a button for keyboard accessibility. *@
             <div class="chat-header" id="chatHeader">
-                <div class="chat-header-avatar" id="chatHeaderAvatar"></div>
-                <div class="chat-header-info">
-                    <strong id="chatHeaderName"></strong>
-                    <span id="chatHeaderPhone"></span>
-                    @* 24h customer-service window indicator. Hidden until loadContactDetails() fills it. *@
-                    <span class="service-window-pill d-none" id="serviceWindowPill" data-service-window-pill>
-                        <span class="service-window-dot" aria-hidden="true"></span>
-                        <span data-service-window-label></span>
-                    </span>
-                </div>
+                <button type="button" class="chat-header-target" id="chatHeaderTarget"
+                        onclick="toggleContactPanel()" aria-label="Open contact details">
+                    <div class="chat-header-avatar" id="chatHeaderAvatar"></div>
+                    <div class="chat-header-info">
+                        <strong id="chatHeaderName"></strong>
+                        <span id="chatHeaderPhone"></span>
+                        @* 24h customer-service window indicator. Hidden until loadContactDetails() fills it. *@
+                        <span class="service-window-pill d-none" id="serviceWindowPill" data-service-window-pill>
+                            <span class="service-window-dot" aria-hidden="true"></span>
+                            <span data-service-window-label></span>
+                        </span>
+                    </div>
+                </button>
                 <div class="chat-header-actions">
                     @* Assign dropdown *@
                     <div class="dropdown-wrap" id="assignWrap">
