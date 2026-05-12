@@ -6,7 +6,7 @@ namespace ChatCRM.Application.Interfaces
     {
         Task<List<ConversationDto>> GetConversationsAsync(int? instanceId = null, string? filter = null, string? currentUserId = null, byte? channelType = null, CancellationToken cancellationToken = default);
         Task<List<MessageDto>> GetMessagesAsync(int conversationId, CancellationToken cancellationToken = default);
-        Task<MessageDto> SendMessageAsync(SendMessageDto dto, CancellationToken cancellationToken = default);
+        Task<MessageDto> SendMessageAsync(SendMessageDto dto, string actingUserId, CancellationToken cancellationToken = default);
         Task<MessageDto> AddNoteAsync(AddNoteDto dto, string authorUserId, CancellationToken cancellationToken = default);
         Task MarkAsReadAsync(int conversationId, CancellationToken cancellationToken = default);
         Task AssignAsync(AssignDto dto, CancellationToken cancellationToken = default);
@@ -18,7 +18,16 @@ namespace ChatCRM.Application.Interfaces
         Task<MessageDto> EditMessageAsync(int messageId, string newBody, CancellationToken cancellationToken = default);
         Task DeleteMessageAsync(int messageId, CancellationToken cancellationToken = default);
 
-        Task<MessageDto> SendMediaMessageAsync(int conversationId, byte[] data, string fileName, string mimeType, string? caption, CancellationToken cancellationToken = default);
-        Task<MessageDto> SendVoiceNoteAsync(int conversationId, byte[] data, string mimeType, CancellationToken cancellationToken = default);
+        Task<MessageDto> SendMediaMessageAsync(int conversationId, byte[] data, string fileName, string mimeType, string? caption, string actingUserId, CancellationToken cancellationToken = default);
+        Task<MessageDto> SendVoiceNoteAsync(int conversationId, byte[] data, string mimeType, string actingUserId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Send an approved WhatsApp template. <paramref name="variables"/> are the values for
+        /// {{1}}, {{2}}, … in template order. Bills against the template's category, not Service.
+        /// </summary>
+        Task<MessageDto> SendTemplateMessageAsync(
+            int conversationId, int templateId,
+            IReadOnlyList<string> variables, string actingUserId,
+            CancellationToken cancellationToken = default);
     }
 }

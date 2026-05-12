@@ -1,3 +1,4 @@
+using ChatCRM.Application.Billing.Exceptions;
 using ChatCRM.Application.Chats.DTOs;
 using ChatCRM.Application.Dashboard.DTOs;
 using ChatCRM.Application.Interfaces;
@@ -5,6 +6,7 @@ using ChatCRM.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 
 namespace ChatCRM.MVC.Controllers
 {
@@ -14,17 +16,20 @@ namespace ChatCRM.MVC.Controllers
         private readonly IChatService _chatService;
         private readonly IWhatsAppInstanceService _instanceService;
         private readonly UserManager<User> _userManager;
+        private readonly IStringLocalizer _localizer;
         private readonly ILogger<DashboardController> _logger;
 
         public DashboardController(
             IChatService chatService,
             IWhatsAppInstanceService instanceService,
             UserManager<User> userManager,
+            IStringLocalizer localizer,
             ILogger<DashboardController> logger)
         {
             _chatService = chatService;
             _instanceService = instanceService;
             _userManager = userManager;
+            _localizer = localizer;
             _logger = logger;
         }
 
@@ -239,15 +244,59 @@ namespace ChatCRM.MVC.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            var userId = _userManager.GetUserId(User) ?? string.Empty;
             try
             {
-                var message = await _chatService.SendMessageAsync(dto, cancellationToken);
+                var message = await _chatService.SendMessageAsync(dto, userId, cancellationToken);
                 return Json(message);
+            }
+            catch (InsufficientBalanceException ex)
+            {
+                _logger.LogInformation("Send blocked — insufficient balance (have {Have:0.0000}, need {Need:0.0000}) for conversation {Id}",
+                    ex.CurrentBalanceUsd, ex.RequiredUsd, dto.ConversationId);
+                return StatusCode(402, new { error = _localizer["Send.Error.InsufficientBalance"].Value, code = "insufficient_balance" });
+            }
+            catch (ServiceWindowExpiredException ex)
+            {
+                _logger.LogInformation("Send blocked — service window closed (last incoming {LastIn}) for conversation {Id}",
+                    ex.LastIncomingAtUtc, dto.ConversationId);
+                return StatusCode(409, new { error = _localizer["Send.Error.ServiceWindowExpired"].Value, code = "service_window_expired" });
             }
             catch (InvalidOperationException ex)
             {
                 _logger.LogWarning(ex, "Send failed for conversation {Id}", dto.ConversationId);
                 return NotFound(new { error = ex.Message });
+            }
+        }
+
+        public sealed class SendTemplateRequest
+        {
+            public int ConversationId { get; set; }
+            public int TemplateId { get; set; }
+            public List<string> Variables { get; set; } = new();
+        }
+
+        [HttpPost("/dashboard/chats/send-template")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendTemplate([FromBody] SendTemplateRequest dto, CancellationToken cancellationToken)
+        {
+            if (dto is null) return BadRequest(new { error = "Body required." });
+
+            var userId = _userManager.GetUserId(User) ?? string.Empty;
+            try
+            {
+                var message = await _chatService.SendTemplateMessageAsync(
+                    dto.ConversationId, dto.TemplateId, dto.Variables, userId, cancellationToken);
+                return Json(message);
+            }
+            catch (InsufficientBalanceException)
+            {
+                return StatusCode(402, new { error = _localizer["Send.Error.InsufficientBalance"].Value, code = "insufficient_balance" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "SendTemplate failed for conversation {Id}", dto.ConversationId);
+                return BadRequest(new { error = ex.Message });
             }
         }
 
@@ -355,6 +404,7 @@ namespace ChatCRM.MVC.Controllers
             if (file is null || file.Length == 0)
                 return BadRequest(new { error = "File is required." });
 
+            var userId = _userManager.GetUserId(User) ?? string.Empty;
             try
             {
                 using var ms = new MemoryStream();
@@ -362,8 +412,16 @@ namespace ChatCRM.MVC.Controllers
                 var bytes = ms.ToArray();
 
                 var mime = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
-                var message = await _chatService.SendMediaMessageAsync(conversationId, bytes, file.FileName, mime, caption, cancellationToken);
+                var message = await _chatService.SendMediaMessageAsync(conversationId, bytes, file.FileName, mime, caption, userId, cancellationToken);
                 return Json(message);
+            }
+            catch (InsufficientBalanceException)
+            {
+                return StatusCode(402, new { error = _localizer["Send.Error.InsufficientBalance"].Value, code = "insufficient_balance" });
+            }
+            catch (ServiceWindowExpiredException)
+            {
+                return StatusCode(409, new { error = _localizer["Send.Error.ServiceWindowExpired"].Value, code = "service_window_expired" });
             }
             catch (InvalidOperationException ex)
             {
@@ -383,6 +441,7 @@ namespace ChatCRM.MVC.Controllers
             if (audio is null || audio.Length == 0)
                 return BadRequest(new { error = "Audio file is required." });
 
+            var userId = _userManager.GetUserId(User) ?? string.Empty;
             try
             {
                 using var ms = new MemoryStream();
@@ -390,8 +449,16 @@ namespace ChatCRM.MVC.Controllers
                 var bytes = ms.ToArray();
 
                 var mime = string.IsNullOrWhiteSpace(audio.ContentType) ? "audio/ogg" : audio.ContentType;
-                var message = await _chatService.SendVoiceNoteAsync(conversationId, bytes, mime, cancellationToken);
+                var message = await _chatService.SendVoiceNoteAsync(conversationId, bytes, mime, userId, cancellationToken);
                 return Json(message);
+            }
+            catch (InsufficientBalanceException)
+            {
+                return StatusCode(402, new { error = _localizer["Send.Error.InsufficientBalance"].Value, code = "insufficient_balance" });
+            }
+            catch (ServiceWindowExpiredException)
+            {
+                return StatusCode(409, new { error = _localizer["Send.Error.ServiceWindowExpired"].Value, code = "service_window_expired" });
             }
             catch (InvalidOperationException ex)
             {

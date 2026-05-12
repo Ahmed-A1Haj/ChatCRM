@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/contacts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/agents.css" asp-append-version="true" />
     <script>
         window.__i18n__ = @Html.Raw(translationsJson);
         window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
@@ -104,12 +105,13 @@
                     <th class="col-language">@T["Contacts.Column.Language"]</th>
                     <th class="col-lifecycle">@T["Contacts.Column.Lifecycle"]</th>
                     <th class="col-assigned">@T["Contacts.Column.AssignedTo"]</th>
+                    <th class="col-agent">@T["Contacts.Column.AIAgent"]</th>
                     <th class="col-status">@T["Contacts.Column.Status"]</th>
                     <th class="col-actions"></th>
                 </tr>
             </thead>
             <tbody id="contactsBody">
-                <tr><td colspan="10" class="contacts-empty">@T["Action.Loading"]</td></tr>
+                <tr><td colspan="11" class="contacts-empty">@T["Action.Loading"]</td></tr>
             </tbody>
         </table>
     </section>
@@ -230,6 +232,14 @@
     window.__CURRENT_USER_ID__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(currentUserId));
 </script>
 <script src="~/js/contacts.js" asp-append-version="true"></script>
+
+@* Per-contact AI agent picker popover (anchored to the clicked row's agent chip). *@
+@Html.AntiForgeryToken()
+<div class="ag-picker-popover d-none" id="contactAgentPopover" role="menu">
+    <ul class="ag-picker-list" id="contactAgentPickerList"></ul>
+    <div class="ag-picker-empty d-none" id="contactAgentPickerEmpty">@T["Agents.Picker.Empty"]</div>
+</div>
+<script src="~/js/contacts-agent-picker.js" asp-append-version="true"></script>
 
 </body>
 </html>

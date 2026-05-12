@@ -1,0 +1,385 @@
+/* ─── Billing page (renders inside the dashboard rail layout) ──────────────── */
+
+.bill-shell {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-page);
+}
+
+.bill-main {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.bill-container {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 24px 32px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bill-page-head { margin-bottom: 4px; }
+.bill-page-title {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+}
+.bill-page-sub {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13.5px;
+}
+
+.bill-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    padding: 24px;
+}
+.bill-card-quiet { background: var(--bg-soft); }
+
+.bill-section-head { margin-bottom: 16px; }
+.bill-section-head h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+}
+.bill-section-head p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* ─── Balance hero card ─────────────────────────────────────────────────── */
+.bill-balance-card {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    border-left: 4px solid var(--brand);
+}
+.bill-balance-card.is-low      { border-left-color: var(--warn); }
+.bill-balance-card.is-empty    { border-left-color: var(--danger); }
+
+.bill-balance-side {
+    flex: 1 1 280px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bill-balance-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.bill-balance-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.8px;
+    line-height: 1.1;
+}
+.bill-balance-card.is-low      .bill-balance-value { color: var(--warn-text);   }
+.bill-balance-card.is-empty    .bill-balance-value { color: var(--danger-text); }
+
+.bill-balance-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.bill-balance-warning {
+    margin: 10px 0 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--danger-bg);
+    color: var(--danger-text);
+    font-size: 13px;
+    font-weight: 500;
+}
+.bill-balance-warning.is-soft {
+    background: var(--warn-bg);
+    color: var(--warn-text);
+}
+
+.bill-balance-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.bill-balance-actions .auth-btn { width: auto; min-width: 140px; }
+.bill-topup-btn { padding-left: 22px; padding-right: 22px; }
+
+/* ─── Refund policy ─────────────────────────────────────────────────────── */
+.bill-policy-text {
+    margin: 0;
+    color: var(--text);
+    font-size: 13.5px;
+    line-height: 1.55;
+    white-space: pre-line;
+}
+
+/* ─── Manual adjustment form (admins only) ─────────────────────────────── */
+.bill-adjust-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+    align-items: start;
+}
+.bill-adjust-grid .auth-field { margin-bottom: 0; }
+.bill-adjust-amount { grid-column: span 1; }
+.bill-adjust-reason { grid-column: span 2; }
+
+.bill-radio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+}
+.bill-radio input[type="radio"] {
+    accent-color: var(--brand);
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+.bill-radio-label {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 12.5px;
+}
+.bill-radio-label.is-credit { background: var(--ok-bg);     color: var(--ok-text); }
+.bill-radio-label.is-debit  { background: var(--danger-bg); color: var(--danger-text); }
+
+.bill-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+    justify-content: flex-end;
+}
+.bill-actions .auth-btn { width: auto; min-width: 160px; }
+
+/* ─── Recent activity list ─────────────────────────────────────────────── */
+.bill-tx-list {
+    display: flex;
+    flex-direction: column;
+}
+.bill-tx-row {
+    display: grid;
+    grid-template-columns: 140px 1fr auto auto;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-soft);
+    align-items: center;
+    font-size: 13px;
+}
+.bill-tx-row:last-child { border-bottom: none; }
+
+.bill-tx-kind {
+    font-weight: 600;
+    color: var(--text);
+}
+.bill-tx-meta {
+    color: var(--text-muted);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bill-tx-reason  { color: var(--text); }
+.bill-tx-actor   { color: var(--text-muted); }
+
+.bill-tx-amount {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 80px;
+}
+.bill-tx-row.is-credit .bill-tx-amount { color: var(--ok-text); }
+.bill-tx-row.is-debit  .bill-tx-amount { color: var(--danger-text); }
+
+.bill-tx-balance {
+    color: var(--text-muted);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    min-width: 110px;
+    text-align: right;
+}
+
+/* ─── Empty state ───────────────────────────────────────────────────────── */
+.bill-empty {
+    text-align: center;
+    padding: 28px 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+.bill-empty-title {
+    color: var(--text);
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+.bill-empty p { margin: 0; }
+
+/* ─── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+    .bill-container { padding: 18px 16px 56px; }
+    .bill-adjust-grid { grid-template-columns: 1fr; }
+    .bill-tx-row {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "kind   amount"
+            "meta   meta"
+            "balance balance";
+    }
+    .bill-tx-kind    { grid-area: kind; }
+    .bill-tx-amount  { grid-area: amount; }
+    .bill-tx-meta    { grid-area: meta; white-space: normal; }
+    .bill-tx-balance { grid-area: balance; text-align: left; }
+}
+
+/* ─── Top-up picker ─────────────────────────────────────────────────────── */
+.bill-container-narrow { max-width: 640px; }
+
+.topup-presets {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+@media (max-width: 480px) {
+    .topup-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.topup-preset { position: relative; cursor: pointer; }
+.topup-preset input[type="radio"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.topup-preset > span {
+    display: block;
+    text-align: center;
+    padding: 14px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-panel);
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+.topup-preset:hover > span { border-color: var(--brand-200); }
+.topup-preset input[type="radio"]:checked + span {
+    border-color: var(--brand);
+    background: var(--brand-50);
+    color: var(--brand-text);
+    box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.topup-preset-custom > span { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.topup-preset-custom input[type="radio"]:checked + span { color: var(--brand-text); }
+
+.topup-custom-row { margin-bottom: 4px; }
+
+.bill-topup-trust {
+    margin: 14px 0 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.bill-topup-trust strong { color: var(--text); }
+
+/* ─── Top-up success / cancel cards ─────────────────────────────────────── */
+.bill-topup-result { text-align: center; padding: 36px 28px; }
+.bill-topup-result.is-success { border-top: 4px solid var(--ok); }
+.bill-topup-result.is-neutral { border-top: 4px solid var(--text-dim); }
+
+.bill-topup-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--ok-bg);
+    color: var(--ok-text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.bill-topup-result-title { margin: 0 0 8px; font-size: 20px; font-weight: 700; color: var(--text); }
+.bill-topup-result-sub   { margin: 0 0 8px; font-size: 14px; color: var(--text); }
+.bill-topup-result-note  { margin: 0 0 16px; font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+.bill-topup-result-ref   { margin: 0 0 16px; font-size: 11.5px; color: var(--text-dim); word-break: break-all; }
+.bill-topup-result-ref code {
+    background: var(--bg-muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--text);
+}
+
+/* ─── Balance pill (top-bar) ────────────────────────────────────────────── */
+.balance-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    text-decoration: none;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+    border: 1px solid transparent;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.balance-pill svg { flex-shrink: 0; }
+
+.balance-pill.is-healthy {
+    background: var(--brand-50);
+    color: var(--brand-text);
+    border-color: var(--brand-100);
+}
+.balance-pill.is-healthy:hover { background: var(--brand-100); border-color: var(--brand-200); }
+
+.balance-pill.is-low {
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+.balance-pill.is-low:hover { filter: brightness(0.97); }
+
+.balance-pill.is-empty {
+    background: var(--danger-bg);
+    color: var(--danger-text);
+    border-color: rgba(239, 68, 68, 0.3);
+    animation: balancePulse 2.4s ease-in-out infinite;
+}
+.balance-pill.is-empty:hover { filter: brightness(0.97); animation-play-state: paused; }
+
+@keyframes balancePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    50%      { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18); }
+}

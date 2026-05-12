@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($stripeExe = \"C:\\\\Users\\\\TSC\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Links\\\\stripe.exe\"; & $stripeExe trigger checkout.session.completed 2>&1 | Out-String)"
+    ]
+  }
+}

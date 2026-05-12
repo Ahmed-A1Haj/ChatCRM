@@ -1,0 +1,84 @@
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+
+@{
+    Layout = null;
+    ViewData["Title"] = T["Billing.TopUp.Success.Title"].Value;
+
+    var sessionId = ViewBag.SessionId as string ?? string.Empty;
+    var balance   = (decimal)(ViewBag.Balance ?? 0m);
+
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "billing")
+
+<section class="bill-shell">
+    <main class="bill-main">
+        <div class="bill-container bill-container-narrow">
+            <section class="bill-card bill-topup-result is-success">
+                <div class="bill-topup-icon" aria-hidden="true">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                </div>
+                <h1 class="bill-topup-result-title">@T["Billing.TopUp.Success.Heading"]</h1>
+                <p class="bill-topup-result-sub" data-balance-line>
+                    @string.Format(T["Billing.TopUp.Success.Body"].Value, $"${balance:0.00}")
+                </p>
+                <p class="bill-topup-result-note">@T["Billing.TopUp.Success.Note"]</p>
+                @if (!string.IsNullOrWhiteSpace(sessionId))
+                {
+                    <p class="bill-topup-result-ref">@T["Billing.TopUp.Reference"]: <code>@sessionId</code></p>
+                }
+                <div class="bill-actions" style="justify-content:center;">
+                    <a asp-action="Index" class="auth-btn auth-btn-primary">@T["Billing.TopUp.Success.GoBilling"]</a>
+                </div>
+            </section>
+        </div>
+    </main>
+</section>
+
+@* The webhook can race the redirect — the balance might briefly read its old value. Soft-poll
+   the snapshot for up to 30 seconds so the success page corrects itself once the credit lands. *@
+<script>
+    (function () {
+        const line = document.querySelector('[data-balance-line]');
+        if (!line) return;
+        const start = Date.now();
+        async function tick() {
+            try {
+                const r = await fetch('/dashboard/billing', { headers: { 'Accept': 'text/html' } });
+                if (r.ok) { /* server-rendered; we only care about the eventual page render */ }
+            } catch { /* ignore */ }
+            if (Date.now() - start < 30_000) setTimeout(tick, 3_000);
+        }
+        // Light prefetch only — the actual update is visible when user clicks "Go to billing".
+        setTimeout(tick, 3_000);
+    })();
+</script>
+
+</body>
+</html>

@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/chat.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/agents.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
     <script>
@@ -95,9 +96,44 @@
                     <a href="@ChannelHref("")" class="ch-chip @(channelAll ? "is-active" : "")" title="@T["Inbox.Channel.All"]">
                         <span class="ch-chip-label">All</span>
                     </a>
-                    <a href="@ChannelHref("&channel=0")" class="ch-chip ch-chip-whatsapp @(channelWhatsApp ? "is-active" : "")" title="WhatsApp">
+                    @{
+                        // Mini-indicator next to WhatsApp tells agents whether they're talking through
+                        // a personal QR-scanned account (amber) or an official Cloud API one (green).
+                        // Decision rule: if the currently-selected instance is WhatsApp, mirror its type;
+                        // otherwise fall back to the dominant type across all WhatsApp instances.
+                        var waInstances = Model.Instances.Where(i => i.ChannelType == ChannelType.WhatsApp).ToList();
+                        WhatsAppIntegration? waIntegration = null;
+                        string? waTooltipKey = null;
+                        if (active is not null && active.ChannelType == ChannelType.WhatsApp)
+                        {
+                            waIntegration = active.Integration;
+                        }
+                        else if (waInstances.Count > 0)
+                        {
+                            var distinct = waInstances.Select(x => x.Integration).Distinct().ToList();
+                            waIntegration = distinct.Count == 1 ? distinct[0] : (WhatsAppIntegration?)null;
+                        }
+                        if (waIntegration.HasValue)
+                        {
+                            waTooltipKey = waIntegration.Value == WhatsAppIntegration.Business
+                                ? "Channels.Integration.Business.Tooltip"
+                                : "Channels.Integration.Personal.Tooltip";
+                        }
+                        var waChipDotClass = waIntegration switch
+                        {
+                            WhatsAppIntegration.Personal => "is-personal",
+                            WhatsAppIntegration.Business => "is-business",
+                            _                              => null
+                        };
+                        var waChipTitle = waTooltipKey is null ? "WhatsApp" : T[waTooltipKey].Value;
+                    }
+                    <a href="@ChannelHref("&channel=0")" class="ch-chip ch-chip-whatsapp @(channelWhatsApp ? "is-active" : "")" title="@waChipTitle">
                         <span class="ch-chip-icon">@await Html.PartialAsync("_Icon", new IconModel("channel-whatsapp", size: 12))</span>
                         <span class="ch-chip-label">WhatsApp</span>
+                        @if (waChipDotClass is not null)
+                        {
+                            <span class="ch-chip-dot @waChipDotClass" aria-hidden="true"></span>
+                        }
                     </a>
                     <span class="ch-chip is-disabled" title="Instagram — coming soon" aria-disabled="true">
                         <span class="ch-chip-icon">@await Html.PartialAsync("_Icon", new IconModel("channel-instagram", size: 12))</span>
@@ -232,13 +268,23 @@
 
         <div class="chat-window d-none" id="chatWindow">
 
-            @* Chat header — name + actions *@
+            @* Chat header — name + actions. The avatar + name area double as a click target
+               for the contact-details panel (same handler as the dedicated toggle button on
+               the right). Wrapped in a button for keyboard accessibility. *@
             <div class="chat-header" id="chatHeader">
-                <div class="chat-header-avatar" id="chatHeaderAvatar"></div>
-                <div class="chat-header-info">
-                    <strong id="chatHeaderName"></strong>
-                    <span id="chatHeaderPhone"></span>
-                </div>
+                <button type="button" class="chat-header-target" id="chatHeaderTarget"
+                        onclick="toggleContactPanel()" aria-label="Open contact details">
+                    <div class="chat-header-avatar" id="chatHeaderAvatar"></div>
+                    <div class="chat-header-info">
+                        <strong id="chatHeaderName"></strong>
+                        <span id="chatHeaderPhone"></span>
+                        @* 24h customer-service window indicator. Hidden until loadContactDetails() fills it. *@
+                        <span class="service-window-pill d-none" id="serviceWindowPill" data-service-window-pill>
+                            <span class="service-window-dot" aria-hidden="true"></span>
+                            <span data-service-window-label></span>
+                        </span>
+                    </div>
+                </button>
                 <div class="chat-header-actions">
                     @* Assign dropdown *@
                     <div class="dropdown-wrap" id="assignWrap">
@@ -315,6 +361,57 @@
                 </div>
             </div>
 
+            @* Service-window expired banner — sits above the composer for Cloud-API instances
+               outside the 24h window. Hidden by default; toggled by chat.js. *@
+            <div class="service-window-expired-bar d-none" id="serviceWindowExpiredBar" data-service-window-expired role="alert">
+                <span class="service-window-expired-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                </span>
+                <div class="service-window-expired-text">
+                    <strong>@T["Window.Expired.Title"]</strong>
+                    <span>@T["Window.Expired.Sub"]</span>
+                </div>
+                <button type="button" class="auth-btn auth-btn-secondary service-window-template-btn" id="pickTemplateBtn">
+                    @T["Window.PickTemplate"]
+                </button>
+            </div>
+
+            @* Template picker modal — opened from #pickTemplateBtn or the inline composer button. *@
+            @* AI Agent picker popover — small dropdown anchored to #cpAgentBtn. *@
+            <div class="ag-picker-popover d-none" id="agentPickerPopover" role="menu" aria-labelledby="cpAgentBtn">
+                <ul class="ag-picker-list" id="agentPickerList"></ul>
+                <div class="ag-picker-empty d-none" id="agentPickerEmpty">@T["Agents.Picker.Empty"]</div>
+            </div>
+
+            <div class="tpl-picker-modal d-none" id="tplPickerModal" role="dialog" aria-modal="true" aria-labelledby="tplPickerTitle">
+                <div class="tpl-picker-inner">
+                    <header class="tpl-picker-head">
+                        <h2 id="tplPickerTitle">@T["Window.PickTemplate"]</h2>
+                        <button type="button" class="tpl-picker-close" id="tplPickerClose" aria-label="@T["Templates.Editor.CloseAria"]">×</button>
+                    </header>
+                    <div class="tpl-picker-body">
+                        <input type="text" id="tplPickerSearch" class="tpl-picker-search" placeholder="@T["TemplatePicker.SearchPlaceholder"]" autocomplete="off" />
+                        <div class="tpl-picker-empty d-none" id="tplPickerEmpty">@T["TemplatePicker.Empty"]</div>
+                        <ul class="tpl-picker-list" id="tplPickerList"></ul>
+                    </div>
+                    <div class="tpl-picker-detail d-none" id="tplPickerDetail">
+                        <div class="tpl-picker-detail-head">
+                            <button type="button" class="tpl-picker-back" id="tplPickerBack">←</button>
+                            <h3 id="tplPickerDetailName"></h3>
+                            <span class="tpl-picker-cat" id="tplPickerDetailCat"></span>
+                        </div>
+                        <div class="tpl-picker-preview" id="tplPickerPreview"></div>
+                        <div class="tpl-picker-vars" id="tplPickerVars"></div>
+                        <footer class="tpl-picker-foot">
+                            <button type="button" class="auth-btn auth-btn-ghost" id="tplPickerCancel">@T["Templates.Editor.Cancel"]</button>
+                            <button type="button" class="auth-btn" id="tplPickerSend">@T["TemplatePicker.SendBtn"]</button>
+                        </footer>
+                    </div>
+                </div>
+            </div>
+
             <form class="chat-input-bar" id="chatForm" onsubmit="sendMessage(event)">
                 @Html.AntiForgeryToken()
 
@@ -378,6 +475,15 @@
                     <div class="cp-row">
                         <span class="cp-row-key">Assigned to</span>
                         <span class="cp-row-val" id="cpAssigned">Unassigned</span>
+                    </div>
+                    <div class="cp-row">
+                        <span class="cp-row-key">@T["Agents.Card.AssignedAgent"]</span>
+                        <span class="cp-row-val">
+                            <button type="button" class="chat-agent-picker" id="cpAgentBtn">
+                                <span class="chat-agent-picker-avatar" id="cpAgentAvatar">🤖</span>
+                                <span class="chat-agent-picker-name" id="cpAgentName">@T["Agents.Card.None"]</span>
+                            </button>
+                        </span>
                     </div>
                     <div class="cp-row">
                         <span class="cp-row-key">Status</span>

@@ -35,6 +35,13 @@ namespace ChatCRM.Infrastructure.Services
             return Task.FromResult(new EvolutionSendResult(true, $"mock-{Guid.NewGuid():N}", $"{phone}@s.whatsapp.net"));
         }
 
+        public Task<EvolutionSendResult> SendTemplateAsync(string instanceName, string phone, string templateName, string languageCode, IReadOnlyList<string> bodyVariables, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("[MOCK] Would send template {Name}/{Lang} via {Instance} to {Phone} with {Vars} var(s)",
+                templateName, languageCode, instanceName, phone, bodyVariables?.Count ?? 0);
+            return Task.FromResult(new EvolutionSendResult(true, $"mock-{Guid.NewGuid():N}", $"{phone}@s.whatsapp.net"));
+        }
+
         public Task<bool> EditMessageAsync(string instanceName, string remoteJid, string externalMessageId, string newText, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("[MOCK] Would edit {Id} via {Instance} to: {Text}", externalMessageId, instanceName, newText);

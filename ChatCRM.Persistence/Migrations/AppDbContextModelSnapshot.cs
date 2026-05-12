@@ -22,6 +22,65 @@ namespace ChatCRM.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("ChatCRM.Domain.Entities.Agent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AvatarPath")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Instructions")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WorkspaceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("WorkspaceId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Agents_WorkspaceId_DefaultUnique")
+                        .HasFilter("[IsDefault] = 1");
+
+                    b.HasIndex("WorkspaceId", "IsActive");
+
+                    b.HasIndex("WorkspaceId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Agents");
+                });
+
             modelBuilder.Entity("ChatCRM.Domain.Entities.Conversation", b =>
                 {
                     b.Property<int>("Id")
@@ -29,6 +88,9 @@ namespace ChatCRM.Persistence.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AssignedAgentId")
+                        .HasColumnType("int");
 
                     b.Property<string>("AssignedUserId")
                         .HasColumnType("nvarchar(450)");
@@ -41,6 +103,9 @@ namespace ChatCRM.Persistence.Migrations
 
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastIncomingAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("LastMessageAt")
                         .HasColumnType("datetime2");
@@ -58,6 +123,8 @@ namespace ChatCRM.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedAgentId");
 
                     b.HasIndex("AssignedUserId");
 
@@ -270,6 +337,9 @@ namespace ChatCRM.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AssignedAgentId")
+                        .HasColumnType("int");
+
                     b.Property<string>("AvatarUrl")
                         .HasMaxLength(260)
                         .HasColumnType("nvarchar(260)");
@@ -306,6 +376,8 @@ namespace ChatCRM.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssignedAgentId");
+
                     b.HasIndex("PhoneNumber")
                         .IsUnique();
 
@@ -334,6 +406,9 @@ namespace ChatCRM.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<byte>("Integration")
+                        .HasColumnType("tinyint");
+
                     b.Property<string>("InstanceName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -361,6 +436,461 @@ namespace ChatCRM.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("WhatsAppInstances");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.Wallet", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AutoRechargeEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("AutoRechargeAmountUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("AutoRechargeTriggerUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("BalanceUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DefaultPaymentMethodId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DisplayCurrency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<decimal>("LowBalanceThresholdUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("StripeCustomerId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WorkspaceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId")
+                        .IsUnique();
+
+                    b.ToTable("Wallets");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.MetaPricingRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("BasePriceUsd")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<byte>("Category")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EffectiveTo")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category", "CountryCode", "EffectiveFrom");
+
+                    b.ToTable("MetaPricingRules");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.BillingSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("InvoiceFooter")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<decimal>("MarkupPercentage")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("RefundPolicy")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WorkspaceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId")
+                        .IsUnique();
+
+                    b.ToTable("BillingSettings");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.ProcessedStripeEvent", b =>
+                {
+                    b.Property<string>("EventId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ProcessedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("EventId");
+
+                    b.HasIndex("ProcessedAtUtc");
+
+                    b.ToTable("ProcessedStripeEvents");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.WalletTransaction", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("AmountUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("BalanceAfterUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InitiatedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int?>("MessageId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("WalletId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InitiatedByUserId");
+
+                    b.HasIndex("MessageId");
+
+                    b.HasIndex("Reference");
+
+                    b.HasIndex("WalletId", "CreatedAt");
+
+                    b.ToTable("WalletTransactions");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.BillingAuditLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("AfterJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("BeforeJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AtUtc");
+
+                    b.HasIndex("EntityType", "EntityId");
+
+                    b.ToTable("BillingAuditLogs");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.MessageBillingRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AppliedRuleLabel")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<byte>("Category")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal>("ChargedUsd")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("FreeEntryPoint")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("MarkupPercentageAtTime")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<int>("MessageId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MetaCostUsd")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<long?>("WalletTransactionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("WasInServiceWindow")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId")
+                        .IsUnique();
+
+                    b.HasIndex("WalletTransactionId");
+
+                    b.HasIndex("Category", "CreatedAt");
+
+                    b.ToTable("MessageBillingRecords");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.Invoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CategoryBreakdownJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FreeMessageCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("IssuedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IssuedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int>("PaidMessageCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PeriodEndUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("PeriodStartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal>("TotalChargedUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("TotalMetaCostUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("TotalToppedUpUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("WorkspaceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IssuedByUserId");
+
+                    b.HasIndex("WorkspaceId", "PeriodStartUtc");
+
+                    b.HasIndex("WorkspaceId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("Invoices");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.WhatsAppTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<byte>("Category")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Footer")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("MetaTemplateId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("StatusCheckedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("SubmittedViaInstanceId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WorkspaceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("SubmittedViaInstanceId");
+
+                    b.HasIndex("Status", "SubmittedAt");
+
+                    b.HasIndex("WorkspaceId", "Status");
+
+                    b.HasIndex("WorkspaceId", "Name", "LanguageCode")
+                        .IsUnique();
+
+                    b.ToTable("WhatsAppTemplates");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -498,6 +1028,11 @@ namespace ChatCRM.Persistence.Migrations
 
             modelBuilder.Entity("ChatCRM.Domain.Entities.Conversation", b =>
                 {
+                    b.HasOne("ChatCRM.Domain.Entities.Agent", "AssignedAgent")
+                        .WithMany()
+                        .HasForeignKey("AssignedAgentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("ChatCRM.Domain.Entities.User", "AssignedUser")
                         .WithMany()
                         .HasForeignKey("AssignedUserId")
@@ -515,11 +1050,33 @@ namespace ChatCRM.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("AssignedAgent");
+
                     b.Navigation("AssignedUser");
 
                     b.Navigation("Contact");
 
                     b.Navigation("Instance");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.Agent", b =>
+                {
+                    b.HasOne("ChatCRM.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.WhatsAppContact", b =>
+                {
+                    b.HasOne("ChatCRM.Domain.Entities.Agent", "AssignedAgent")
+                        .WithMany()
+                        .HasForeignKey("AssignedAgentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AssignedAgent");
                 });
 
             modelBuilder.Entity("ChatCRM.Domain.Entities.ConversationTag", b =>
@@ -567,6 +1124,76 @@ namespace ChatCRM.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.WalletTransaction", b =>
+                {
+                    b.HasOne("ChatCRM.Domain.Entities.User", "InitiatedByUser")
+                        .WithMany()
+                        .HasForeignKey("InitiatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ChatCRM.Domain.Entities.Message", "Message")
+                        .WithMany()
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ChatCRM.Domain.Entities.Wallet", "Wallet")
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("InitiatedByUser");
+
+                    b.Navigation("Message");
+
+                    b.Navigation("Wallet");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.MessageBillingRecord", b =>
+                {
+                    b.HasOne("ChatCRM.Domain.Entities.Message", "Message")
+                        .WithMany()
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ChatCRM.Domain.Entities.WalletTransaction", "WalletTransaction")
+                        .WithMany()
+                        .HasForeignKey("WalletTransactionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Message");
+
+                    b.Navigation("WalletTransaction");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.Invoice", b =>
+                {
+                    b.HasOne("ChatCRM.Domain.Entities.User", "IssuedByUser")
+                        .WithMany()
+                        .HasForeignKey("IssuedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("IssuedByUser");
+                });
+
+            modelBuilder.Entity("ChatCRM.Domain.Entities.WhatsAppTemplate", b =>
+                {
+                    b.HasOne("ChatCRM.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ChatCRM.Domain.Entities.WhatsAppInstance", "SubmittedViaInstance")
+                        .WithMany()
+                        .HasForeignKey("SubmittedViaInstanceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("SubmittedViaInstance");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
