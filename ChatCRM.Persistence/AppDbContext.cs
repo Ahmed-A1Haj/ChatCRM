@@ -48,6 +48,13 @@ namespace ChatCRM.Persistence
                 builder.Property(x => x.AvatarUrl).HasMaxLength(260);
                 builder.Property(x => x.Country).HasMaxLength(60);
                 builder.Property(x => x.Language).HasMaxLength(40);
+
+                builder.HasOne(x => x.AssignedAgent)
+                    .WithMany()
+                    .HasForeignKey(x => x.AssignedAgentId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                builder.HasIndex(x => x.AssignedAgentId);
             });
 
             modelBuilder.Entity<WhatsAppInstance>(builder =>
@@ -211,6 +218,7 @@ namespace ChatCRM.Persistence
                 builder.Property(x => x.Name).HasMaxLength(80).IsRequired();
                 builder.Property(x => x.Description).HasMaxLength(500);
                 builder.Property(x => x.AvatarPath).HasMaxLength(260);
+                builder.Property(x => x.Instructions).HasColumnType("nvarchar(max)");
 
                 builder.HasOne(x => x.CreatedByUser)
                     .WithMany()

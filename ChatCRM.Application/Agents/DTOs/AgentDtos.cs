@@ -9,6 +9,7 @@ namespace ChatCRM.Application.Agents.DTOs
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string? AvatarPath { get; set; }
+        public string? Instructions { get; set; }
         public bool IsDefault { get; set; }
         public bool IsActive { get; set; }
         public string? CreatedByName { get; set; }
@@ -32,6 +33,10 @@ namespace ChatCRM.Application.Agents.DTOs
         [MaxLength(500)]
         public string? Description { get; set; }
 
+        /// <summary>System-prompt / role definition. Up to 8000 chars (~2k tokens).</summary>
+        [MaxLength(8000)]
+        public string? Instructions { get; set; }
+
         public bool IsActive { get; set; } = true;
 
         /// <summary>
@@ -50,5 +55,14 @@ namespace ChatCRM.Application.Agents.DTOs
         public string Name { get; set; } = string.Empty;
         public string? AvatarPath { get; set; }
         public bool IsDefault { get; set; }
+    }
+
+    /// <summary>Result of an assign-contact-to-agent call.</summary>
+    public sealed class ContactAgentAssignmentDto
+    {
+        public int ContactId { get; set; }
+        public int? AgentId { get; set; }
+        public string? AgentName { get; set; }
+        public string? AgentAvatarPath { get; set; }
     }
 }

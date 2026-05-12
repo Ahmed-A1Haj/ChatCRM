@@ -644,6 +644,51 @@ input[type="checkbox"]:disabled + .ag-switch { opacity: 0.55; cursor: not-allowe
 }
 .ag-field-row { display: flex; gap: 16px; flex-wrap: wrap; }
 .ag-help { color: var(--text-muted); font-size: 12px; }
+.ag-help-tight { margin-top: -2px; line-height: 1.4; }
+
+/* Instructions field — bigger textarea + pill icons + char counter footer. */
+.ag-field-instructions textarea {
+    font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    min-height: 120px;
+    resize: vertical;
+}
+.ag-instructions-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: -2px;
+}
+.ag-instructions-pills {
+    display: inline-flex;
+    gap: 4px;
+}
+.ag-pill {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    color: var(--text-muted);
+    border-radius: 999px;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.ag-pill:hover:not(:disabled) {
+    background: var(--bg-soft);
+    color: var(--text);
+}
+.ag-pill:disabled { opacity: 0.5; cursor: not-allowed; }
+.ag-instructions-count {
+    color: var(--text-muted);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+}
 .ag-error { color: var(--danger); font-size: 12px; min-height: 0; }
 .ag-error:not(:empty) { min-height: 16px; margin-top: 2px; }
 .ag-field.has-error input,

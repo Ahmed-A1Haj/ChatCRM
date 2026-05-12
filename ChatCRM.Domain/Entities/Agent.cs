@@ -29,6 +29,14 @@ namespace ChatCRM.Domain.Entities
         /// <summary>Web-served path under <c>/avatars/agents/...</c>. Null = use the default avatar.</summary>
         public string? AvatarPath { get; set; }
 
+        /// <summary>
+        /// Free-form system-prompt / role definition for the AI agent. Stored as
+        /// <c>nvarchar(max)</c> because well-tuned prompts can run into thousands of chars
+        /// (think few-shot examples and tool definitions). Service layer caps at 8,000 chars
+        /// for sanity — anything beyond starts hurting context-window economics anyway.
+        /// </summary>
+        public string? Instructions { get; set; }
+
         public bool IsDefault { get; set; }
         public bool IsActive { get; set; } = true;
 

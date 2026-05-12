@@ -283,6 +283,8 @@
         if (isCreate) {
             $('editName').value = '';
             $('editDescription').value = '';
+            $('editInstructions').value = '';
+            updateInstructionsCount();
             $('editIsActive').checked = true;
             $('editIsActive').disabled = false;
             $('editMakeDefault').checked = false;
@@ -294,6 +296,8 @@
             const a = r.payload;
             $('editName').value = a.name;
             $('editDescription').value = a.description || '';
+            $('editInstructions').value = a.instructions || '';
+            updateInstructionsCount();
             $('editIsActive').checked = a.isActive;
             // Default agents must stay active — block the active toggle so the user can't try
             // to demote and deactivate in one step. To demote: uncheck "default" first.
@@ -327,6 +331,12 @@
         }
     }
 
+    function updateInstructionsCount() {
+        const ta = $('editInstructions');
+        const out = $('instructionsCount');
+        if (ta && out) out.textContent = (ta.value || '').length;
+    }
+
     function clearEditorErrors() {
         document.querySelectorAll('.ag-error[data-error-for]').forEach(e => e.textContent = '');
         document.querySelectorAll('.ag-field.has-error').forEach(f => f.classList.remove('has-error'));
@@ -349,6 +359,7 @@
         const dto = {
             name: $('editName').value.trim(),
             description: $('editDescription').value.trim() || null,
+            instructions: $('editInstructions').value || null,
             isActive: $('editIsActive').checked,
             makeDefault: $('editMakeDefault').checked
         };
@@ -461,6 +472,9 @@
             const url = URL.createObjectURL(f);
             renderAvatarPreview(url);
         });
+
+        // Instructions live char counter.
+        $('editInstructions')?.addEventListener('input', updateInstructionsCount);
 
         // Interaction guard: while "default" is checked, the agent must stay active.
         // Unchecking "default" releases that lock so the user can deactivate.

@@ -63,5 +63,13 @@ namespace ChatCRM.Application.Interfaces
         Task ReassignConversationAsync(
             int conversationId, int? agentId, string actingUserId,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Set the per-contact agent preference. Pass null to clear (falls back to workspace
+        /// default at next conversation auto-creation). Throws if the target agent is inactive.
+        /// </summary>
+        Task<ContactAgentAssignmentDto> AssignContactAsync(
+            int contactId, int? agentId, string actingUserId,
+            CancellationToken cancellationToken = default);
     }
 }

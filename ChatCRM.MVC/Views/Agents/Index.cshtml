@@ -133,9 +133,26 @@
 
                 <div class="ag-field">
                     <label for="editDescription">@T["Agents.Field.Description"]</label>
-                    <textarea id="editDescription" rows="3" maxlength="500"></textarea>
+                    <textarea id="editDescription" rows="2" maxlength="500"></textarea>
                     <small class="ag-help">@T["Agents.Field.DescriptionHelp"]</small>
                     <small class="ag-error" data-error-for="Description"></small>
+                </div>
+
+                <div class="ag-field ag-field-instructions">
+                    <label for="editInstructions">@T["Agents.Field.Instructions"]</label>
+                    <small class="ag-help ag-help-tight">@T["Agents.Field.InstructionsHelp"]</small>
+                    <textarea id="editInstructions" rows="6" maxlength="8000"
+                              placeholder='@T["Agents.Field.InstructionsPlaceholder"]'></textarea>
+                    <div class="ag-instructions-foot">
+                        <div class="ag-instructions-pills">
+                            <button type="button" class="ag-pill" title="@T["Agents.Field.InsertVariable"]" disabled>@@</button>
+                            <button type="button" class="ag-pill" title="@T["Agents.Field.InsertEmoji"]" disabled>💬</button>
+                            <button type="button" class="ag-pill" title="@T["Agents.Field.InsertTag"]" disabled>🏷</button>
+                            <button type="button" class="ag-pill" title="@T["Agents.Field.InsertWorkflow"]" disabled>⛓</button>
+                        </div>
+                        <span class="ag-instructions-count"><span id="instructionsCount">0</span> / 8000</span>
+                    </div>
+                    <small class="ag-error" data-error-for="Instructions"></small>
                 </div>
 
                 <div class="ag-field-row">

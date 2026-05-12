@@ -269,6 +269,23 @@ namespace ChatCRM.MVC.Controllers
             }
         }
 
+        [HttpPost("/dashboard/contacts/{contactId:int}/agent")]
+        [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.AgentsView)]
+        public async Task<IActionResult> AssignContact(int contactId, [FromBody] ReassignDto body, CancellationToken ct)
+        {
+            var userId = _userManager.GetUserId(User) ?? string.Empty;
+            try
+            {
+                var result = await _agents.AssignContactAsync(contactId, body?.AgentId, userId, ct);
+                return Json(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
         // ── helpers ────────────────────────────────────────────────────────
 
         private object BuildValidationPayload(AgentValidationException ex)

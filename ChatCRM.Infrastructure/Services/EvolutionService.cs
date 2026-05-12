@@ -333,12 +333,22 @@ namespace ChatCRM.Infrastructure.Services
 
             if (contact is null)
             {
+                // Brand-new contact: stamp the workspace's default agent so this contact sticks
+                // to that agent across all future conversations (and across instances). If no
+                // default agent is configured, leave null — the user can assign later from the
+                // Contacts page or the chat panel.
+                var defaultAgentId = await _db.Agents.AsNoTracking()
+                    .Where(a => a.WorkspaceId == 1 && a.IsDefault && a.IsActive)
+                    .Select(a => (int?)a.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
+
                 contact = new WhatsAppContact
                 {
                     PhoneNumber = phone,
                     RemoteJid = rawJid,
                     DisplayName = payload.Data.PushName,
                     Country = PhoneCountryDetector.Detect(phone),
+                    AssignedAgentId = defaultAgentId,
                     CreatedAt = DateTime.UtcNow
                 };
                 _db.WhatsAppContacts.Add(contact);
@@ -370,20 +380,31 @@ namespace ChatCRM.Infrastructure.Services
 
             if (conversation is null)
             {
-                // Auto-assign the workspace's default AI agent to brand-new conversations.
-                // Null when no agents are configured yet — that's fine, the picker can fill
-                // it in later. We only auto-assign on the *first* incoming message; reassignment
-                // afterwards is a user action.
-                var defaultAgentId = await _db.Agents.AsNoTracking()
-                    .Where(a => a.WorkspaceId == 1 && a.IsDefault && a.IsActive)
-                    .Select(a => (int?)a.Id)
-                    .FirstOrDefaultAsync(cancellationToken);
+                // Auto-assign:
+                //   1. If the contact has a per-contact agent preference AND it's still active, use it.
+                //   2. Otherwise fall back to the workspace default agent (if any).
+                //   3. Otherwise null — the picker can fill it in later.
+                int? agentToAssign = null;
+                if (contact.AssignedAgentId.HasValue)
+                {
+                    agentToAssign = await _db.Agents.AsNoTracking()
+                        .Where(a => a.Id == contact.AssignedAgentId.Value && a.IsActive)
+                        .Select(a => (int?)a.Id)
+                        .FirstOrDefaultAsync(cancellationToken);
+                }
+                if (agentToAssign is null)
+                {
+                    agentToAssign = await _db.Agents.AsNoTracking()
+                        .Where(a => a.WorkspaceId == 1 && a.IsDefault && a.IsActive)
+                        .Select(a => (int?)a.Id)
+                        .FirstOrDefaultAsync(cancellationToken);
+                }
 
                 conversation = new Conversation
                 {
                     ContactId = contact.Id,
                     WhatsAppInstanceId = instance.Id,
-                    AssignedAgentId = defaultAgentId,
+                    AssignedAgentId = agentToAssign,
                     CreatedAt = DateTime.UtcNow
                 };
                 _db.Conversations.Add(conversation);

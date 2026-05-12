@@ -53,15 +53,13 @@ namespace ChatCRM.Infrastructure.Services.Agents
                 .ThenBy(a => a.Name)
                 .Select(a => new
                 {
-                    a.Id, a.Name, a.Description, a.AvatarPath,
+                    a.Id, a.Name, a.Description, a.AvatarPath, a.Instructions,
                     a.IsDefault, a.IsActive, a.CreatedAt, a.UpdatedAt,
                     CreatedBy = a.CreatedByUser,
-                    AssignedCount = _db.Conversations.Count(c => c.AssignedAgentId == a.Id),
-                    ContactsCount = _db.Conversations
-                        .Where(c => c.AssignedAgentId == a.Id)
-                        .Select(c => c.ContactId)
-                        .Distinct()
-                        .Count()
+                    // Contacts assigned to this agent (per-contact preference) + conversations
+                    // routed to it (per-conversation). Both surface as stat tiles on the card.
+                    ContactsCount = _db.WhatsAppContacts.Count(c => c.AssignedAgentId == a.Id),
+                    AssignedCount = _db.Conversations.Count(c => c.AssignedAgentId == a.Id)
                 })
                 .ToListAsync(ct);
 
@@ -71,6 +69,7 @@ namespace ChatCRM.Infrastructure.Services.Agents
                 Name = r.Name,
                 Description = r.Description,
                 AvatarPath = r.AvatarPath,
+                Instructions = r.Instructions,
                 IsDefault = r.IsDefault,
                 IsActive = r.IsActive,
                 CreatedByName = r.CreatedBy is null ? null
@@ -91,7 +90,7 @@ namespace ChatCRM.Infrastructure.Services.Agents
             return row is null ? null : new AgentDetailDto
             {
                 Id = row.Id, Name = row.Name, Description = row.Description,
-                AvatarPath = row.AvatarPath,
+                AvatarPath = row.AvatarPath, Instructions = row.Instructions,
                 IsDefault = row.IsDefault, IsActive = row.IsActive,
                 CreatedByName = row.CreatedByName, CreatedAt = row.CreatedAt,
                 UpdatedAt = row.UpdatedAt,
@@ -127,6 +126,7 @@ namespace ChatCRM.Infrastructure.Services.Agents
                 WorkspaceId = DefaultWorkspaceId,
                 Name = name,
                 Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim(),
+                Instructions = string.IsNullOrWhiteSpace(dto.Instructions) ? null : dto.Instructions,
                 IsActive = dto.IsActive,
                 IsDefault = shouldBeDefaultOnCreate,
                 CreatedByUserId = actingUserId,
@@ -190,12 +190,13 @@ namespace ChatCRM.Infrastructure.Services.Agents
 
             entity.Name = name;
             entity.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim();
+            entity.Instructions = string.IsNullOrWhiteSpace(dto.Instructions) ? null : dto.Instructions;
             entity.IsActive = dto.IsActive;
             entity.UpdatedAt = DateTime.UtcNow;
 
             WriteAudit(actingUserId, "agent.updated", entity.Id.ToString(),
                 beforeJson: beforeJson,
-                afterJson: JsonSerializer.Serialize(new { entity.Name, entity.Description, entity.IsActive }));
+                afterJson: JsonSerializer.Serialize(new { entity.Name, entity.Description, entity.IsActive, InstructionsLen = entity.Instructions?.Length ?? 0 }));
 
             await _db.SaveChangesAsync(ct);
 
@@ -358,6 +359,41 @@ namespace ChatCRM.Infrastructure.Services.Agents
                 .FirstOrDefaultAsync(ct);
         }
 
+        public async Task<ContactAgentAssignmentDto> AssignContactAsync(
+            int contactId, int? agentId, string actingUserId, CancellationToken ct = default)
+        {
+            var contact = await _db.WhatsAppContacts
+                .FirstOrDefaultAsync(c => c.Id == contactId, ct)
+                ?? throw new InvalidOperationException("Contact not found.");
+
+            Agent? agent = null;
+            if (agentId.HasValue)
+            {
+                agent = await _db.Agents
+                    .FirstOrDefaultAsync(a => a.Id == agentId.Value && a.WorkspaceId == DefaultWorkspaceId, ct)
+                    ?? throw new InvalidOperationException("Agent not found.");
+                if (!agent.IsActive)
+                    throw new InvalidOperationException("Cannot assign an inactive agent.");
+            }
+
+            var beforeId = contact.AssignedAgentId;
+            contact.AssignedAgentId = agentId;
+
+            WriteAudit(actingUserId, "contact.agent_assigned", contact.Id.ToString(),
+                beforeJson: JsonSerializer.Serialize(new { AgentId = beforeId }),
+                afterJson: JsonSerializer.Serialize(new { AgentId = agentId }));
+
+            await _db.SaveChangesAsync(ct);
+
+            return new ContactAgentAssignmentDto
+            {
+                ContactId = contact.Id,
+                AgentId = agent?.Id,
+                AgentName = agent?.Name,
+                AgentAvatarPath = agent?.AvatarPath
+            };
+        }
+
         public async Task ReassignConversationAsync(int conversationId, int? agentId, string actingUserId, CancellationToken ct = default)
         {
             var conv = await _db.Conversations
@@ -396,6 +432,9 @@ namespace ChatCRM.Infrastructure.Services.Agents
 
             if (!string.IsNullOrEmpty(dto.Description) && dto.Description.Length > 500)
                 errors["Description"] = "Agents.Validation.DescriptionTooLong";
+
+            if (!string.IsNullOrEmpty(dto.Instructions) && dto.Instructions.Length > 8000)
+                errors["Instructions"] = "Agents.Validation.InstructionsTooLong";
 
             if (errors.Count > 0)
                 throw new AgentValidationException(errors);
