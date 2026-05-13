@@ -27,7 +27,9 @@ namespace ChatCRM.Infrastructure.Services
                     Permissions.ContactsView, Permissions.ContactsEdit, Permissions.ContactsDelete,
                     Permissions.ConversationsAssign, Permissions.ConversationsClose,
                     Permissions.ChannelsManage,
-                    Permissions.SettingsView
+                    Permissions.SettingsView,
+                    Permissions.BillingView, Permissions.BillingTopUp,
+                    Permissions.TemplatesView, Permissions.TemplatesCreate, Permissions.TemplatesSubmit, Permissions.TemplatesDelete
                 },
                 [Roles.Agent] = new[]
                 {

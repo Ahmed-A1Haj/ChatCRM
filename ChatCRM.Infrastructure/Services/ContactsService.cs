@@ -207,7 +207,10 @@ namespace ChatCRM.Infrastructure.Services
                            ConversationStatus = primary != null ? (byte?)primary.Status : null,
                            IsBlocked = contact.IsBlocked,
                            PrimaryConversationId = primary != null ? primary.Id : null,
-                           PrimaryInstanceId = primary != null ? primary.WhatsAppInstanceId : null
+                           PrimaryInstanceId = primary != null ? primary.WhatsAppInstanceId : null,
+                           AssignedAgentId = contact.AssignedAgentId,
+                           AssignedAgentName = contact.AssignedAgent != null ? contact.AssignedAgent.Name : null,
+                           AssignedAgentAvatarPath = contact.AssignedAgent != null ? contact.AssignedAgent.AvatarPath : null
                        };
 
             // Filters

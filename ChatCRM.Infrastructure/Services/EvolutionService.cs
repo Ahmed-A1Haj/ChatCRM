@@ -73,6 +73,34 @@ namespace ChatCRM.Infrastructure.Services
             return PostSendAsync($"/message/sendWhatsAppAudio/{instanceName}", payload, instanceName, phone, cancellationToken);
         }
 
+        public Task<EvolutionSendResult> SendTemplateAsync(
+            string instanceName,
+            string phone,
+            string templateName,
+            string languageCode,
+            IReadOnlyList<string> bodyVariables,
+            CancellationToken cancellationToken = default)
+        {
+            // Meta's template send wraps body parameters in a `body` component. Even templates
+            // with zero variables need the components array — Evolution forwards it verbatim.
+            var bodyParams = (bodyVariables ?? Array.Empty<string>())
+                .Select(v => new { type = "text", text = v ?? string.Empty })
+                .ToArray();
+
+            var components = bodyParams.Length == 0
+                ? Array.Empty<object>()
+                : new object[] { new { type = "body", parameters = bodyParams } };
+
+            var payload = new
+            {
+                number = phone,
+                name = templateName,
+                language = new { code = languageCode },
+                components
+            };
+            return PostSendAsync($"/message/sendTemplate/{instanceName}", payload, instanceName, phone, cancellationToken);
+        }
+
         public async Task<bool> EditMessageAsync(
             string instanceName,
             string remoteJid,
@@ -305,12 +333,22 @@ namespace ChatCRM.Infrastructure.Services
 
             if (contact is null)
             {
+                // Brand-new contact: stamp the workspace's default agent so this contact sticks
+                // to that agent across all future conversations (and across instances). If no
+                // default agent is configured, leave null — the user can assign later from the
+                // Contacts page or the chat panel.
+                var defaultAgentId = await _db.Agents.AsNoTracking()
+                    .Where(a => a.WorkspaceId == 1 && a.IsDefault && a.IsActive)
+                    .Select(a => (int?)a.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
+
                 contact = new WhatsAppContact
                 {
                     PhoneNumber = phone,
                     RemoteJid = rawJid,
                     DisplayName = payload.Data.PushName,
                     Country = PhoneCountryDetector.Detect(phone),
+                    AssignedAgentId = defaultAgentId,
                     CreatedAt = DateTime.UtcNow
                 };
                 _db.WhatsAppContacts.Add(contact);
@@ -342,10 +380,31 @@ namespace ChatCRM.Infrastructure.Services
 
             if (conversation is null)
             {
+                // Auto-assign:
+                //   1. If the contact has a per-contact agent preference AND it's still active, use it.
+                //   2. Otherwise fall back to the workspace default agent (if any).
+                //   3. Otherwise null — the picker can fill it in later.
+                int? agentToAssign = null;
+                if (contact.AssignedAgentId.HasValue)
+                {
+                    agentToAssign = await _db.Agents.AsNoTracking()
+                        .Where(a => a.Id == contact.AssignedAgentId.Value && a.IsActive)
+                        .Select(a => (int?)a.Id)
+                        .FirstOrDefaultAsync(cancellationToken);
+                }
+                if (agentToAssign is null)
+                {
+                    agentToAssign = await _db.Agents.AsNoTracking()
+                        .Where(a => a.WorkspaceId == 1 && a.IsDefault && a.IsActive)
+                        .Select(a => (int?)a.Id)
+                        .FirstOrDefaultAsync(cancellationToken);
+                }
+
                 conversation = new Conversation
                 {
                     ContactId = contact.Id,
                     WhatsAppInstanceId = instance.Id,
+                    AssignedAgentId = agentToAssign,
                     CreatedAt = DateTime.UtcNow
                 };
                 _db.Conversations.Add(conversation);
@@ -368,7 +427,14 @@ namespace ChatCRM.Infrastructure.Services
             _db.Messages.Add(message);
             conversation.LastMessageAt = sentAt;
             // Only inbound messages count toward unread — outbound (fromMe) doesn't.
-            if (!isOutgoing) conversation.UnreadCount += 1;
+            if (!isOutgoing)
+            {
+                conversation.UnreadCount += 1;
+                // Reset the 24h customer-service-window clock. Phase 5: agents on Cloud-API
+                // instances can free-form reply for 24h after this timestamp; outside that,
+                // only approved templates are allowed.
+                conversation.LastIncomingAt = sentAt;
+            }
 
             await _db.SaveChangesAsync(cancellationToken);
 

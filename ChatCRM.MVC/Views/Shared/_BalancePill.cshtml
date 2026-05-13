@@ -1,0 +1,55 @@
+@*
+    Wallet balance pill. Renders nothing if the user can't see billing or the snapshot fetch
+    fails. Click → /dashboard/billing. Color tone follows BalanceHealth:
+        Healthy → indigo (matches dashboard accent)
+        Low     → amber
+        Empty   → red
+        Negative→ red
+
+    Usage:
+        @await Html.PartialAsync("_BalancePill")
+*@
+@using ChatCRM.Application.Billing.DTOs
+@using ChatCRM.Application.Interfaces
+@using ChatCRM.Domain.Entities
+@inject IWalletService Wallet
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthZ
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+
+@{
+    if (User.Identity?.IsAuthenticated != true) { return; }
+
+    var canSee = await AuthZ.AuthorizeAsync(User, null,
+        new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.BillingView) });
+    if (!canSee.Succeeded) { return; }
+
+    WalletSnapshot? snap = null;
+    try { snap = await Wallet.GetSnapshotAsync(); }
+    catch { /* Wallet missing or DB unreachable — render nothing rather than break the page. */ }
+    if (snap is null) { return; }
+
+    var toneClass = snap.Health switch
+    {
+        BalanceHealth.Healthy  => "is-healthy",
+        BalanceHealth.Low      => "is-low",
+        BalanceHealth.Empty    => "is-empty",
+        BalanceHealth.Negative => "is-empty",
+        _                       => "is-healthy"
+    };
+    var titleKey = snap.Health switch
+    {
+        BalanceHealth.Low      => "Billing.Pill.Tooltip.Low",
+        BalanceHealth.Empty    => "Billing.Pill.Tooltip.Empty",
+        BalanceHealth.Negative => "Billing.Pill.Tooltip.Negative",
+        _                       => "Billing.Pill.Tooltip.Healthy"
+    };
+}
+
+<a class="balance-pill @toneClass" href="/dashboard/billing" title="@T[titleKey]">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
+    </svg>
+    <span>$@snap.BalanceUsd.ToString("0.00")</span>
+</a>

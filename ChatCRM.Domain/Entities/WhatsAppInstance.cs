@@ -8,6 +8,17 @@ namespace ChatCRM.Domain.Entities
         Disconnected = 3
     }
 
+    /// <summary>
+    /// How a WhatsApp account is connected. Maps to Evolution API's `integration` field:
+    /// Personal == "WHATSAPP-BAILEYS" (QR-scanned WhatsApp Web account, prosumer features),
+    /// Business == "WHATSAPP-BUSINESS" (official Cloud API via Meta, full features).
+    /// </summary>
+    public enum WhatsAppIntegration : byte
+    {
+        Personal = 0,
+        Business = 1
+    }
+
     public class WhatsAppInstance
     {
         public int Id { get; set; }
@@ -17,6 +28,9 @@ namespace ChatCRM.Domain.Entities
         public string DisplayName { get; set; } = string.Empty;
 
         public ChannelType ChannelType { get; set; } = ChannelType.WhatsApp;
+
+        /// <summary>Personal (Baileys/WhatsApp Web) vs. Business (Cloud API). Captured at create time.</summary>
+        public WhatsAppIntegration Integration { get; set; } = WhatsAppIntegration.Personal;
 
         public string? PhoneNumber { get; set; }
 

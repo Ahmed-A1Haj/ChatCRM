@@ -1,0 +1,272 @@
+@model ChatCRM.Application.Billing.DTOs.BillingOverviewDto
+@using System.Globalization
+@using ChatCRM.Application.Billing.DTOs
+@using ChatCRM.Domain.Entities
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthZ
+
+@{
+    Layout = null;
+    ViewData["Title"] = T["Billing.Title"].Value;
+
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+
+    var canAdjust = (await AuthZ.AuthorizeAsync(User, null,
+        new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.BillingAdminRefund) })).Succeeded;
+
+    var statusMessage = TempData["StatusMessage"] as string;
+    var statusType    = (TempData["StatusType"] as string ?? "info").ToLowerInvariant();
+
+    var balanceTone = Model.Health switch
+    {
+        BalanceHealth.Healthy  => "is-healthy",
+        BalanceHealth.Low      => "is-low",
+        BalanceHealth.Empty    => "is-empty",
+        BalanceHealth.Negative => "is-empty",
+        _                       => "is-healthy"
+    };
+
+    string KindLabel(WalletTransactionKind k) => k switch
+    {
+        WalletTransactionKind.TopUp              => T["Billing.Kind.TopUp"].Value,
+        WalletTransactionKind.MessageCharge      => T["Billing.Kind.MessageCharge"].Value,
+        WalletTransactionKind.MessageRefund      => T["Billing.Kind.MessageRefund"].Value,
+        WalletTransactionKind.ManualCredit       => T["Billing.Kind.ManualCredit"].Value,
+        WalletTransactionKind.ManualDebit        => T["Billing.Kind.ManualDebit"].Value,
+        WalletTransactionKind.AutoRechargeCharge => T["Billing.Kind.AutoRecharge"].Value,
+        _                                         => k.ToString()
+    };
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "billing")
+
+<section class="bill-shell">
+    <main class="bill-main">
+        <div class="bill-container">
+
+            <header class="bill-page-head">
+                <h1 class="bill-page-title">@T["Billing.Title"]</h1>
+                <p class="bill-page-sub">@T["Billing.Sub"]</p>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(statusMessage))
+            {
+                <div class="auth-alert auth-alert-@(statusType == "error" ? "danger" : statusType)" role="alert">@statusMessage</div>
+            }
+
+            @* ── Balance + top up CTA ─────────────────────────────────────── *@
+            <section class="bill-card bill-balance-card @balanceTone">
+                <div class="bill-balance-side">
+                    <span class="bill-balance-label">@T["Billing.CurrentBalance"]</span>
+                    <span class="bill-balance-value">$@Model.BalanceUsd.ToString("0.00")</span>
+                    <span class="bill-balance-meta">
+                        @T["Billing.Markup"]: @Model.MarkupPercentage.ToString("0.##")%  ·
+                        @T["Billing.LowAt"]: $@Model.LowBalanceThresholdUsd.ToString("0.00")
+                    </span>
+
+                    @if (Model.Health == BalanceHealth.Empty || Model.Health == BalanceHealth.Negative)
+                    {
+                        <p class="bill-balance-warning">@T["Billing.Warning.Empty"]</p>
+                    }
+                    else if (Model.Health == BalanceHealth.Low)
+                    {
+                        <p class="bill-balance-warning is-soft">@T["Billing.Warning.Low"]</p>
+                    }
+                </div>
+                <div class="bill-balance-actions">
+                    <a class="auth-btn auth-btn-primary bill-topup-btn" asp-action="TopUp">@T["Billing.TopUp"]</a>
+                    <a class="auth-btn auth-btn-secondary" asp-action="Analytics">@T["Billing.ViewActivity"]</a>
+                    <a class="auth-btn auth-btn-secondary" asp-controller="Invoices" asp-action="Index">@T["Billing.ViewInvoices"]</a>
+                </div>
+            </section>
+
+            @* ── Auto-recharge (phase 11) ─────────────────────────────────── *@
+            <section class="bill-card" id="autoRechargeCard">
+                <header class="bill-section-head">
+                    <h2>@T["Billing.AutoRecharge.Title"]</h2>
+                    <p>@T["Billing.AutoRecharge.Sub"]</p>
+                </header>
+                @Html.AntiForgeryToken()
+                <div id="arNoCardNotice" class="auth-alert auth-alert-info d-none" role="alert">
+                    @T["Billing.AutoRecharge.NoCardNotice"]
+                </div>
+                <form id="arForm" class="bill-adjust-form">
+                    <div class="bill-adjust-grid">
+                        <label class="bill-radio">
+                            <input type="checkbox" id="arEnabled" />
+                            <span class="bill-radio-label">@T["Billing.AutoRecharge.Enable"]</span>
+                        </label>
+                        <div class="auth-field">
+                            <label for="arTrigger">@T["Billing.AutoRecharge.Trigger"]</label>
+                            <input id="arTrigger" type="number" min="1" max="500" step="0.01" class="auth-input" placeholder="10.00" />
+                            <p class="auth-hint">@T["Billing.AutoRecharge.TriggerHint"]</p>
+                        </div>
+                        <div class="auth-field">
+                            <label for="arAmount">@T["Billing.AutoRecharge.Amount"]</label>
+                            <input id="arAmount" type="number" min="10" max="1000" step="0.01" class="auth-input" placeholder="50.00" />
+                            <p class="auth-hint">@T["Billing.AutoRecharge.AmountHint"]</p>
+                        </div>
+                    </div>
+                    <div class="bill-actions">
+                        <button type="submit" class="auth-btn auth-btn-primary" id="arSave">@T["Billing.AutoRecharge.Save"]</button>
+                    </div>
+                </form>
+            </section>
+
+            <script>
+                (function () {
+                    const csrf = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+                    async function load() {
+                        const resp = await fetch('/dashboard/billing/autorecharge');
+                        if (!resp.ok) return;
+                        const s = await resp.json();
+                        document.getElementById('arEnabled').checked = !!s.enabled;
+                        document.getElementById('arTrigger').value = s.triggerUsd ?? '';
+                        document.getElementById('arAmount').value = s.amountUsd ?? '';
+                        const hasCard = !!s.hasPaymentMethod;
+                        document.getElementById('arNoCardNotice').classList.toggle('d-none', hasCard);
+                        document.getElementById('arSave').disabled = !hasCard;
+                        document.getElementById('arEnabled').disabled = !hasCard;
+                    }
+                    document.getElementById('arForm').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const body = {
+                            enabled: document.getElementById('arEnabled').checked,
+                            triggerUsd: parseFloat(document.getElementById('arTrigger').value || '0') || null,
+                            amountUsd: parseFloat(document.getElementById('arAmount').value || '0') || null
+                        };
+                        const resp = await fetch('/dashboard/billing/autorecharge', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': csrf },
+                            body: JSON.stringify(body)
+                        });
+                        if (resp.ok) {
+                            alert('@T["Billing.AutoRecharge.Saved"]');
+                            load();
+                        } else {
+                            const err = await resp.json().catch(() => ({}));
+                            alert(err.error || 'Error');
+                        }
+                    });
+                    load();
+                })();
+            </script>
+
+            @* ── Manual adjustment (admins with billing.admin.refund only) ── *@
+            @if (canAdjust)
+            {
+                <section class="bill-card">
+                    <header class="bill-section-head">
+                        <h2>@T["Billing.Adjust.Title"]</h2>
+                        <p>@T["Billing.Adjust.Sub"]</p>
+                    </header>
+
+                    <form method="post" asp-action="Adjust" class="bill-adjust-form">
+                        @Html.AntiForgeryToken()
+                        <div class="bill-adjust-grid">
+                            <label class="bill-radio">
+                                <input type="radio" name="IsCredit" value="true" checked />
+                                <span class="bill-radio-label is-credit">+ @T["Billing.Adjust.Credit"]</span>
+                            </label>
+                            <label class="bill-radio">
+                                <input type="radio" name="IsCredit" value="false" />
+                                <span class="bill-radio-label is-debit">− @T["Billing.Adjust.Debit"]</span>
+                            </label>
+
+                            <div class="auth-field bill-adjust-amount">
+                                <label for="AmountUsd">@T["Billing.Adjust.Amount"]</label>
+                                <input id="AmountUsd" name="AmountUsd" type="number" min="0.01" max="10000" step="0.01"
+                                       class="auth-input" required placeholder="0.00" />
+                            </div>
+
+                            <div class="auth-field bill-adjust-reason">
+                                <label for="Reason">@T["Billing.Adjust.Reason"]</label>
+                                <textarea id="Reason" name="Reason" rows="2" minlength="5" maxlength="500"
+                                          class="auth-input" required placeholder="@T["Billing.Adjust.ReasonPlaceholder"]"></textarea>
+                                <p class="auth-hint">@T["Billing.Adjust.ReasonHint"]</p>
+                            </div>
+                        </div>
+                        <div class="bill-actions">
+                            <button type="submit" class="auth-btn auth-btn-primary">@T["Billing.Adjust.Submit"]</button>
+                        </div>
+                    </form>
+                </section>
+            }
+
+            @* ── Refund policy ────────────────────────────────────────────── *@
+            <section class="bill-card bill-card-quiet">
+                <header class="bill-section-head">
+                    <h2>@T["Billing.RefundPolicy.Title"]</h2>
+                </header>
+                <p class="bill-policy-text">@Model.RefundPolicy</p>
+            </section>
+
+            @* ── Recent activity ──────────────────────────────────────────── *@
+            <section class="bill-card" id="bill-recent">
+                <header class="bill-section-head">
+                    <h2>@T["Billing.Recent.Title"]</h2>
+                    <p>@T["Billing.Recent.Sub"]</p>
+                </header>
+
+                @if (Model.RecentTransactions.Count == 0)
+                {
+                    <div class="bill-empty">
+                        <div class="bill-empty-title">@T["Billing.Recent.EmptyTitle"]</div>
+                        <p>@T["Billing.Recent.EmptySub"]</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="bill-tx-list">
+                        @foreach (var tx in Model.RecentTransactions)
+                        {
+                            var isPositive = tx.AmountUsd > 0;
+                            var sign = isPositive ? "+" : "−";
+                            <div class="bill-tx-row @(isPositive ? "is-credit" : "is-debit")">
+                                <span class="bill-tx-kind">@KindLabel(tx.Kind)</span>
+                                <span class="bill-tx-meta">
+                                    @tx.CreatedAt.ToLocalTime().ToString("MMM d, yyyy HH:mm")
+                                    @if (!string.IsNullOrWhiteSpace(tx.Reason))
+                                    {
+                                        <span class="bill-tx-reason"> · @tx.Reason</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(tx.InitiatedByName))
+                                    {
+                                        <span class="bill-tx-actor"> · @tx.InitiatedByName</span>
+                                    }
+                                </span>
+                                <span class="bill-tx-amount">@sign$@Math.Abs(tx.AmountUsd).ToString("0.00")</span>
+                                <span class="bill-tx-balance">@T["Billing.AfterBalance"]: $@tx.BalanceAfterUsd.ToString("0.00")</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+    </main>
+</section>
+
+</body>
+</html>

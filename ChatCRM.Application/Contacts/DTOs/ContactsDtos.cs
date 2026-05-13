@@ -19,6 +19,11 @@ namespace ChatCRM.Application.Contacts.DTOs
         public bool IsBlocked { get; set; }
         public int? PrimaryConversationId { get; set; }
         public int? PrimaryInstanceId { get; set; }
+
+        // ── AI agent assignment (phase 13.5) ─────────────────────────────
+        public int? AssignedAgentId { get; set; }
+        public string? AssignedAgentName { get; set; }
+        public string? AssignedAgentAvatarPath { get; set; }
     }
 
     public class ContactsListResultDto

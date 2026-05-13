@@ -43,6 +43,23 @@ namespace ChatCRM.Application.Chats.DTOs
         public int MessageCount { get; set; }
         public int NoteCount { get; set; }
         public List<TagDto> Tags { get; set; } = new();
+
+        // ── 24h customer-service window (phase 5) ──────────────────────────
+        /// <summary>UTC timestamp of the most recent incoming message. Null if the contact has never replied.</summary>
+        public DateTime? LastIncomingAtUtc { get; set; }
+
+        /// <summary>
+        /// Integration type of the WhatsApp instance that owns this conversation. The 24h window
+        /// only matters for Cloud-API (Business) instances — Personal/Baileys instances bypass
+        /// Meta's window rules entirely. The client uses this to decide whether to show the
+        /// pill at all.
+        /// </summary>
+        public byte Integration { get; set; }
+
+        // ── AI agent assignment ────────────────────────────────────────────
+        public int? AssignedAgentId { get; set; }
+        public string? AssignedAgentName { get; set; }
+        public string? AssignedAgentAvatarPath { get; set; }
     }
 
     public class SetLifecycleDto

@@ -44,6 +44,8 @@ namespace ChatCRM.Infrastructure.Services
                     DisplayName = i.DisplayName,
                     PhoneNumber = i.PhoneNumber,
                     Status = i.Status,
+                    ChannelType = i.ChannelType,
+                    Integration = i.Integration,
                     CreatedAt = i.CreatedAt,
                     LastConnectedAt = i.LastConnectedAt,
                     ConversationCount = i.Conversations.Count,
@@ -63,6 +65,8 @@ namespace ChatCRM.Infrastructure.Services
                     DisplayName = i.DisplayName,
                     PhoneNumber = i.PhoneNumber,
                     Status = i.Status,
+                    ChannelType = i.ChannelType,
+                    Integration = i.Integration,
                     CreatedAt = i.CreatedAt,
                     LastConnectedAt = i.LastConnectedAt,
                     ConversationCount = i.Conversations.Count,
@@ -92,6 +96,10 @@ namespace ChatCRM.Infrastructure.Services
                 InstanceName = instanceName,
                 DisplayName = displayName,
                 Status = InstanceStatus.Connecting,
+                // Today's create flow always uses Baileys (QR-scanned WhatsApp Web). When we add the
+                // official Meta Cloud API flow, that code path sets Integration = Business and sends
+                // integration = "WHATSAPP-BUSINESS" to Evolution.
+                Integration = WhatsAppIntegration.Personal,
                 CreatedAt = DateTime.UtcNow,
                 CreatedByUserId = createdByUserId
             };

@@ -57,6 +57,12 @@
                 <div class="instance-card-head">
                     <span class="status-dot status-@inst.Status.ToString().ToLowerInvariant()" title="@inst.Status" data-status-dot></span>
                     <h3 class="instance-name">@inst.DisplayName</h3>
+                    @{
+                        var integrationClass = inst.Integration == ChatCRM.Domain.Entities.WhatsAppIntegration.Business ? "is-business" : "is-personal";
+                        var integrationLabelKey = inst.Integration == ChatCRM.Domain.Entities.WhatsAppIntegration.Business ? "Channels.Integration.Business" : "Channels.Integration.Personal";
+                        var integrationTipKey   = inst.Integration == ChatCRM.Domain.Entities.WhatsAppIntegration.Business ? "Channels.Integration.Business.Tooltip" : "Channels.Integration.Personal.Tooltip";
+                    }
+                    <span class="integration-pill @integrationClass" title="@T[integrationTipKey]">@T[integrationLabelKey]</span>
                 </div>
                 <div class="instance-phone" data-phone>
                     @(string.IsNullOrWhiteSpace(inst.PhoneNumber) ? "—" : "+" + inst.PhoneNumber)

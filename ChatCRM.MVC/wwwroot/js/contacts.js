@@ -157,6 +157,31 @@ function renderRows(items) {
     tbody.innerHTML = items.map(c => renderRow(c)).join('');
 }
 
+/** Compact AI-agent chip rendered into the new column on each contact row. */
+function renderAgentChip(c) {
+    if (c.assignedAgentName) {
+        const avatar = c.assignedAgentAvatarPath
+            ? `<img src="${escapeHtml(c.assignedAgentAvatarPath)}" alt="" />`
+            : '🤖';
+        return `
+            <button class="chat-agent-picker" type="button"
+                    data-agent-picker="contact"
+                    data-contact-id="${c.id}"
+                    data-current-agent="${c.assignedAgentId}">
+                <span class="chat-agent-picker-avatar">${avatar}</span>
+                <span class="chat-agent-picker-name">${escapeHtml(c.assignedAgentName)}</span>
+            </button>`;
+    }
+    return `
+        <button class="chat-agent-picker" type="button"
+                data-agent-picker="contact"
+                data-contact-id="${c.id}"
+                data-current-agent="">
+            <span class="chat-agent-picker-avatar">🤖</span>
+            <span class="chat-agent-picker-name" style="color: var(--text-muted);">${escapeHtml(t('Agents.Picker.Unassign'))}</span>
+        </button>`;
+}
+
 function renderRow(c) {
     const initials = avatarInitials(c.displayName || c.phoneNumber);
 
@@ -247,6 +272,7 @@ function renderRow(c) {
         <td>${langHtml}</td>
         <td>${lifecycleHtml}</td>
         <td>${assigneeHtml}</td>
+        <td>${renderAgentChip(c)}</td>
         <td>${statusHtml}</td>
         <td class="cell-actions">
             <div class="action-menu-wrap">

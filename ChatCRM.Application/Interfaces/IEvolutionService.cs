@@ -22,6 +22,19 @@ namespace ChatCRM.Application.Interfaces
             byte[] data,
             CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// Send an approved WhatsApp Business template. Body variables are passed as positional
+        /// strings ({{1}}, {{2}}, …) — Meta does the substitution server-side. Caller must have
+        /// already validated that the template is Approved locally.
+        /// </summary>
+        Task<EvolutionSendResult> SendTemplateAsync(
+            string instanceName,
+            string phone,
+            string templateName,
+            string languageCode,
+            IReadOnlyList<string> bodyVariables,
+            CancellationToken cancellationToken = default);
+
         Task<bool> EditMessageAsync(
             string instanceName,
             string remoteJid,

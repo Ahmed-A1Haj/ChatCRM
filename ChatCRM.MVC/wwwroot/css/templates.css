@@ -1,0 +1,301 @@
+/* ─── Templates manager (renders inside the dashboard rail layout) ───────── */
+
+.tpl-page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.tpl-page-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ─── Preflight + rate-limit banners ───────────────────────────────────── */
+.tpl-rate-banner {
+    background: color-mix(in oklab, var(--warn) 12%, var(--bg-panel));
+    border: 1px solid color-mix(in oklab, var(--warn) 40%, var(--border));
+    color: var(--text);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ─── Tabs ─────────────────────────────────────────────────────────────── */
+.tpl-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    margin-top: 4px;
+}
+.tpl-tab {
+    background: transparent;
+    border: none;
+    padding: 10px 4px;
+    margin-bottom: -1px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid transparent;
+    transition: color 120ms ease, border-color 120ms ease;
+}
+.tpl-tab:hover { color: var(--text); }
+.tpl-tab.is-active {
+    color: var(--text);
+    border-bottom-color: var(--brand);
+    font-weight: 600;
+}
+.tpl-tab-count {
+    background: var(--bg-soft);
+    color: var(--text-muted);
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 1px 8px;
+    border-radius: 999px;
+}
+.tpl-tab.is-active .tpl-tab-count {
+    background: color-mix(in oklab, var(--brand) 20%, var(--bg-panel));
+    color: var(--brand);
+}
+
+/* ─── List card ────────────────────────────────────────────────────────── */
+.tpl-list-card { padding: 0; overflow: hidden; }
+.tpl-empty {
+    padding: 48px 24px;
+    text-align: center;
+}
+.tpl-empty h3 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    color: var(--text);
+}
+.tpl-empty p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.tpl-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+.tpl-table th, .tpl-table td {
+    padding: 12px 16px;
+    text-align: start;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.tpl-table th {
+    background: var(--bg-soft);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+.tpl-table tr:last-child td { border-bottom: none; }
+.tpl-table tr:hover td { background: var(--bg-soft); }
+
+.tpl-name {
+    font-weight: 600;
+    color: var(--text);
+    word-break: break-all;
+}
+.tpl-name-sub {
+    display: block;
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 2px;
+}
+.tpl-col-actions {
+    text-align: end;
+    width: 1%;
+    white-space: nowrap;
+}
+.tpl-col-actions .tpl-row-btn {
+    margin-inline-start: 4px;
+}
+.tpl-row-btn {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.tpl-row-btn:hover {
+    background: var(--bg-soft);
+    color: var(--text);
+}
+.tpl-row-btn-danger {
+    color: var(--danger);
+    border-color: color-mix(in oklab, var(--danger) 20%, var(--border));
+}
+.tpl-row-btn-danger:hover {
+    background: color-mix(in oklab, var(--danger) 8%, var(--bg-panel));
+    color: var(--danger);
+}
+
+/* ─── Status pill ──────────────────────────────────────────────────────── */
+.tpl-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.tpl-status.s-draft     { background: var(--bg-soft); color: var(--text-muted); }
+.tpl-status.s-submitted { background: color-mix(in oklab, var(--brand) 12%, var(--bg-panel)); color: var(--brand); }
+.tpl-status.s-approved  { background: color-mix(in oklab, var(--success) 14%, var(--bg-panel)); color: var(--success); }
+.tpl-status.s-rejected  { background: color-mix(in oklab, var(--danger) 14%, var(--bg-panel)); color: var(--danger); }
+.tpl-status.s-paused    { background: color-mix(in oklab, var(--warn) 14%, var(--bg-panel)); color: color-mix(in oklab, var(--warn) 70%, var(--text)); }
+.tpl-status.s-disabled  { background: var(--bg-soft); color: var(--text-muted); }
+.tpl-status.s-stuck     { background: color-mix(in oklab, var(--warn) 18%, var(--bg-panel)); color: color-mix(in oklab, var(--warn) 70%, var(--text)); }
+
+/* ─── Modal ─────────────────────────────────────────────────────────────── */
+.tpl-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 80;
+}
+.tpl-modal-inner {
+    background: var(--bg-panel);
+    border-radius: 14px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    width: 100%;
+    max-width: 640px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    border: 1px solid var(--border);
+}
+.tpl-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+}
+.tpl-modal-head h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+.tpl-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0 6px;
+}
+.tpl-modal-close:hover { color: var(--text); }
+
+#editForm {
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.tpl-field { display: flex; flex-direction: column; gap: 4px; }
+.tpl-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.tpl-field input,
+.tpl-field select,
+.tpl-field textarea {
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13.5px;
+    color: var(--text);
+    font-family: inherit;
+}
+.tpl-field textarea {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.55;
+}
+.tpl-field input:focus,
+.tpl-field select:focus,
+.tpl-field textarea:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 20%, transparent);
+}
+.tpl-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+.tpl-help {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+.tpl-error {
+    color: var(--danger);
+    font-size: 12px;
+    min-height: 0;
+    transition: min-height 120ms ease;
+}
+.tpl-error:not(:empty) { min-height: 16px; margin-top: 2px; }
+.tpl-field.has-error input,
+.tpl-field.has-error select,
+.tpl-field.has-error textarea {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--danger) 20%, transparent);
+}
+.tpl-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-soft);
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+}
+
+/* ─── Toast ────────────────────────────────────────────────────────────── */
+.tpl-toast {
+    position: fixed;
+    bottom: 24px;
+    inset-inline-end: 24px;
+    background: var(--text);
+    color: var(--bg-panel);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+    z-index: 90;
+    max-width: 360px;
+}
+.tpl-toast.is-error   { background: var(--danger); }
+.tpl-toast.is-success { background: var(--success); }
+
+.d-none { display: none !important; }
