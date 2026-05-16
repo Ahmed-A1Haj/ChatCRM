@@ -49,6 +49,13 @@ namespace ChatCRM.Application.Interfaces
             CancellationToken cancellationToken = default);
 
         Task HandleIncomingWebhookAsync(WebhookPayloadDto payload, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Handle a <c>connection.update</c> webhook from Evolution. Maps Baileys connection
+        /// states ("open" / "close" / "connecting") onto <c>WhatsAppInstance.Status</c> and
+        /// broadcasts the change over SignalR so the dashboard reflects reality.
+        /// </summary>
+        Task HandleConnectionUpdateAsync(WebhookPayloadDto payload, CancellationToken cancellationToken = default);
     }
 
     /// <summary>Outcome of an outbound Evolution API call. ExternalId is the Baileys message ID

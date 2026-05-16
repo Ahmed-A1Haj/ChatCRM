@@ -45,5 +45,21 @@ namespace ChatCRM.Domain.Entities
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        // ── CRM-AI-Service sync ─────────────────────────────────────────────
+        // The AI service stores its own agent row (Postgres + pgvector). We
+        // round-trip its UUID back here so future chat-turn dispatches can
+        // address the remote agent directly.
+
+        /// <summary>UUID of this agent in the remote CRM-AI-Service. Null until first sync succeeds.</summary>
+        public Guid? RemoteAgentId { get; set; }
+
+        /// <summary><c>pending</c> | <c>synced</c> | <c>error</c>.</summary>
+        public string RemoteSyncStatus { get; set; } = "pending";
+
+        public DateTime? RemoteSyncedAt { get; set; }
+
+        /// <summary>Last error from the remote sync, if status is <c>error</c>.</summary>
+        public string? RemoteSyncError { get; set; }
     }
 }

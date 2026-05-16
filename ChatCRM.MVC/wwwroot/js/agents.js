@@ -166,6 +166,20 @@
             ? `<button type="button" class="agent-card-menu" data-act="menu" aria-label="${escapeHtml(t('Agents.Action.More'))}">⋯</button>`
             : '';
 
+        // CRM-AI-Service sync state badge. "synced" = green, "pending" = amber, "error" = red.
+        // Title attribute exposes the error string (if any) on hover.
+        const syncStatus = (a.remoteSyncStatus || 'pending').toLowerCase();
+        const syncLabel  = syncStatus === 'synced' ? 'Synced'
+                         : syncStatus === 'error'  ? 'Sync error'
+                         : 'Syncing…';
+        const syncTitle  = syncStatus === 'error' && a.remoteSyncError
+            ? escapeHtml(a.remoteSyncError)
+            : (syncStatus === 'pending' ? 'Waiting to sync with CRM-AI-Service' : 'In sync with CRM-AI-Service');
+        const syncPill = `<span class="agent-sync-pill is-${syncStatus}" title="${syncTitle}">
+                            <span class="agent-sync-dot"></span>
+                            ${escapeHtml(syncLabel)}
+                          </span>`;
+
         card.innerHTML = `
             <div class="agent-card-body">
                 <div class="agent-card-top">
@@ -173,6 +187,7 @@
                         <span class="agent-status-dot"></span>
                         ${escapeHtml(statusLabel)}
                     </span>
+                    ${syncPill}
                     ${menuBtn}
                 </div>
                 <div class="agent-card-avatar">${avatarHtml(a)}</div>

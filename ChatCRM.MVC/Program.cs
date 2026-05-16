@@ -2,6 +2,7 @@ using ChatCRM.Application.Interfaces;
 using ChatCRM.Application.Users.DTOS;
 using ChatCRM.Domain.Entities;
 using ChatCRM.Infrastructure.Services;
+using ChatCRM.Infrastructure.Services.Ai;
 using ChatCRM.MVC.Localization;
 using ChatCRM.MVC.Services;
 using ChatCRM.Persistence;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Localization;
+using StackExchange.Redis;
 using System.Globalization;
 
 DotEnvLoader.Load(
@@ -157,6 +159,22 @@ builder.Services.AddScoped<IAuditLogService, ChatCRM.Infrastructure.Services.Aud
 
 // AI Agents (phase 13) — workspace-scoped agents + per-conversation assignment.
 builder.Services.AddScoped<IAgentService, ChatCRM.Infrastructure.Services.Agents.AgentService>();
+
+// AI integration (phase 14) — outbox-backed bridge to CRM-AI-Service over Redis Streams.
+// Producer side: IAiAgentClient writes to AiOutboxMessages; AiOutboxPublisher drains to
+// stream:inbound via XADD. Consumer side: AiOutboundConsumer XREADGROUP from
+// stream:outbound, dispatches to AiReplyDispatcher which reuses the existing
+// BillingGate + Evolution + SignalR pipeline.
+builder.Services.Configure<AiOptions>(builder.Configuration.GetSection("Ai"));
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiOptions>>().Value;
+    return ConnectionMultiplexer.Connect(opts.RedisUrl);
+});
+builder.Services.AddScoped<IAiAgentClient, AiAgentClient>();
+builder.Services.AddScoped<IAiReplyDispatcher, AiReplyDispatcher>();
+builder.Services.AddHostedService<AiOutboxPublisher>();
+builder.Services.AddHostedService<AiOutboundConsumer>();
 
 // Stripe configuration — keys live in environment / appsettings.Development.json.
 // The provider self-checks IsConfigured before any Stripe API call so missing keys

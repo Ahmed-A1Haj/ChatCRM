@@ -28,6 +28,7 @@ namespace ChatCRM.Persistence
         public DbSet<WhatsAppTemplate> WhatsAppTemplates => Set<WhatsAppTemplate>();
         public DbSet<Invoice> Invoices => Set<Invoice>();
         public DbSet<Agent> Agents => Set<Agent>();
+        public DbSet<AiOutboxMessage> AiOutboxMessages => Set<AiOutboxMessage>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -110,10 +111,16 @@ namespace ChatCRM.Persistence
                     .HasForeignKey(x => x.AuthorUserId)
                     .OnDelete(DeleteBehavior.SetNull);
 
+                builder.HasOne(x => x.AuthorAgent)
+                    .WithMany()
+                    .HasForeignKey(x => x.AuthorAgentId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 builder.Property(x => x.ExternalId).HasMaxLength(100);
                 builder.HasIndex(x => x.ExternalId).IsUnique().HasFilter("[ExternalId] IS NOT NULL");
                 builder.HasIndex(x => x.ConversationId);
                 builder.HasIndex(x => x.SentAt);
+                builder.HasIndex(x => x.AuthorAgentId);
             });
 
             modelBuilder.Entity<Tag>(builder =>
@@ -239,6 +246,23 @@ namespace ChatCRM.Persistence
                     .HasDatabaseName("IX_Agents_WorkspaceId_DefaultUnique");
 
                 builder.HasIndex(x => new { x.WorkspaceId, x.IsActive });
+
+                // CRM-AI-Service sync — see Agent.RemoteAgentId.
+                builder.Property(x => x.RemoteSyncStatus).HasMaxLength(20).IsRequired();
+                builder.Property(x => x.RemoteSyncError).HasMaxLength(500);
+                builder.HasIndex(x => x.RemoteAgentId);
+            });
+
+            modelBuilder.Entity<AiOutboxMessage>(builder =>
+            {
+                builder.Property(x => x.Kind).HasMaxLength(40).IsRequired();
+                builder.Property(x => x.PayloadJson).HasColumnType("nvarchar(max)").IsRequired();
+                builder.Property(x => x.Status).HasMaxLength(20).IsRequired();
+                builder.Property(x => x.LastError).HasMaxLength(500);
+                builder.Property(x => x.StreamId).HasMaxLength(64);
+
+                // Publisher hot path: "next batch of pending rows, oldest first."
+                builder.HasIndex(x => new { x.Status, x.CreatedAt });
             });
 
             modelBuilder.Entity<Invoice>(builder =>

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ChatCRM.Application.Agents.DTOs;
 using ChatCRM.Application.Agents.Exceptions;
+using ChatCRM.Application.Ai.DTOs;
 using ChatCRM.Application.Interfaces;
 using ChatCRM.Domain.Entities;
 using ChatCRM.Persistence;
@@ -20,10 +21,12 @@ namespace ChatCRM.Infrastructure.Services.Agents
 
         private readonly AppDbContext _db;
         private readonly ILogger<AgentService> _logger;
+        private readonly IAiAgentClient _aiAgent;
 
-        public AgentService(AppDbContext db, ILogger<AgentService> logger)
+        public AgentService(AppDbContext db, IAiAgentClient aiAgent, ILogger<AgentService> logger)
         {
             _db = db;
+            _aiAgent = aiAgent;
             _logger = logger;
         }
 
@@ -55,6 +58,7 @@ namespace ChatCRM.Infrastructure.Services.Agents
                 {
                     a.Id, a.Name, a.Description, a.AvatarPath, a.Instructions,
                     a.IsDefault, a.IsActive, a.CreatedAt, a.UpdatedAt,
+                    a.RemoteSyncStatus, a.RemoteSyncError,
                     CreatedBy = a.CreatedByUser,
                     // Contacts assigned to this agent (per-contact preference) + conversations
                     // routed to it (per-conversation). Both surface as stat tiles on the card.
@@ -79,7 +83,9 @@ namespace ChatCRM.Infrastructure.Services.Agents
                 CreatedAt = r.CreatedAt,
                 UpdatedAt = r.UpdatedAt,
                 AssignedConversationsCount = r.AssignedCount,
-                AssignedContactsCount = r.ContactsCount
+                AssignedContactsCount = r.ContactsCount,
+                RemoteSyncStatus = r.RemoteSyncStatus,
+                RemoteSyncError = r.RemoteSyncError
             }).ToList();
         }
 
@@ -148,6 +154,17 @@ namespace ChatCRM.Infrastructure.Services.Agents
 
             WriteAudit(actingUserId, "agent.created", entity.Id.ToString(),
                 afterJson: JsonSerializer.Serialize(new { entity.Name, entity.IsActive, entity.IsDefault }));
+
+            // CRM-AI-Service sync — enqueue a create_agent message in the same transaction
+            // as the business save. The outbox publisher will XADD it to stream:inbound and
+            // the response (kind=agent_created) updates Agents.RemoteAgentId via the consumer.
+            await _aiAgent.EnqueueCreateAgentAsync(
+                localAgentId: entity.Id,
+                instruction:  entity.Instructions ?? string.Empty,
+                files:        System.Array.Empty<AiFileRef>(),
+                links:        System.Array.Empty<AiLinkRef>(),
+                cancellationToken: ct);
+
             await _db.SaveChangesAsync(ct);
 
             _logger.LogInformation("[AGENT] Created {Id} '{Name}' by {User}", entity.Id, name, actingUserId);
@@ -188,6 +205,7 @@ namespace ChatCRM.Infrastructure.Services.Agents
                 entity.Name, entity.Description, entity.IsActive, entity.IsDefault
             });
 
+            var previousInstructions = entity.Instructions;
             entity.Name = name;
             entity.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim();
             entity.Instructions = string.IsNullOrWhiteSpace(dto.Instructions) ? null : dto.Instructions;
@@ -197,6 +215,19 @@ namespace ChatCRM.Infrastructure.Services.Agents
             WriteAudit(actingUserId, "agent.updated", entity.Id.ToString(),
                 beforeJson: beforeJson,
                 afterJson: JsonSerializer.Serialize(new { entity.Name, entity.Description, entity.IsActive, InstructionsLen = entity.Instructions?.Length ?? 0 }));
+
+            // Re-sync to CRM-AI-Service only when the system prompt actually changed. Avatar /
+            // name / active toggles are local UI concerns and don't affect AI behaviour.
+            if (!string.Equals(previousInstructions, entity.Instructions, StringComparison.Ordinal))
+            {
+                entity.RemoteSyncStatus = "pending";
+                await _aiAgent.EnqueueCreateAgentAsync(
+                    localAgentId: entity.Id,
+                    instruction:  entity.Instructions ?? string.Empty,
+                    files:        System.Array.Empty<AiFileRef>(),
+                    links:        System.Array.Empty<AiLinkRef>(),
+                    cancellationToken: ct);
+            }
 
             await _db.SaveChangesAsync(ct);
 
