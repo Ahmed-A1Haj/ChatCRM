@@ -42,6 +42,27 @@ namespace ChatCRM.Application.Chats.DTOs
         /// <summary>For messages.delete this is "DELETED"; for status updates it's "READ"/"DELIVERED" etc.</summary>
         [JsonPropertyName("status")]
         public string? Status { get; set; }
+
+        // ── connection.update fields ────────────────────────────────────────
+        // Evolution emits these when the WhatsApp session state changes:
+        //   { event: "connection.update", data: { state: "open"|"close"|"connecting",
+        //     statusReason: 200, wuid: "37369...@s.whatsapp.net", profileName, profilePictureUrl } }
+
+        /// <summary>connection.update: "open" / "close" / "connecting".</summary>
+        [JsonPropertyName("state")]
+        public string? State { get; set; }
+
+        /// <summary>connection.update: Baileys status code; 200=ok, 401=device_removed, etc.</summary>
+        [JsonPropertyName("statusReason")]
+        public int? StatusReason { get; set; }
+
+        /// <summary>connection.update: owner JID once the session is open.</summary>
+        [JsonPropertyName("wuid")]
+        public string? Wuid { get; set; }
+
+        /// <summary>connection.update: owner display name once the session is open.</summary>
+        [JsonPropertyName("profileName")]
+        public string? ProfileName { get; set; }
     }
 
     public class WebhookMessageKey

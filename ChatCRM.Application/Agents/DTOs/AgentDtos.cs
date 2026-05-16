@@ -19,6 +19,17 @@ namespace ChatCRM.Application.Agents.DTOs
         public int AssignedConversationsCount { get; set; }
         /// <summary>Distinct contacts behind those conversations — surfaced as a stat tile on the card.</summary>
         public int AssignedContactsCount { get; set; }
+
+        /// <summary>
+        /// CRM-AI-Service sync state. <c>pending</c> (created/updated, queued for sync),
+        /// <c>synced</c> (remote agent UUID stored on the row), or <c>error</c>
+        /// (last sync attempt failed; see <see cref="RemoteSyncError"/>). Surfaced as a
+        /// small badge on the agent card so admins can spot orphans.
+        /// </summary>
+        public string RemoteSyncStatus { get; set; } = "pending";
+
+        /// <summary>Short error string when <see cref="RemoteSyncStatus"/> is <c>error</c>.</summary>
+        public string? RemoteSyncError { get; set; }
     }
 
     /// <summary>Detail payload — currently identical to the list item; reserved for future fields.</summary>
