@@ -54,6 +54,29 @@
         revealEls.forEach(el => el.classList.add('is-visible'));
     }
 
+    // Footer language switcher — open/close, outside-click + escape dismiss
+    document.querySelectorAll('[data-pz-lang]').forEach((wrap) => {
+        const btn = wrap.querySelector('[data-pz-lang-toggle]');
+        const menu = wrap.querySelector('[data-pz-lang-menu]');
+        if (!btn || !menu) return;
+
+        const setOpen = (open) => {
+            menu.hidden = !open;
+            btn.setAttribute('aria-expanded', String(open));
+        };
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setOpen(menu.hidden);
+        });
+        document.addEventListener('click', (e) => {
+            if (!wrap.contains(e.target)) setOpen(false);
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') setOpen(false);
+        });
+    });
+
     // Smooth-scroll anchor links account for sticky nav offset
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', e => {

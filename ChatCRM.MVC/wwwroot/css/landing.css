@@ -1645,29 +1645,112 @@ button { font-family: inherit; cursor: pointer; }
 .pz-footer__bottom-right {
     display: flex; align-items: center; gap: 16px;
 }
-.pz-footer__lang-wrap {
+/* Language switcher — used in the top nav (light) and previously footer (dark).
+   Default styling is the light parchment variant; the .pz-lang--footer modifier
+   (if reintroduced) flips it to the dark theme. */
+.pz-lang {
     position: relative;
     display: inline-flex;
     align-items: center;
 }
-.pz-footer__lang {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.10);
-    color: #cfd0c5;
+.pz-lang__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--pz-line);
+    color: var(--pz-ink);
     border-radius: 999px;
-    padding: 7px 30px 7px 14px;
-    font-size: 13px;
+    padding: 8px 12px;
+    font-size: 14px;
     font-family: inherit;
     cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23cfd0c5' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 6.5 8 10.5 12 6.5'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 14px;
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
-.pz-footer__lang:focus { outline: 1px solid rgba(200,169,106,.5); outline-offset: 1px; }
+.pz-lang__btn:hover {
+    background: rgba(255,255,255,.55);
+    border-color: var(--pz-ink);
+}
+.pz-lang__btn[aria-expanded="true"] {
+    background: #fff;
+    border-color: var(--pz-green);
+}
+.pz-lang__btn:focus-visible {
+    outline: 2px solid rgba(200,169,106,.6);
+    outline-offset: 2px;
+}
+.pz-lang__flag {
+    font-size: 15px;
+    line-height: 1;
+}
+.pz-lang__code {
+    font-weight: 600;
+    letter-spacing: .04em;
+}
+.pz-lang__chev {
+    transition: transform .2s ease;
+    opacity: .65;
+}
+.pz-lang__btn[aria-expanded="true"] .pz-lang__chev {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+.pz-lang__menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    min-width: 200px;
+    background: #fff;
+    border: 1px solid var(--pz-line-soft);
+    border-radius: 14px;
+    padding: 6px;
+    box-shadow:
+        0 18px 40px -16px rgba(31, 50, 30, .25),
+        0 4px 10px -4px rgba(31, 50, 30, .10);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 60;
+}
+.pz-lang__menu[hidden] { display: none; }
+.pz-lang__form { display: block; margin: 0; }
+.pz-lang__item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: 0;
+    color: var(--pz-ink-2);
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s ease, color .15s ease;
+}
+.pz-lang__item:hover {
+    background: var(--pz-card-tint);
+    color: var(--pz-ink);
+}
+.pz-lang__item.is-active {
+    background: rgba(111, 138, 100, .12);
+    color: var(--pz-green);
+    font-weight: 600;
+}
+.pz-lang__name { flex: 1; }
+.pz-lang__item svg { color: var(--pz-green); }
+
+/* Nav-specific tweaks */
+.pz-lang--nav .pz-lang__btn { padding: 8px 12px; }
+
+@media (max-width: 480px) {
+    .pz-lang__menu {
+        right: auto;
+        left: 0;
+    }
+}
 .pz-footer__social {
     display: inline-flex; align-items: center; gap: 8px;
 }
@@ -1726,8 +1809,13 @@ button { font-family: inherit; cursor: pointer; }
 
 @media (max-width: 768px) {
     .pz-nav__links,
-    .pz-nav__cta .pz-btn--ghost { display: none; }
+    .pz-nav__cta .pz-btn--ghost,
+    .pz-nav__cta .pz-btn--primary { display: none; }
     .pz-nav__toggle { display: inline-flex; }
+
+    /* Compact language pill on mobile: show only the flag */
+    .pz-lang--nav .pz-lang__btn { padding: 8px 10px; gap: 4px; }
+    .pz-lang--nav .pz-lang__code { display: none; }
 
     .pz-nav__menu {
         position: fixed;
