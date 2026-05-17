@@ -1,0 +1,25 @@
+@*
+    Public marketing layout. Distinct from the dashboard/auth shells — uses the warm
+    parchment palette, serif display headings, and full-bleed sections from the
+    Public zone design brief.
+*@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] ?? "ChatCRM — Every conversation. Every channel. One intelligent CRM.")</title>
+    <meta name="description" content="ChatCRM unifies WhatsApp, Instagram, Messenger, Email, SMS and more into one AI-powered inbox that qualifies leads, suggests replies, and moves deals forward automatically." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
+</head>
+<body class="landing-body">
+    @RenderBody()
+    <script src="~/js/landing.js" asp-append-version="true"></script>
+</body>
+</html>
