@@ -1,0 +1,91 @@
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+
+@{
+    Layout = null;
+    ViewData["Title"] = T["PlatformAdmin.Title"].Value;
+    var culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/analytics.css" asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "platform-admin")
+@Html.AntiForgeryToken()
+
+<section class="bill-shell">
+    <main class="bill-main">
+        <div class="bill-container">
+            <header class="bill-page-head an-page-head">
+                <div>
+                    <h1 class="bill-page-title">@T["PlatformAdmin.Title"]</h1>
+                    <p class="bill-page-sub">@T["PlatformAdmin.Sub"]</p>
+                </div>
+                <div class="an-controls">
+                    <select id="rangeSel">
+                        <option value="mtd">@T["Billing.Analytics.Range.Mtd"]</option>
+                        <option value="7d">@T["Billing.Analytics.Range.7d"]</option>
+                        <option value="30d">@T["Billing.Analytics.Range.30d"]</option>
+                        <option value="ytd">@T["Billing.Analytics.Range.Ytd"]</option>
+                    </select>
+                </div>
+            </header>
+
+            <section class="an-kpis" id="kpis"></section>
+
+            <section class="bill-card">
+                <div class="bill-section-head">
+                    <h2>@T["PlatformAdmin.TopSpenders.Title"]</h2>
+                    <p>@T["PlatformAdmin.TopSpenders.Sub"]</p>
+                </div>
+                <table class="an-cat-table" id="topTable">
+                    <thead><tr>
+                        <th>@T["PlatformAdmin.TopSpenders.Workspace"]</th>
+                        <th>@T["PlatformAdmin.TopSpenders.Spent"]</th>
+                        <th>@T["PlatformAdmin.TopSpenders.Messages"]</th>
+                        <th>@T["PlatformAdmin.TopSpenders.Balance"]</th>
+                    </tr></thead>
+                    <tbody></tbody>
+                </table>
+            </section>
+
+            <section class="bill-card">
+                <div class="bill-section-head">
+                    <h2>@T["Billing.Analytics.Categories.Title"]</h2>
+                    <p>@T["Billing.Analytics.Categories.Sub"]</p>
+                </div>
+                <table class="an-cat-table" id="catTable">
+                    <thead><tr>
+                        <th>@T["Billing.Analytics.Categories.Category"]</th>
+                        <th>@T["Billing.Analytics.Categories.Count"]</th>
+                        <th>@T["Billing.Analytics.Categories.Charged"]</th>
+                    </tr></thead>
+                    <tbody></tbody>
+                </table>
+            </section>
+        </div>
+    </main>
+</section>
+
+<script src="~/js/platform-admin.js" asp-append-version="true"></script>
+</body>
+</html>

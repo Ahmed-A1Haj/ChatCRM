@@ -1,0 +1,150 @@
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+
+@{
+    Layout = null;
+    ViewData["Title"] = T["Billing.TopUp.Title"].Value;
+
+    var presets         = (decimal[])(ViewBag.Presets ?? new decimal[] { 25m, 50m, 100m, 250m, 500m });
+    var minAmount       = (decimal)(ViewBag.MinAmountUsd ?? 10m);
+    var maxAmount       = (decimal)(ViewBag.MaxAmountUsd ?? 1000m);
+    var configured      = (bool)(ViewBag.PaymentConfigured ?? false);
+
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+
+    var statusMessage = TempData["StatusMessage"] as string;
+    var statusType    = (TempData["StatusType"] as string ?? "info").ToLowerInvariant();
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "billing")
+
+<section class="bill-shell">
+    <main class="bill-main">
+        <div class="bill-container bill-container-narrow">
+
+            <header class="bill-page-head">
+                <h1 class="bill-page-title">@T["Billing.TopUp.Title"]</h1>
+                <p class="bill-page-sub">@T["Billing.TopUp.Sub"]</p>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(statusMessage))
+            {
+                <div class="auth-alert auth-alert-@(statusType == "error" ? "danger" : statusType)" role="alert">@statusMessage</div>
+            }
+
+            @if (!configured)
+            {
+                <div class="auth-alert auth-alert-warning" role="alert">
+                    @T["Billing.TopUp.NotConfigured"]
+                </div>
+            }
+
+            <section class="bill-card">
+                <header class="bill-section-head">
+                    <h2>@T["Billing.TopUp.PickAmount"]</h2>
+                    <p>@string.Format(T["Billing.TopUp.Bounds"].Value, minAmount.ToString("0.00"), maxAmount.ToString("0.00"))</p>
+                </header>
+
+                <form method="post" asp-action="CreateTopUp" id="topUpForm">
+                    @Html.AntiForgeryToken()
+
+                    <div class="topup-presets">
+                        @foreach (var amount in presets)
+                        {
+                            <label class="topup-preset">
+                                <input type="radio" name="AmountUsd" value="@amount.ToString(CultureInfo.InvariantCulture)" />
+                                <span>$@amount.ToString("0")</span>
+                            </label>
+                        }
+                        <label class="topup-preset topup-preset-custom">
+                            <input type="radio" name="AmountUsd" value="custom" id="presetCustom" />
+                            <span>@T["Billing.TopUp.Custom"]</span>
+                        </label>
+                    </div>
+
+                    <div class="auth-field topup-custom-row d-none" data-custom-row>
+                        <label for="customAmount">@T["Billing.TopUp.CustomLabel"]</label>
+                        <input id="customAmount" type="number" step="0.01"
+                               min="@minAmount.ToString(CultureInfo.InvariantCulture)"
+                               max="@maxAmount.ToString(CultureInfo.InvariantCulture)"
+                               class="auth-input" placeholder="@minAmount.ToString("0.00")" />
+                        <p class="auth-hint">@string.Format(T["Billing.TopUp.Bounds"].Value, minAmount.ToString("0.00"), maxAmount.ToString("0.00"))</p>
+                    </div>
+
+                    <div class="bill-actions">
+                        <a asp-action="Index" class="auth-btn auth-btn-secondary">@T["Action.Cancel"]</a>
+                        <button type="submit" class="auth-btn auth-btn-primary" id="topUpSubmit" @(configured ? "" : "disabled")>
+                            @T["Billing.TopUp.Continue"]
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <p class="bill-topup-trust">
+                @Html.Raw(T["Billing.TopUp.TrustNote"].Value)
+            </p>
+        </div>
+    </main>
+</section>
+
+<script>
+    (function () {
+        const form = document.getElementById('topUpForm');
+        if (!form) return;
+
+        const customRow = form.querySelector('[data-custom-row]');
+        const customInput = form.querySelector('#customAmount');
+        const radios = form.querySelectorAll('input[name="AmountUsd"]');
+
+        function syncCustomRow() {
+            const isCustom = form.querySelector('input[name="AmountUsd"]:checked')?.value === 'custom';
+            customRow.classList.toggle('d-none', !isCustom);
+            if (isCustom) customInput?.focus();
+        }
+        radios.forEach(r => r.addEventListener('change', syncCustomRow));
+        syncCustomRow();
+
+        // On submit: if 'custom' is selected, replace its value with the typed number so the
+        // server gets a real decimal in AmountUsd. Validate min/max client-side too — the
+        // server still re-validates, but a clear inline message is friendlier than a redirect.
+        form.addEventListener('submit', (e) => {
+            const checked = form.querySelector('input[name="AmountUsd"]:checked');
+            if (!checked) { e.preventDefault(); return; }
+            if (checked.value === 'custom') {
+                const v = parseFloat(customInput.value);
+                if (Number.isNaN(v) || v < @minAmount.ToString(CultureInfo.InvariantCulture) || v > @maxAmount.ToString(CultureInfo.InvariantCulture)) {
+                    e.preventDefault();
+                    customInput.focus();
+                    customInput.classList.add('is-invalid');
+                    return;
+                }
+                checked.value = v.toFixed(2);
+            }
+        });
+    })();
+</script>
+
+</body>
+</html>

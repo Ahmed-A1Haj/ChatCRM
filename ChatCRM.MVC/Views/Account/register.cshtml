@@ -1,58 +1,54 @@
 @model RegisterDto
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
 
 @{
-    ViewData["Title"] = "Create account";
+    Layout = "_AuthLayout";
+    ViewData["Title"] = T["Auth.Register.Title"].Value;
 }
 
-<section class="auth-page">
-    <div class="auth-card">
-        <div class="auth-copy">
-            <span class="eyebrow">Get started</span>
-            <h1>Create your ChatCRM account</h1>
-            <p>Use a strong password and we'll send a verification link before your first sign-in.</p>
-        </div>
+<h1 class="auth-heading">@T["Auth.Register.Heading"]</h1>
+<p class="auth-sub">@T["Auth.Register.Sub"]</p>
 
-        <form asp-action="Register" method="post" novalidate>
-            @Html.AntiForgeryToken()
+<form asp-action="Register" method="post" novalidate>
+    @Html.AntiForgeryToken()
 
-            <div asp-validation-summary="ModelOnly" class="validation-summary text-danger"></div>
+    <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
 
-            <div class="mb-3">
-                <label asp-for="Email" class="form-label"></label>
-                <input asp-for="Email" class="form-control form-control-lg" autocomplete="email" placeholder="name@company.com" />
-                <span asp-validation-for="Email" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Password" class="form-label"></label>
-                <div class="password-field">
-                    <input asp-for="Password" class="form-control form-control-lg" autocomplete="new-password" placeholder="Create a strong password" />
-                    <button type="button" class="password-toggle" data-password-toggle aria-label="Show password" aria-pressed="false">
-                        <span class="password-toggle-text">Show</span>
-                    </button>
-                </div>
-                <span asp-validation-for="Password" class="text-danger"></span>
-                <div class="form-hint">Use at least 10 characters, including uppercase, lowercase, and a number.</div>
-            </div>
-
-            <div class="mb-4">
-                <label asp-for="ConfirmPassword" class="form-label"></label>
-                <div class="password-field">
-                    <input asp-for="ConfirmPassword" class="form-control form-control-lg" autocomplete="new-password" placeholder="Repeat your password" />
-                    <button type="button" class="password-toggle" data-password-toggle aria-label="Show password" aria-pressed="false">
-                        <span class="password-toggle-text">Show</span>
-                    </button>
-                </div>
-                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
-            </div>
-
-            <button type="submit" class="btn btn-accent w-100 btn-lg">Create account</button>
-        </form>
-
-        <p class="auth-footer">Already registered? <a asp-action="Login" class="auth-link">Sign in</a>.</p>
+    <div class="auth-field">
+        <label asp-for="Email"></label>
+        <input asp-for="Email" class="auth-input" autocomplete="email" placeholder="name@company.com" />
+        <span asp-validation-for="Email" class="auth-error"></span>
     </div>
-</section>
+
+    <div class="auth-field">
+        <label asp-for="Password"></label>
+        <div class="auth-password">
+            <input asp-for="Password" class="auth-input" autocomplete="new-password" placeholder="@T["Auth.Register.PasswordPlaceholder"]" />
+            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+                <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
+            </button>
+        </div>
+        <span asp-validation-for="Password" class="auth-error"></span>
+        <p class="auth-hint">@T["Auth.Register.PasswordHint"]</p>
+    </div>
+
+    <div class="auth-field">
+        <label asp-for="ConfirmPassword"></label>
+        <div class="auth-password">
+            <input asp-for="ConfirmPassword" class="auth-input" autocomplete="new-password" placeholder="@T["Auth.Register.ConfirmPlaceholder"]" />
+            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+                <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
+            </button>
+        </div>
+        <span asp-validation-for="ConfirmPassword" class="auth-error"></span>
+    </div>
+
+    <button type="submit" class="auth-btn auth-btn-primary">@T["Auth.Register.Submit"]</button>
+</form>
+
+<p class="auth-footer">@T["Auth.Register.Footer"] <a asp-action="Login" class="auth-link">@T["Auth.Register.SignIn"]</a>.</p>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/site.js" asp-append-version="true"></script>
 }

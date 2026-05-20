@@ -1,0 +1,85 @@
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthZ
+@using ChatCRM.Domain.Entities
+
+@{
+    Layout = null;
+    ViewData["Title"] = T["Invoices.Title"].Value;
+
+    var culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+
+    var canIssue = (await AuthZ.AuthorizeAsync(User, null,
+        new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.BillingAdminRefund) })).Succeeded;
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/analytics.css" asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+        window.__caps__        = { canIssue: @(canIssue.ToString().ToLowerInvariant()) };
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "billing")
+@Html.AntiForgeryToken()
+
+<section class="bill-shell">
+    <main class="bill-main">
+        <div class="bill-container">
+            <header class="bill-page-head an-page-head">
+                <div>
+                    <h1 class="bill-page-title">@T["Invoices.Title"]</h1>
+                    <p class="bill-page-sub">@T["Invoices.Sub"]</p>
+                </div>
+                @if (canIssue)
+                {
+                    <div class="an-controls">
+                        <select id="genMonth" aria-label="@T["Invoices.GenMonthAria"]"></select>
+                        <button type="button" class="auth-btn" id="genBtn">@T["Invoices.GenBtn"]</button>
+                    </div>
+                }
+            </header>
+
+            <section class="bill-card">
+                <table class="an-log-table" id="invoiceTable">
+                    <thead>
+                        <tr>
+                            <th>@T["Invoices.Col.Number"]</th>
+                            <th>@T["Invoices.Col.Period"]</th>
+                            <th>@T["Invoices.Col.Status"]</th>
+                            <th>@T["Invoices.Col.Charged"]</th>
+                            <th>@T["Invoices.Col.Issued"]</th>
+                            <th class="tpl-col-actions">@T["Invoices.Col.Actions"]</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="an-log-foot" id="emptyRow" style="display: none;">
+                    <span class="an-log-info">@T["Invoices.Empty"]</span>
+                </div>
+            </section>
+        </div>
+    </main>
+</section>
+
+<div class="tpl-toast d-none" id="toast" role="status" aria-live="polite"></div>
+
+<script src="~/js/invoices.js" asp-append-version="true"></script>
+</body>
+</html>

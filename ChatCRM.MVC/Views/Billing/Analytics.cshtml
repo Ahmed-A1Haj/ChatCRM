@@ -1,0 +1,131 @@
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+
+@{
+    Layout = null;
+    ViewData["Title"] = T["Billing.Analytics.Title"].Value;
+
+    var culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/analytics.css" asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "billing")
+@Html.AntiForgeryToken()
+
+<section class="bill-shell">
+    <main class="bill-main">
+        <div class="bill-container">
+            <header class="bill-page-head an-page-head">
+                <div>
+                    <h1 class="bill-page-title">@T["Billing.Analytics.Title"]</h1>
+                    <p class="bill-page-sub">@T["Billing.Analytics.Sub"]</p>
+                </div>
+                <div class="an-controls">
+                    <select id="rangeSel" aria-label="@T["Billing.Analytics.RangeAria"]">
+                        <option value="mtd">@T["Billing.Analytics.Range.Mtd"]</option>
+                        <option value="7d">@T["Billing.Analytics.Range.7d"]</option>
+                        <option value="30d">@T["Billing.Analytics.Range.30d"]</option>
+                        <option value="90d">@T["Billing.Analytics.Range.90d"]</option>
+                        <option value="ytd">@T["Billing.Analytics.Range.Ytd"]</option>
+                    </select>
+                    <a id="csvExport" class="auth-btn auth-btn-secondary" href="#">@T["Billing.Analytics.ExportCsv"]</a>
+                </div>
+            </header>
+
+            <section class="an-kpis" id="kpis"></section>
+
+            <section class="bill-card">
+                <div class="bill-section-head">
+                    <h2>@T["Billing.Analytics.Chart.Title"]</h2>
+                    <p>@T["Billing.Analytics.Chart.Sub"]</p>
+                </div>
+                <div id="chart" class="an-chart"></div>
+                <div class="an-chart-legend">
+                    <span><span class="an-dot an-dot-spent"></span>@T["Billing.Analytics.Chart.Spent"]</span>
+                    <span><span class="an-dot an-dot-topup"></span>@T["Billing.Analytics.Chart.TopUp"]</span>
+                </div>
+            </section>
+
+            <section class="bill-card">
+                <div class="bill-section-head">
+                    <h2>@T["Billing.Analytics.Categories.Title"]</h2>
+                    <p>@T["Billing.Analytics.Categories.Sub"]</p>
+                </div>
+                <table class="an-cat-table" id="catTable">
+                    <thead><tr>
+                        <th>@T["Billing.Analytics.Categories.Category"]</th>
+                        <th>@T["Billing.Analytics.Categories.Count"]</th>
+                        <th>@T["Billing.Analytics.Categories.Charged"]</th>
+                    </tr></thead>
+                    <tbody></tbody>
+                </table>
+            </section>
+
+            <section class="bill-card">
+                <div class="bill-section-head">
+                    <h2>@T["Billing.Analytics.Log.Title"]</h2>
+                    <p>@T["Billing.Analytics.Log.Sub"]</p>
+                </div>
+                <div class="an-filters">
+                    <select id="kindFilter">
+                        <option value="">@T["Billing.Analytics.Filter.AllKinds"]</option>
+                        <option value="0">@T["Billing.Kind.TopUp"]</option>
+                        <option value="1">@T["Billing.Kind.MessageCharge"]</option>
+                        <option value="2">@T["Billing.Kind.MessageRefund"]</option>
+                        <option value="3">@T["Billing.Kind.ManualCredit"]</option>
+                        <option value="4">@T["Billing.Kind.ManualDebit"]</option>
+                        <option value="5">@T["Billing.Kind.AutoRecharge"]</option>
+                    </select>
+                    <select id="statusFilter">
+                        <option value="">@T["Billing.Analytics.Filter.AllStatuses"]</option>
+                        <option value="0">@T["Billing.Analytics.Status.Pending"]</option>
+                        <option value="1">@T["Billing.Analytics.Status.Succeeded"]</option>
+                        <option value="2">@T["Billing.Analytics.Status.Failed"]</option>
+                        <option value="3">@T["Billing.Analytics.Status.Refunded"]</option>
+                    </select>
+                </div>
+                <table class="an-log-table" id="logTable">
+                    <thead><tr>
+                        <th>@T["Billing.Analytics.Log.When"]</th>
+                        <th>@T["Billing.Analytics.Log.Kind"]</th>
+                        <th>@T["Billing.Analytics.Log.Amount"]</th>
+                        <th>@T["Billing.Analytics.Log.BalanceAfter"]</th>
+                        <th>@T["Billing.Analytics.Log.Status"]</th>
+                        <th>@T["Billing.Analytics.Log.Reference"]</th>
+                    </tr></thead>
+                    <tbody></tbody>
+                </table>
+                <div class="an-log-foot">
+                    <button type="button" class="auth-btn auth-btn-ghost" id="logPrev">@T["Billing.Analytics.Log.Prev"]</button>
+                    <span id="logPageInfo" class="an-log-info"></span>
+                    <button type="button" class="auth-btn auth-btn-ghost" id="logNext">@T["Billing.Analytics.Log.Next"]</button>
+                </div>
+            </section>
+        </div>
+    </main>
+</section>
+
+<script src="~/js/analytics.js" asp-append-version="true"></script>
+</body>
+</html>

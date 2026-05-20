@@ -1,0 +1,187 @@
+@using ChatCRM.Application.Templates
+@using ChatCRM.Domain.Entities
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthZ
+
+@{
+    Layout = null;
+    ViewData["Title"] = T["Templates.Title"].Value;
+
+    var culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+
+    var canCreate = (await AuthZ.AuthorizeAsync(User, null,
+        new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.TemplatesCreate) })).Succeeded;
+    var canSubmit = (await AuthZ.AuthorizeAsync(User, null,
+        new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.TemplatesSubmit) })).Succeeded;
+    var canDelete = (await AuthZ.AuthorizeAsync(User, null,
+        new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(Permissions.TemplatesDelete) })).Succeeded;
+
+    var languages = (IReadOnlyList<MetaTemplateLanguages.Entry>)ViewBag.Languages;
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/templates.css" asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+        window.__caps__        = {
+            canCreate: @(canCreate.ToString().ToLowerInvariant()),
+            canSubmit: @(canSubmit.ToString().ToLowerInvariant()),
+            canDelete: @(canDelete.ToString().ToLowerInvariant())
+        };
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "templates")
+
+<section class="bill-shell">
+    <main class="bill-main">
+        <div class="bill-container">
+
+            <header class="bill-page-head tpl-page-head">
+                <div>
+                    <h1 class="bill-page-title">@T["Templates.Title"]</h1>
+                    <p class="bill-page-sub">@T["Templates.Sub"]</p>
+                </div>
+                <div class="tpl-page-actions">
+                    @if (canSubmit)
+                    {
+                        <button type="button" class="auth-btn auth-btn-secondary" id="syncBtn">
+                            @T["Templates.SyncBtn"]
+                        </button>
+                    }
+                    @if (canCreate)
+                    {
+                        <button type="button" class="auth-btn" id="createBtn">
+                            @T["Templates.CreateBtn"]
+                        </button>
+                    }
+                </div>
+            </header>
+
+            <div id="preflightBanner" class="auth-alert d-none" role="alert"></div>
+            <div id="rateBanner" class="tpl-rate-banner d-none"></div>
+
+            <nav class="tpl-tabs" role="tablist" aria-label="@T["Templates.TabsAria"]">
+                <button type="button" class="tpl-tab is-active" data-tab="active" role="tab" aria-selected="true">
+                    @T["Templates.Tab.Active"]
+                    <span class="tpl-tab-count" id="countActive">0</span>
+                </button>
+                <button type="button" class="tpl-tab" data-tab="archived" role="tab" aria-selected="false">
+                    @T["Templates.Tab.Archived"]
+                    <span class="tpl-tab-count" id="countArchived">0</span>
+                </button>
+            </nav>
+
+            <section class="bill-card tpl-list-card">
+                <div id="emptyState" class="tpl-empty d-none">
+                    <h3 id="emptyTitle">@T["Templates.Empty.Title"]</h3>
+                    <p id="emptySub">@T["Templates.Empty.Sub"]</p>
+                </div>
+                <table class="tpl-table" id="tplTable">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Templates.Col.Name"]</th>
+                            <th scope="col">@T["Templates.Col.Category"]</th>
+                            <th scope="col">@T["Templates.Col.Language"]</th>
+                            <th scope="col">@T["Templates.Col.Status"]</th>
+                            <th scope="col">@T["Templates.Col.Updated"]</th>
+                            <th scope="col" class="tpl-col-actions">@T["Templates.Col.Actions"]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tplBody"></tbody>
+                </table>
+            </section>
+        </div>
+    </main>
+</section>
+
+@* ── Create / Edit modal ───────────────────────────────────────────────── *@
+@if (canCreate)
+{
+    <div class="tpl-modal d-none" id="editModal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+        <div class="tpl-modal-inner">
+            <header class="tpl-modal-head">
+                <h2 id="editTitle">@T["Templates.Editor.Title"]</h2>
+                <button type="button" class="tpl-modal-close" id="editClose" aria-label="@T["Templates.Editor.CloseAria"]">×</button>
+            </header>
+            <form id="editForm" novalidate>
+                <input type="hidden" id="editId" value="" />
+                @Html.AntiForgeryToken()
+
+                <div class="tpl-field">
+                    <label for="editName">@T["Templates.Field.Name"]</label>
+                    <input type="text" id="editName" required maxlength="512" autocomplete="off" />
+                    <small class="tpl-help">@T["Templates.Field.NameHelp"]</small>
+                    <small class="tpl-error" data-error-for="Name"></small>
+                </div>
+
+                <div class="tpl-field-row">
+                    <div class="tpl-field">
+                        <label for="editCategory">@T["Templates.Field.Category"]</label>
+                        <select id="editCategory">
+                            <option value="@((byte)MetaMessageCategory.Utility)">@T["Templates.Category.Utility"]</option>
+                            <option value="@((byte)MetaMessageCategory.Marketing)">@T["Templates.Category.Marketing"]</option>
+                            <option value="@((byte)MetaMessageCategory.Authentication)">@T["Templates.Category.Authentication"]</option>
+                        </select>
+                        <small class="tpl-error" data-error-for="Category"></small>
+                    </div>
+                    <div class="tpl-field">
+                        <label for="editLanguage">@T["Templates.Field.Language"]</label>
+                        <select id="editLanguage">
+                            @foreach (var lang in languages)
+                            {
+                                <option value="@lang.Code">@lang.NativeName (@lang.Code)</option>
+                            }
+                        </select>
+                        <small class="tpl-error" data-error-for="LanguageCode"></small>
+                    </div>
+                </div>
+
+                <div class="tpl-field">
+                    <label for="editBody">@T["Templates.Field.Body"]</label>
+                    <textarea id="editBody" rows="6" maxlength="1024" required></textarea>
+                    <small class="tpl-help">@T["Templates.Field.BodyHelp"]</small>
+                    <small class="tpl-error" data-error-for="Body"></small>
+                </div>
+
+                <div class="tpl-field">
+                    <label for="editFooter">@T["Templates.Field.Footer"]</label>
+                    <input type="text" id="editFooter" maxlength="60" />
+                    <small class="tpl-help">@T["Templates.Field.FooterHelp"]</small>
+                    <small class="tpl-error" data-error-for="Footer"></small>
+                </div>
+
+                <footer class="tpl-modal-foot">
+                    <button type="button" class="auth-btn auth-btn-ghost" id="editCancel">@T["Templates.Editor.Cancel"]</button>
+                    <button type="submit" class="auth-btn auth-btn-secondary" id="editSaveDraft">@T["Templates.Editor.SaveDraft"]</button>
+                    @if (canSubmit)
+                    {
+                        <button type="button" class="auth-btn" id="editSaveSubmit">@T["Templates.Editor.SaveAndSubmit"]</button>
+                    }
+                </footer>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="tpl-toast d-none" id="toast" role="status" aria-live="polite"></div>
+
+<script src="~/js/templates.js" asp-append-version="true"></script>
+</body>
+</html>

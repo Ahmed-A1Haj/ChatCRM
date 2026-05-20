@@ -31,4 +31,18 @@
     <ProjectReference Include="..\ChatCRM.Persistence\ChatCRM.Persistence.csproj" />
   </ItemGroup>
 
+  <!-- Translation JSON files + billing seed data: copied next to the binary so the JsonStringLocalizer
+       and BillingSeeder can read them at runtime. Use <Update> rather than <Include> to override the
+       SDK's implicit Content items without duplicating. -->
+  <ItemGroup>
+    <Content Update="Resources\strings.*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Resources\billing\meta-pricing.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

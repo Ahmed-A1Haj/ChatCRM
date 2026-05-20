@@ -1,0 +1,51 @@
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+
+@{
+    Layout = null;
+    ViewData["Title"] = T["Billing.TopUp.Cancel.Title"].Value;
+
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir  = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+    <script>
+        window.__i18n__        = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "billing")
+
+<section class="bill-shell">
+    <main class="bill-main">
+        <div class="bill-container bill-container-narrow">
+            <section class="bill-card bill-topup-result is-neutral">
+                <h1 class="bill-topup-result-title">@T["Billing.TopUp.Cancel.Heading"]</h1>
+                <p class="bill-topup-result-sub">@T["Billing.TopUp.Cancel.Body"]</p>
+                <div class="bill-actions" style="justify-content:center;">
+                    <a asp-action="TopUp" class="auth-btn auth-btn-primary">@T["Billing.TopUp.Cancel.TryAgain"]</a>
+                    <a asp-action="Index" class="auth-btn auth-btn-secondary">@T["Billing.TopUp.Cancel.BackBilling"]</a>
+                </div>
+            </section>
+        </div>
+    </main>
+</section>
+
+</body>
+</html>

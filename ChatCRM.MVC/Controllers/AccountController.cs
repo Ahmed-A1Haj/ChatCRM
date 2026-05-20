@@ -39,7 +39,7 @@ namespace ChatCRM.MVC.Controllers
         {
             if (User.Identity?.IsAuthenticated == true)
             {
-                return RedirectToAction("Index", "Home");
+                return Redirect("/dashboard");
             }
 
             return View(new RegisterDto());
@@ -103,7 +103,7 @@ namespace ChatCRM.MVC.Controllers
         {
             if (User.Identity?.IsAuthenticated == true)
             {
-                return RedirectToAction("Index", "Home");
+                return Redirect("/dashboard");
             }
 
             return View(new LoginDto { ReturnUrl = returnUrl });
@@ -275,6 +275,50 @@ namespace ChatCRM.MVC.Controllers
                 TempData["StatusType"] = "success";
             }
 
+            return RedirectToAction(nameof(Profile));
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(ChangePasswordDto model)
+        {
+            var user = await GetCurrentUserAsync();
+            if (user is null)
+            {
+                return Challenge();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                // Redirect back to Profile preserving validation errors via TempData. Profile re-binds
+                // its own model on GET so we ship a flag the view can use to focus the section + show
+                // the relevant errors.
+                TempData["StatusMessage"] = "Please fix the errors in the change-password section.";
+                TempData["StatusType"]    = "danger";
+                TempData["ChangePasswordOpen"] = true;
+                foreach (var entry in ModelState)
+                {
+                    foreach (var error in entry.Value!.Errors)
+                    {
+                        TempData[$"ChangePasswordError_{entry.Key}"] = error.ErrorMessage;
+                    }
+                }
+                return RedirectToAction(nameof(Profile));
+            }
+
+            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+            if (!result.Succeeded)
+            {
+                TempData["StatusMessage"] = string.Join(" ", result.Errors.Select(e => e.Description));
+                TempData["StatusType"]    = "danger";
+                TempData["ChangePasswordOpen"] = true;
+                return RedirectToAction(nameof(Profile));
+            }
+
+            await _signInManager.RefreshSignInAsync(user);
+            TempData["StatusMessage"] = "Your password was updated.";
+            TempData["StatusType"]    = "success";
             return RedirectToAction(nameof(Profile));
         }
 
@@ -543,7 +587,8 @@ namespace ChatCRM.MVC.Controllers
                 return Redirect(returnUrl);
             }
 
-            return RedirectToAction("Index", "Home");
+            // Default post-sign-in destination is the dashboard home (command-center view).
+            return Redirect("/dashboard");
         }
 
         private void AddIdentityErrors(IdentityResult result)

@@ -1,0 +1,52 @@
+/*
+ * ChatCRM design tokens — a single source of truth for colors.
+ *
+ * Brand color is intentionally NEUTRAL (indigo) so the UI represents a
+ * multi-channel CRM, not any single platform. Platform colors (WhatsApp,
+ * Instagram, Messenger) are used ONLY on UI that represents that specific
+ * channel — channel badges, channel cards, channel filter pills.
+ */
+:root {
+    /* ── Primary brand (indigo) ────────────────────────────── */
+    --brand:        #4f46e5;
+    --brand-hover:  #4338ca;
+    --brand-50:     #eef2ff;
+    --brand-100:    #e0e7ff;
+    --brand-200:    #c7d2fe;
+    --brand-text:   #4338ca;
+    --brand-ring:   rgba(79, 70, 229, 0.18);
+
+    /* ── Semantic states ───────────────────────────────────── */
+    --ok:        #16a34a;
+    --ok-bg:     #dcfce7;
+    --ok-text:   #15803d;
+
+    --warn:      #f59e0b;
+    --warn-bg:   #fef3c7;
+    --warn-text: #92400e;
+
+    --danger:      #ef4444;
+    --danger-bg:   #fee2e2;
+    --danger-text: #991b1b;
+
+    /* ── Neutrals ──────────────────────────────────────────── */
+    --bg-page:     #f8fafc;
+    --bg-panel:    #ffffff;
+    --bg-soft:     #f9fafb;
+    --bg-muted:    #f3f4f6;
+    --border:      #e5e7eb;
+    --border-soft: #f3f4f6;
+    --text:        #0f172a;
+    --text-muted:  #64748b;
+    --text-dim:    #94a3b8;
+
+    /* ── Chat bubbles — neutral, channel-agnostic ──────────── */
+    --bubble-incoming: #ffffff;
+    --bubble-outgoing: #eef2ff;     /* soft indigo tint instead of WhatsApp green */
+    --bubble-note:     #fffbeb;
+
+    /* ── Platform brand colors — used ONLY on platform UI ──── */
+    --channel-whatsapp:  #25d366;
+    --channel-instagram: #d6249f;
+    --channel-messenger: #0084ff;
+}
