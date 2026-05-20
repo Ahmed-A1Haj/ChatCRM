@@ -44,6 +44,10 @@ namespace ChatCRM.MVC.Controllers
             {
                 await _evolutionService.HandleIncomingWebhookAsync(payload, cancellationToken);
             }
+            else if (payload.Event is "connection.update")
+            {
+                await _evolutionService.HandleConnectionUpdateAsync(payload, cancellationToken);
+            }
 
             return Ok();
         }

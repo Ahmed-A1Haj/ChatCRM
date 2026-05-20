@@ -56,5 +56,8 @@ namespace ChatCRM.Infrastructure.Services
 
         public Task HandleIncomingWebhookAsync(WebhookPayloadDto payload, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task HandleConnectionUpdateAsync(WebhookPayloadDto payload, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 }

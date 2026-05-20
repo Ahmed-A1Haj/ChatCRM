@@ -231,6 +231,61 @@ namespace ChatCRM.Infrastructure.Services
             }
         }
 
+        public async Task HandleConnectionUpdateAsync(WebhookPayloadDto payload, CancellationToken cancellationToken = default)
+        {
+            if (payload.Data is null || string.IsNullOrWhiteSpace(payload.Instance))
+            {
+                _logger.LogWarning("connection.update missing data/instance — dropping.");
+                return;
+            }
+
+            var instance = await _db.WhatsAppInstances
+                .FirstOrDefaultAsync(i => i.InstanceName == payload.Instance, cancellationToken);
+            if (instance is null)
+            {
+                _logger.LogWarning(
+                    "connection.update for unknown instance {Instance} — dropping.",
+                    payload.Instance);
+                return;
+            }
+
+            var newStatus = payload.Data.State?.ToLowerInvariant() switch
+            {
+                "open"       => InstanceStatus.Connected,
+                "connecting" => InstanceStatus.Connecting,
+                "close"      => InstanceStatus.Disconnected,
+                _            => instance.Status,
+            };
+
+            if (newStatus == instance.Status)
+                return; // no-op, don't trigger pointless broadcasts
+
+            instance.Status = newStatus;
+            if (newStatus == InstanceStatus.Connected)
+            {
+                instance.LastConnectedAt = DateTime.UtcNow;
+                if (!string.IsNullOrEmpty(payload.Data.Wuid))
+                    instance.OwnerJid = payload.Data.Wuid;
+            }
+            await _db.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "[INSTANCE] {Name} status -> {Status} (state={State}, reason={Reason})",
+                instance.InstanceName, newStatus, payload.Data.State, payload.Data.StatusReason);
+
+            // Broadcast to the global instances group so any dashboard tile / WhatsApp Numbers
+            // page can re-render without waiting for a manual refresh.
+            await _hub.Clients.Group(ChatHub.InstancesGlobalGroup)
+                .SendAsync("InstanceStatusChanged", new
+                {
+                    instanceId   = instance.Id,
+                    instanceName = instance.InstanceName,
+                    status       = (byte)newStatus,
+                    statusText   = newStatus.ToString(),
+                    reason       = payload.Data.StatusReason,
+                }, cancellationToken);
+        }
+
         public async Task HandleIncomingWebhookAsync(WebhookPayloadDto payload, CancellationToken cancellationToken = default)
         {
             if (payload.Data is null)

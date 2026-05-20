@@ -235,6 +235,45 @@
     background: currentColor;
 }
 
+/* CRM-AI-Service sync state. Same pill shape as the active/inactive status pill,
+   with three color variants for synced / pending / error. */
+.agent-sync-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    margin-left: 6px;
+}
+.agent-sync-pill.is-synced {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+.agent-sync-pill.is-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+.agent-sync-pill.is-error {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+.agent-sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+/* Subtle pulse on pending so admins notice it's waiting. */
+.agent-sync-pill.is-pending .agent-sync-dot {
+    animation: agent-sync-pulse 1.6s ease-in-out infinite;
+}
+@keyframes agent-sync-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+}
+
 .agent-card-menu {
     background: transparent;
     border: none;
