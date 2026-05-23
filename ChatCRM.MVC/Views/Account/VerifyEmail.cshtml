@@ -4,11 +4,19 @@
 @{
     Layout = "_AuthLayout";
     ViewData["Title"] = T["Auth.Verify.Title"].Value;
+    ViewData["AuthCardClass"] = "auth-card-verify";
 }
 
-<h1 class="auth-heading">@T["Auth.Verify.Heading"]</h1>
-<p class="auth-sub">@T["Auth.Verify.SubBefore"] <strong>@Model.Email</strong>@T["Auth.Verify.SubAfter"]</p>
-<p class="auth-hint">@Html.Raw(T["Auth.Verify.DevHint"].Value)</p>
+<div class="auth-verify-icon" aria-hidden="true">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="14" rx="2"/>
+        <path d="m3 7 9 6 9-6"/>
+    </svg>
+</div>
+
+<h1 class="auth-heading auth-heading-center">@T["Auth.Verify.Heading"]</h1>
+<p class="auth-sub auth-sub-center">@T["Auth.Verify.SubBefore"] <strong>@Model.Email</strong>@T["Auth.Verify.SubAfter"]</p>
+<p class="auth-hint auth-hint-center">@Html.Raw(T["Auth.Verify.DevHint"].Value)</p>
 
 <form asp-action="ResendConfirmationEmail" method="post" novalidate>
     @Html.AntiForgeryToken()

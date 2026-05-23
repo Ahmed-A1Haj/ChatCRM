@@ -1,6 +1,10 @@
 @*
-    Vertical icon rail used on every dashboard page (Inbox / Numbers / Settings).
+    Vertical labeled rail used on every dashboard page (Inbox / Numbers / Settings).
     Pass the active section name so the matching link gets highlighted.
+
+    Restyled to the warm parchment / serif aesthetic of the public landing page.
+    Class names (.rail, .rail-link, .active, etc.) and href targets are unchanged
+    so JS and routing behavior stay identical.
 
     Usage:
         @await Html.PartialAsync("_DashboardRail", "inbox")        // chats
@@ -28,48 +32,55 @@
 
 <aside class="rail">
     <a class="rail-brand" asp-controller="Home" asp-action="Index" title="ChatCRM">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="32" height="32" rx="8" fill="var(--brand)"/>
-            <path d="M9 11.5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-6.5l-3 3v-3H11a2 2 0 0 1-2-2v-6z"
-                  fill="white"/>
+        <svg class="rail-brand-leaf" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 2C7 6 4 10 4 14a8 8 0 0 0 16 0c0-4-3-8-8-12zm0 18c-2.6 0-4.5-1.6-5.4-3.8 1.2.5 2.6.8 4 .8 3.1 0 5.4-1.6 6.4-3.5C16.5 17 14.5 20 12 20z"/>
         </svg>
+        <span class="rail-brand-text">ChatCRM</span>
     </a>
 
     <nav class="rail-nav">
         <a class="@Cls("dashboard")" href="/dashboard" title="@T["Rail.Dashboard"]">
-            @await Html.PartialAsync("_Icon", new IconModel("layout-dashboard", size: 22, ariaLabel: T["Rail.Dashboard"].Value))
+            @await Html.PartialAsync("_Icon", new IconModel("layout-dashboard", size: 20, ariaLabel: T["Rail.Dashboard"].Value))
+            <span class="rail-label">@T["Rail.Dashboard"]</span>
         </a>
         <a class="@Cls("inbox")" href="/dashboard/chats" title="@T["Rail.Inbox"]">
-            @await Html.PartialAsync("_Icon", new IconModel("inbox", size: 22, ariaLabel: T["Rail.Inbox"].Value))
+            @await Html.PartialAsync("_Icon", new IconModel("inbox", size: 20, ariaLabel: T["Rail.Inbox"].Value))
+            <span class="rail-label">@T["Rail.Inbox"]</span>
         </a>
         <a class="@Cls("contacts")" href="/dashboard/contacts" title="@T["Rail.Contacts"]">
-            @await Html.PartialAsync("_Icon", new IconModel("users", size: 22, ariaLabel: T["Rail.Contacts"].Value))
+            @await Html.PartialAsync("_Icon", new IconModel("users", size: 20, ariaLabel: T["Rail.Contacts"].Value))
+            <span class="rail-label">@T["Rail.Contacts"]</span>
         </a>
         @if (canSeeBilling)
         {
             <a class="@Cls("billing")" href="/dashboard/billing" title="@T["Rail.Billing"]">
-                @await Html.PartialAsync("_Icon", new IconModel("wallet", size: 22, ariaLabel: T["Rail.Billing"].Value))
+                @await Html.PartialAsync("_Icon", new IconModel("wallet", size: 20, ariaLabel: T["Rail.Billing"].Value))
+                <span class="rail-label">@T["Rail.Billing"]</span>
             </a>
         }
         @if (canSeeTemplates)
         {
             <a class="@Cls("templates")" href="/dashboard/templates" title="@T["Rail.Templates"]">
-                @await Html.PartialAsync("_Icon", new IconModel("file-text", size: 22, ariaLabel: T["Rail.Templates"].Value))
+                @await Html.PartialAsync("_Icon", new IconModel("file-text", size: 20, ariaLabel: T["Rail.Templates"].Value))
+                <span class="rail-label">@T["Rail.Templates"]</span>
             </a>
         }
         @if (canSeeAgents)
         {
             <a class="@Cls("agents")" href="/dashboard/agents" title="@T["Rail.Agents"]">
-                @await Html.PartialAsync("_Icon", new IconModel("smile-plus", size: 22, ariaLabel: T["Rail.Agents"].Value))
+                @await Html.PartialAsync("_Icon", new IconModel("smile-plus", size: 20, ariaLabel: T["Rail.Agents"].Value))
+                <span class="rail-label">@T["Rail.Agents"]</span>
             </a>
         }
         @if (canSeePlatformAdmin)
         {
             <a class="@Cls("platform-admin")" href="/dashboard/platform-admin" title="@T["Rail.PlatformAdmin"]">
-                @await Html.PartialAsync("_Icon", new IconModel("shield", size: 22, ariaLabel: T["Rail.PlatformAdmin"].Value))
+                @await Html.PartialAsync("_Icon", new IconModel("shield", size: 20, ariaLabel: T["Rail.PlatformAdmin"].Value))
+                <span class="rail-label">@T["Rail.PlatformAdmin"]</span>
             </a>
             <a class="@Cls("audit")" href="/dashboard/audit" title="@T["Rail.Audit"]">
-                @await Html.PartialAsync("_Icon", new IconModel("eye", size: 22, ariaLabel: T["Rail.Audit"].Value))
+                @await Html.PartialAsync("_Icon", new IconModel("eye", size: 20, ariaLabel: T["Rail.Audit"].Value))
+                <span class="rail-label">@T["Rail.Audit"]</span>
             </a>
         }
         <div class="rail-link-wrap" id="settingsRailWrap">
@@ -79,7 +90,8 @@
                     title="@T["Rail.Settings"]"
                     aria-haspopup="true"
                     aria-expanded="false">
-                @await Html.PartialAsync("_Icon", new IconModel("settings", size: 22, ariaLabel: T["Rail.Settings"].Value))
+                @await Html.PartialAsync("_Icon", new IconModel("settings", size: 20, ariaLabel: T["Rail.Settings"].Value))
+                <span class="rail-label">@T["Rail.Settings"]</span>
             </button>
             <div class="settings-popover d-none" id="settingsPopover" role="menu">
                 <a class="settings-popover-item" href="/Account/Profile" role="menuitem">
@@ -101,12 +113,14 @@
     <div class="rail-bottom">
         @await Html.PartialAsync("_LanguageSwitcher")
         <a asp-controller="Account" asp-action="Profile" class="rail-link" title="@T["Rail.Profile"]">
-            @await Html.PartialAsync("_Icon", new IconModel("user", size: 22, ariaLabel: T["Rail.Profile"].Value))
+            @await Html.PartialAsync("_Icon", new IconModel("user", size: 20, ariaLabel: T["Rail.Profile"].Value))
+            <span class="rail-label">@T["Rail.Profile"]</span>
         </a>
         <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
             @Html.AntiForgeryToken()
             <button type="submit" class="rail-link" title="@T["Rail.SignOut"]">
-                @await Html.PartialAsync("_Icon", new IconModel("log-out", size: 22, ariaLabel: T["Rail.SignOut"].Value))
+                @await Html.PartialAsync("_Icon", new IconModel("log-out", size: 20, ariaLabel: T["Rail.SignOut"].Value))
+                <span class="rail-label">@T["Rail.SignOut"]</span>
             </button>
         </form>
     </div>

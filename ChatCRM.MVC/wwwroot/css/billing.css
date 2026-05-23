@@ -26,32 +26,38 @@
 .bill-page-head { margin-bottom: 4px; }
 .bill-page-title {
     margin: 0 0 4px;
-    font-size: 22px;
-    font-weight: 700;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 28px;
+    font-weight: 500;
     color: var(--text);
-    letter-spacing: -0.3px;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
 }
 .bill-page-sub {
     margin: 0;
     color: var(--text-muted);
-    font-size: 13.5px;
+    font-size: 14px;
 }
 
 .bill-card {
     background: var(--bg-panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    padding: 24px;
+    border-radius: 18px;
+    box-shadow:
+        0 1px 2px rgba(31, 41, 28, 0.04),
+        0 12px 28px -22px rgba(31, 41, 28, 0.18);
+    padding: 26px;
 }
 .bill-card-quiet { background: var(--bg-soft); }
 
-.bill-section-head { margin-bottom: 16px; }
+.bill-section-head { margin-bottom: 18px; }
 .bill-section-head h2 {
     margin: 0 0 4px;
-    font-size: 15px;
-    font-weight: 600;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 18px;
+    font-weight: 500;
     color: var(--text);
+    letter-spacing: -0.01em;
 }
 .bill-section-head p {
     margin: 0;
@@ -87,10 +93,11 @@
 }
 
 .bill-balance-value {
-    font-size: 36px;
-    font-weight: 700;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 42px;
+    font-weight: 500;
     color: var(--text);
-    letter-spacing: -0.8px;
+    letter-spacing: -0.025em;
     line-height: 1.1;
 }
 .bill-balance-card.is-low      .bill-balance-value { color: var(--warn-text);   }
@@ -277,26 +284,27 @@
 .topup-preset > span {
     display: block;
     text-align: center;
-    padding: 14px 12px;
+    padding: 16px 12px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 14px;
     background: var(--bg-panel);
     color: var(--text);
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: -0.2px;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
     transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
 }
 .topup-preset:hover > span { border-color: var(--brand-200); }
 .topup-preset input[type="radio"]:checked + span {
     border-color: var(--brand);
-    background: var(--brand-50);
-    color: var(--brand-text);
+    background: var(--bg-soft);
+    color: var(--brand);
     box-shadow: 0 0 0 3px var(--brand-ring);
 }
 
-.topup-preset-custom > span { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-.topup-preset-custom input[type="radio"]:checked + span { color: var(--brand-text); }
+.topup-preset-custom > span { font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.topup-preset-custom input[type="radio"]:checked + span { color: var(--brand); }
 
 .topup-custom-row { margin-bottom: 4px; }
 
@@ -326,7 +334,7 @@
     margin-bottom: 16px;
 }
 
-.bill-topup-result-title { margin: 0 0 8px; font-size: 20px; font-weight: 700; color: var(--text); }
+.bill-topup-result-title { margin: 0 0 8px; font-family: 'Fraunces', 'Times New Roman', serif; font-size: 24px; font-weight: 500; color: var(--text); letter-spacing: -0.01em; }
 .bill-topup-result-sub   { margin: 0 0 8px; font-size: 14px; color: var(--text); }
 .bill-topup-result-note  { margin: 0 0 16px; font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
 .bill-topup-result-ref   { margin: 0 0 16px; font-size: 11.5px; color: var(--text-dim); word-break: break-all; }
@@ -358,28 +366,28 @@
 .balance-pill svg { flex-shrink: 0; }
 
 .balance-pill.is-healthy {
-    background: var(--brand-50);
-    color: var(--brand-text);
-    border-color: var(--brand-100);
+    background: var(--bg-panel);
+    color: var(--brand);
+    border-color: var(--border);
 }
-.balance-pill.is-healthy:hover { background: var(--brand-100); border-color: var(--brand-200); }
+.balance-pill.is-healthy:hover { background: var(--bg-soft); border-color: var(--text-muted); }
 
 .balance-pill.is-low {
     background: var(--warn-bg);
     color: var(--warn-text);
-    border-color: rgba(245, 158, 11, 0.3);
+    border-color: rgba(200, 169, 106, 0.3);
 }
 .balance-pill.is-low:hover { filter: brightness(0.97); }
 
 .balance-pill.is-empty {
     background: var(--danger-bg);
     color: var(--danger-text);
-    border-color: rgba(239, 68, 68, 0.3);
+    border-color: rgba(179, 65, 65, 0.3);
     animation: balancePulse 2.4s ease-in-out infinite;
 }
 .balance-pill.is-empty:hover { filter: brightness(0.97); animation-play-state: paused; }
 
 @keyframes balancePulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-    50%      { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(179, 65, 65, 0); }
+    50%      { box-shadow: 0 0 0 4px rgba(179, 65, 65, 0.18); }
 }

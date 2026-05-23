@@ -30,9 +30,11 @@
 .an-kpi {
     background: var(--bg-panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px 18px;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow:
+        0 1px 2px rgba(31, 41, 28, 0.04),
+        0 12px 28px -22px rgba(31, 41, 28, 0.18);
 }
 .an-kpi-label {
     color: var(--text-muted);
@@ -42,19 +44,21 @@
     font-weight: 600;
 }
 .an-kpi-value {
-    margin-top: 6px;
-    font-size: 22px;
-    font-weight: 700;
+    margin-top: 8px;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 28px;
+    font-weight: 500;
     color: var(--text);
-    letter-spacing: -0.3px;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
 }
 .an-kpi-sub {
     margin-top: 2px;
     color: var(--text-muted);
     font-size: 12px;
 }
-.an-kpi.is-positive .an-kpi-value { color: var(--success); }
-.an-kpi.is-warn .an-kpi-value { color: var(--warn); }
+.an-kpi.is-positive .an-kpi-value { color: var(--ok-text); }
+.an-kpi.is-warn .an-kpi-value { color: var(--warn-text); }
 
 /* ─── Bar chart (raw SVG, no library) ─────────────────────────────────── */
 .an-chart {
@@ -69,7 +73,7 @@
     overflow: visible;
 }
 .an-bar-spent { fill: var(--brand); }
-.an-bar-topup { fill: var(--success); }
+.an-bar-topup { fill: #c8a96a; }
 .an-axis-line { stroke: var(--border); stroke-width: 1; }
 .an-axis-label { fill: var(--text-muted); font-size: 10px; }
 .an-grid-line { stroke: var(--border); stroke-width: 0.5; stroke-dasharray: 2 3; }
@@ -77,19 +81,19 @@
 .an-chart-legend {
     display: flex;
     gap: 16px;
-    margin-top: 8px;
+    margin-top: 10px;
     font-size: 12px;
     color: var(--text-muted);
 }
 .an-dot {
     display: inline-block;
     width: 10px; height: 10px;
-    border-radius: 2px;
+    border-radius: 3px;
     margin-inline-end: 6px;
     vertical-align: middle;
 }
 .an-dot-spent { background: var(--brand); }
-.an-dot-topup { background: var(--success); }
+.an-dot-topup { background: #c8a96a; }
 
 /* ─── Tables (categories + log) ──────────────────────────────────────── */
 .an-cat-table, .an-log-table {
@@ -137,5 +141,7 @@
     font-size: 12.5px;
 }
 
-.an-amount-positive { color: var(--success); font-weight: 600; }
-.an-amount-negative { color: var(--danger); font-weight: 600; }
+.an-amount-positive { color: var(--ok-text); font-weight: 600; }
+.an-amount-negative { color: var(--danger-text); font-weight: 600; }
+.an-kpi.is-positive .an-kpi-value { color: var(--ok-text); }
+.an-kpi.is-warn .an-kpi-value { color: var(--warn-text); }

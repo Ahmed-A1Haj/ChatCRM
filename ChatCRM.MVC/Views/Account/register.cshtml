@@ -4,9 +4,34 @@
 @{
     Layout = "_AuthLayout";
     ViewData["Title"] = T["Auth.Register.Title"].Value;
+    ViewData["AuthMainClass"] = "auth-main-split";
+    ViewData["AuthCardClass"] = "auth-card-wide";
+    ViewData["AuthAside"] = (Func<object, Microsoft.AspNetCore.Html.IHtmlContent>)((_) => new Microsoft.AspNetCore.Html.HtmlString(
+        @"<blockquote class=""auth-aside-quote"">
+            <em>“ChatCRM replaced 4 tools.</em> We close 67% more deals now.”
+          </blockquote>
+          <p class=""auth-aside-attr"">— Sarah Johnson, Head of Revenue</p>
+          <div class=""auth-aside-visual"" aria-hidden=""true"">
+            <div class=""auth-aside-visual-row"">
+              <span class=""auth-aside-visual-dot"" style=""background:#25d366"">W</span>
+              <span>WhatsApp</span><span>Connected</span>
+            </div>
+            <div class=""auth-aside-visual-row"">
+              <span class=""auth-aside-visual-dot"" style=""background:linear-gradient(135deg,#feda77,#d6249f,#4f5bd5)"">I</span>
+              <span>Instagram</span><span>Connected</span>
+            </div>
+            <div class=""auth-aside-visual-row"">
+              <span class=""auth-aside-visual-dot"" style=""background:#0084ff"">M</span>
+              <span>Messenger</span><span>Connected</span>
+            </div>
+            <div class=""auth-aside-visual-row"">
+              <span class=""auth-aside-visual-dot"" style=""background:#229ed9"">T</span>
+              <span>Telegram</span><span>Connected</span>
+            </div>
+          </div>"));
 }
 
-<h1 class="auth-heading">@T["Auth.Register.Heading"]</h1>
+<h1 class="auth-heading"><em>@T["Auth.Register.Heading"]</em></h1>
 <p class="auth-sub">@T["Auth.Register.Sub"]</p>
 
 <form asp-action="Register" method="post" novalidate>

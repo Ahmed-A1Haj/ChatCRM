@@ -67,19 +67,20 @@
 
 .user-role-badge {
     display: inline-block;
-    padding: 2px 9px;
-    border-radius: 10px;
+    padding: 2px 10px;
+    border-radius: 999px;
     font-size: 11px;
     font-weight: 600;
-    background: var(--brand-50);
-    color: var(--brand-text);
+    background: var(--bg-soft);
+    color: var(--brand);
     text-transform: uppercase;
     letter-spacing: 0.3px;
+    border: 1px solid var(--border-soft);
 }
-.user-role-badge.role-admin   { background: #fee2e2; color: #b91c1c; }
-.user-role-badge.role-manager { background: #fef3c7; color: #92400e; }
-.user-role-badge.role-agent   { background: var(--brand-50); color: var(--brand-text); }
-.user-role-badge.role-none    { background: var(--bg-muted); color: var(--text-muted); }
+.user-role-badge.role-admin   { background: var(--danger-bg); color: var(--danger-text); border-color: rgba(179, 65, 65, 0.25); }
+.user-role-badge.role-manager { background: var(--warn-bg); color: var(--warn-text); border-color: rgba(200, 169, 106, 0.30); }
+.user-role-badge.role-agent   { background: var(--bg-soft); color: var(--brand); border-color: var(--border-soft); }
+.user-role-badge.role-none    { background: var(--bg-muted); color: var(--text-muted); border-color: transparent; }
 
 .user-cell-email { color: var(--text-muted); font-size: 12.5px; }
 
@@ -94,11 +95,14 @@
 .role-card {
     background: var(--bg-panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px 18px;
+    border-radius: 16px;
+    padding: 18px 20px;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    box-shadow:
+        0 1px 2px rgba(31, 41, 28, 0.04),
+        0 12px 28px -22px rgba(31, 41, 28, 0.18);
 }
 
 .role-card-head {
@@ -109,9 +113,11 @@
 }
 
 .role-card h3 {
-    font-size: 16px;
-    font-weight: 700;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 18px;
+    font-weight: 500;
     color: var(--text);
+    letter-spacing: -0.01em;
     margin: 0;
 }
 
@@ -333,13 +339,13 @@
 }
 
 .role-card.is-my-role {
-    background: linear-gradient(180deg, var(--brand-50) 0%, var(--bg-panel) 70%);
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-panel) 70%);
 }
 
-.role-accent-red    { border-left-color: #ef4444; }
-.role-accent-amber  { border-left-color: #f59e0b; }
+.role-accent-red    { border-left-color: var(--danger); }
+.role-accent-amber  { border-left-color: var(--warn); }
 .role-accent-indigo { border-left-color: var(--brand); }
-.role-accent-slate  { border-left-color: #94a3b8; }
+.role-accent-slate  { border-left-color: var(--text-muted); }
 
 .role-card-head {
     display: flex;
@@ -359,16 +365,18 @@
     color: var(--text-muted);
 }
 
-.role-accent-red    .role-card-icon { background: #fee2e2; color: #b91c1c; }
-.role-accent-amber  .role-card-icon { background: #fef3c7; color: #b45309; }
-.role-accent-indigo .role-card-icon { background: var(--brand-100); color: var(--brand-text); }
+.role-accent-red    .role-card-icon { background: var(--danger-bg); color: var(--danger-text); }
+.role-accent-amber  .role-card-icon { background: var(--warn-bg); color: var(--warn-text); }
+.role-accent-indigo .role-card-icon { background: #e3ecd9; color: var(--brand); }
 .role-accent-slate  .role-card-icon { background: var(--bg-muted); color: var(--text-muted); }
 
 .role-card-title { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
 .role-card-title h3 {
-    font-size: 16px;
-    font-weight: 700;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 18px;
+    font-weight: 500;
     color: var(--text);
+    letter-spacing: -0.01em;
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -388,8 +396,8 @@
 }
 
 .role-tag-builtin { background: var(--bg-muted); color: var(--text-muted); }
-.role-tag-custom  { background: #ecfeff; color: #0e7490; }
-.role-tag-mine    { background: var(--brand-100); color: var(--brand-text); }
+.role-tag-custom  { background: #d6e5e3; color: #2c5450; }
+.role-tag-mine    { background: #e3ecd9; color: var(--brand); }
 
 .role-card-meta { font-size: 12.5px; color: var(--text-muted); margin: 0; }
 .role-card-meta strong { color: var(--text); font-weight: 600; }
@@ -448,8 +456,8 @@
     transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 .role-perm-more:hover {
-    background: var(--brand-50);
-    color: var(--brand-text);
+    background: var(--bg-soft);
+    color: var(--brand);
     border-color: var(--brand-200);
 }
 .role-perm-more:focus-visible {
@@ -474,7 +482,7 @@
 .role-card-actions .btn-ghost:hover {
     background: var(--bg-muted);
     border-color: var(--brand-200);
-    color: var(--brand-text);
+    color: var(--brand);
 }
 .role-card-actions .btn-ghost:focus-visible {
     outline: none;
