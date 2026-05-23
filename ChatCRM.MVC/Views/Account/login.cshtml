@@ -46,10 +46,7 @@
     </div>
 
     <div class="auth-field">
-        <div class="auth-label-row">
-            <label asp-for="Password" class="auth-label">@Html.DisplayNameFor(m => m.Password)</label>
-            <a asp-action="ForgotPassword" class="auth-link">@T["Auth.Login.Forgot"]</a>
-        </div>
+        <label asp-for="Password" class="auth-label">@Html.DisplayNameFor(m => m.Password)</label>
         <div class="auth-password">
             <input asp-for="Password" class="auth-input" autocomplete="current-password" placeholder="@T["Auth.Login.PasswordPlaceholder"]" />
             <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
@@ -59,10 +56,13 @@
         <span asp-validation-for="Password" class="auth-error"></span>
     </div>
 
-    <label class="auth-check">
-        <input asp-for="RememberMe" />
-        <span>@T["Auth.Login.RememberMe"]</span>
-    </label>
+    <div class="auth-row-between">
+        <label class="auth-check">
+            <input asp-for="RememberMe" />
+            <span>@T["Auth.Login.RememberMe"]</span>
+        </label>
+        <a asp-action="ForgotPassword" class="auth-link">@T["Auth.Login.Forgot"]</a>
+    </div>
 
     <button type="submit" class="auth-btn auth-btn-primary">@T["Auth.Login.Submit"]</button>
 </form>

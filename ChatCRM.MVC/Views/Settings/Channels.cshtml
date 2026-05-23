@@ -44,10 +44,16 @@
     @* ─── Main content ─── *@
     <main class="settings-main">
 
-        <div class="settings-header">
-            <h1 class="settings-title">@T["Channels.Title"]</h1>
-            <p class="settings-sub">@T["Channels.Subtitle"]</p>
-        </div>
+        <header class="ch-page-head">
+            <div class="ch-page-title-wrap">
+                <h1 class="settings-title">@T["Channels.Title"]</h1>
+                <p class="settings-sub">@T["Channels.Subtitle"]</p>
+            </div>
+            <a href="/dashboard/whatsapp" class="btn-primary-round ch-page-cta">
+                @await Html.PartialAsync("_Icon", new IconModel("plus", size: 14))
+                <span>@T["Channels.Manage"]</span>
+            </a>
+        </header>
 
         <div class="channel-grid">
 

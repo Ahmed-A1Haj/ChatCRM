@@ -761,6 +761,18 @@ function populateDetails(d) {
     document.getElementById('cdLifecycle').innerHTML =
         `<span class="badge-btn lc-${stage.cls}" style="cursor:default"><span class="badge-dot"></span>${escapeHtml(t(stage.key))}</span>`;
 
+    // Pipeline stages bar — mark steps up to current as completed, current as active.
+    const stagesBar = document.getElementById('cdStages');
+    if (stagesBar) {
+        const cur = d.lifecycleStage ?? 0;
+        stagesBar.querySelectorAll('.cd-stage').forEach(el => {
+            const idx = parseInt(el.getAttribute('data-stage'), 10);
+            el.classList.remove('is-active', 'is-done');
+            if (idx < cur) el.classList.add('is-done');
+            else if (idx === cur) el.classList.add('is-active');
+        });
+    }
+
     // Channel
     document.getElementById('cdChannel').textContent = d.instanceDisplayName || '—';
 

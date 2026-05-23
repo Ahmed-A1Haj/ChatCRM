@@ -68,6 +68,25 @@
 }
 
 .settings-header { margin-bottom: 28px; max-width: 760px; }
+
+/* Channels page top header — title + sub on the left, "+ Add" CTA pinned right. */
+.ch-page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-soft);
+}
+.ch-page-title-wrap { flex: 1; min-width: 0; }
+.ch-page-cta { flex-shrink: 0; }
+.ch-page-cta .icon { margin-right: 4px; }
+
+@media (max-width: 640px) {
+    .ch-page-head { flex-direction: column; align-items: flex-start; }
+    .ch-page-cta { width: 100%; justify-content: center; }
+}
 .settings-title {
     font-family: 'Fraunces', 'Times New Roman', serif;
     font-size: 30px;

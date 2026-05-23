@@ -48,6 +48,45 @@
     line-height: 1.15;
 }
 
+/* Slim breadcrumb-style label in the topbar, replaces the giant H1 in the
+   reference (the big greeting lives below in its own block). */
+.dash-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.01em;
+}
+.dash-crumb::before {
+    content: "";
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--brand);
+}
+
+/* Greeting block (page hero), per Dashboard principal.png. */
+.dash-greeting {
+    padding: 4px 0 6px;
+}
+.dash-greeting-h {
+    margin: 0 0 4px;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: clamp(26px, 2.6vw, 32px);
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+.dash-wave { display: inline-block; transform: translateY(-1px); }
+.dash-greeting-date {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13.5px;
+}
+
 .dash-topbar-left  { display: flex; align-items: center; gap: 16px; }
 .dash-topbar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
@@ -157,19 +196,20 @@
         0 12px 28px -22px rgba(31, 41, 28, 0.18);
 }
 .dash-kpi-label {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--text-muted);
     letter-spacing: 0.1px;
-    text-transform: uppercase;
+    text-transform: none;
 }
 .dash-kpi-value {
     font-family: 'Fraunces', 'Times New Roman', serif;
-    font-size: 32px;
+    font-size: 38px;
     font-weight: 500;
     color: var(--text);
     letter-spacing: -0.02em;
-    line-height: 1.1;
+    line-height: 1.05;
+    margin-bottom: 2px;
 }
 .dash-kpi-delta {
     display: inline-flex;
@@ -256,17 +296,17 @@
 .dash-pipeline-delta.up   { color: var(--ok-text); }
 .dash-pipeline-delta.down { color: var(--danger-text); }
 
-/* ── Channel donut ────────────────────────────────────────────── */
+/* ── Channel donut — side-by-side (donut left, legend right) per ref. */
 .dash-channel-wrap {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 16px;
+    gap: 22px;
     padding-top: 6px;
 }
 .dash-donut {
-    width: 160px;
-    height: 160px;
+    width: 150px;
+    height: 150px;
     position: relative;
     flex-shrink: 0;
 }

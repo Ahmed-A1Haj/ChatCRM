@@ -41,11 +41,15 @@
 <main class="contacts-page">
 
     <header class="contacts-header">
-        <div>
+        <div class="contacts-header-title">
             <h1 class="contacts-title">@T["Contacts.Title"]</h1>
             <p class="contacts-sub">@T["Contacts.Subtitle"]</p>
         </div>
         <div class="contacts-toolbar">
+            <div class="filter-search contacts-header-search">
+                @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
+                <input type="search" id="searchInput" placeholder="@T["Contacts.SearchPlaceholder"]" />
+            </div>
             <button class="btn-primary-soft has-icon" id="exportBtn" type="button">
                 @await Html.PartialAsync("_Icon", new IconModel("download", size: 14))
                 <span class="export-label">@T["Contacts.Export"]</span>
@@ -55,11 +59,6 @@
     </header>
 
     <section class="contacts-filters">
-        <div class="filter-search">
-            @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
-            <input type="search" id="searchInput" placeholder="@T["Contacts.SearchPlaceholder"]" />
-        </div>
-
         <select id="lifecycleFilter" class="filter-select" aria-label="@T["Contacts.Filter.Lifecycle"]">
             <option value="">@T["Contacts.Filter.AllLifecycles"]</option>
             <option value="0">@T["Lifecycle.NewClient"]</option>
@@ -140,10 +139,10 @@
     </footer>
 </main>
 
-@* ─── Contact Details modal ─── *@
+@* ─── Contact Details modal (Lead card detail reference) ─── *@
 <div class="modal-backdrop d-none" id="contactDetailsModal" onclick="if(event.target===this) closeContactDetailsModal()">
     <div class="modal-panel modal-panel-detail">
-        <div class="modal-header">
+        <div class="modal-header cd-modal-head">
             <h3>@T["Contacts.Modal.Title"]</h3>
             <button class="modal-close" type="button" onclick="closeContactDetailsModal()">✕</button>
         </div>
@@ -151,59 +150,86 @@
             <div class="cd-loading" id="cdLoading">@T["Action.Loading"]</div>
 
             <div class="cd-content d-none" id="cdContent">
+                @* HERO — avatar + name + company line + lifecycle pill + open-chat CTA *@
                 <div class="cd-hero">
                     <div class="cd-avatar" id="cdAvatar">?</div>
-                    <div class="cd-name" id="cdName">—</div>
-                    <div class="cd-phone" id="cdPhone">—</div>
+                    <div class="cd-hero-meta">
+                        <div class="cd-name" id="cdName">—</div>
+                        <div class="cd-phone" id="cdPhone">—</div>
+                        <div class="cd-hero-pills">
+                            <span class="cd-pill" id="cdLifecycle"><span class="badge-dot"></span>—</span>
+                            <span class="cd-pill cd-pill-quiet" id="cdChannel">—</span>
+                        </div>
+                    </div>
+                    <a href="#" class="btn-primary-soft cd-open-cta" id="cdOpenChat">@T["Contacts.OpenConversation"]</a>
                 </div>
 
-                <dl class="cd-grid">
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.Lifecycle"]</dt>
-                        <dd id="cdLifecycle"><span class="badge-btn lc-gray"><span class="badge-dot"></span>—</span></dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.Channel"]</dt>
-                        <dd id="cdChannel">—</dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.Country"]</dt>
-                        <dd id="cdCountry">—</dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.Language"]</dt>
-                        <dd id="cdLanguage">—</dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.AssignedTo"]</dt>
-                        <dd id="cdAssigned">@T["Inbox.Unassigned"]</dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.Status"]</dt>
-                        <dd id="cdStatus"><span class="badge-btn status-badge status-open"><span class="status-dot-inline"></span>@T["Inbox.Open"]</span></dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Blocked"]</dt>
-                        <dd id="cdBlocked">@T["Contacts.NotBlocked"]</dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.FirstContact"]</dt>
-                        <dd id="cdCreated">—</dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.TotalMessages"]</dt>
-                        <dd id="cdMsgCount">0</dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.InternalNotes"]</dt>
-                        <dd id="cdNoteCount">0</dd>
-                    </div>
-                </dl>
+                @* PIPELINE STAGES BAR — 11 lifecycle steps with current one highlighted.
+                   Filled by contacts.js once it knows the current stage. *@
+                <div class="cd-stages" id="cdStages" aria-label="@T["Contacts.Column.Lifecycle"]">
+                    <span class="cd-stage" data-stage="0">@T["Lifecycle.NewClient"]</span>
+                    <span class="cd-stage" data-stage="1">@T["Lifecycle.NotResponding"]</span>
+                    <span class="cd-stage" data-stage="2">@T["Lifecycle.Interested"]</span>
+                    <span class="cd-stage" data-stage="3">@T["Lifecycle.Thinking"]</span>
+                    <span class="cd-stage" data-stage="4">@T["Lifecycle.WantsAMeeting"]</span>
+                    <span class="cd-stage" data-stage="5">@T["Lifecycle.WaitingForMeeting"]</span>
+                    <span class="cd-stage" data-stage="6">@T["Lifecycle.Discussed"]</span>
+                    <span class="cd-stage" data-stage="7">@T["Lifecycle.PotentialClient"]</span>
+                    <span class="cd-stage" data-stage="8">@T["Lifecycle.WillMakePayment"]</span>
+                    <span class="cd-stage" data-stage="9">@T["Lifecycle.WaitingForContract"]</span>
+                    <span class="cd-stage" data-stage="10">@T["Lifecycle.OurClient"]</span>
+                </div>
+
+                @* DATA GRID — split into Contact Info + Engagement columns. *@
+                <div class="cd-cols">
+                    <section class="cd-col">
+                        <h4 class="cd-col-title">@T["Contacts.Modal.Title"]</h4>
+                        <dl class="cd-grid">
+                            <div class="cd-row">
+                                <dt>@T["Contacts.Column.Country"]</dt>
+                                <dd id="cdCountry">—</dd>
+                            </div>
+                            <div class="cd-row">
+                                <dt>@T["Contacts.Column.Language"]</dt>
+                                <dd id="cdLanguage">—</dd>
+                            </div>
+                            <div class="cd-row">
+                                <dt>@T["Contacts.Column.AssignedTo"]</dt>
+                                <dd id="cdAssigned">@T["Inbox.Unassigned"]</dd>
+                            </div>
+                            <div class="cd-row">
+                                <dt>@T["Contacts.Blocked"]</dt>
+                                <dd id="cdBlocked">@T["Contacts.NotBlocked"]</dd>
+                            </div>
+                        </dl>
+                    </section>
+
+                    <section class="cd-col">
+                        <h4 class="cd-col-title">@T["Dashboard.Activity.Title"]</h4>
+                        <dl class="cd-grid">
+                            <div class="cd-row">
+                                <dt>@T["Contacts.Column.Status"]</dt>
+                                <dd id="cdStatus"><span class="badge-btn status-badge status-open"><span class="status-dot-inline"></span>@T["Inbox.Open"]</span></dd>
+                            </div>
+                            <div class="cd-row">
+                                <dt>@T["Contacts.FirstContact"]</dt>
+                                <dd id="cdCreated">—</dd>
+                            </div>
+                            <div class="cd-row">
+                                <dt>@T["Contacts.TotalMessages"]</dt>
+                                <dd id="cdMsgCount">0</dd>
+                            </div>
+                            <div class="cd-row">
+                                <dt>@T["Contacts.InternalNotes"]</dt>
+                                <dd id="cdNoteCount">0</dd>
+                            </div>
+                        </dl>
+                    </section>
+                </div>
             </div>
         </div>
         <div class="modal-actions cd-actions">
             <button class="btn-ghost" type="button" onclick="closeContactDetailsModal()">@T["Action.Close"]</button>
-            <a href="#" class="btn-primary-soft" id="cdOpenChat">@T["Contacts.OpenConversation"]</a>
         </div>
     </div>
 </div>

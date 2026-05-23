@@ -30,6 +30,8 @@
 
     var mainClass = ViewData["AuthMainClass"] as string ?? string.Empty;
     var asideContent = ViewData["AuthAside"] as Func<object, Microsoft.AspNetCore.Html.IHtmlContent>;
+    var topRightContent = ViewData["AuthTopRight"] as Func<object, Microsoft.AspNetCore.Html.IHtmlContent>;
+    var isSplit = mainClass.Contains("auth-main-split");
 }
 <!DOCTYPE html>
 <html lang="@htmlLang" dir="@htmlDir">
@@ -49,23 +51,40 @@
     </script>
     <script src="~/js/i18n.js" asp-append-version="true"></script>
 </head>
-<body class="auth-shell">
+<body class="auth-shell @(isSplit ? "auth-shell-split" : "")">
 
-    <header class="auth-topbar">
-        <a class="auth-brand" href="/" title="ChatCRM">
-            <span class="auth-brand-mark">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M12 2C7 6 4 10 4 14a8 8 0 0 0 16 0c0-4-3-8-8-12zm0 18c-2.6 0-4.5-1.6-5.4-3.8 1.2.5 2.6.8 4 .8 3.1 0 5.4-1.6 6.4-3.5C16.5 17 14.5 20 12 20z"/>
-                </svg>
-            </span>
-            <span>ChatCRM</span>
-        </a>
-    </header>
+    @if (!isSplit)
+    {
+        <header class="auth-topbar">
+            <a class="auth-brand" href="/" title="ChatCRM">
+                <span class="auth-brand-mark">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M12 2C7 6 4 10 4 14a8 8 0 0 0 16 0c0-4-3-8-8-12zm0 18c-2.6 0-4.5-1.6-5.4-3.8 1.2.5 2.6.8 4 .8 3.1 0 5.4-1.6 6.4-3.5C16.5 17 14.5 20 12 20z"/>
+                    </svg>
+                </span>
+                <span>ChatCRM</span>
+            </a>
+        </header>
+    }
 
     <main class="auth-main @mainClass">
         @if (asideContent != null)
         {
             <div class="auth-form-col">
+                <div class="auth-form-topbar">
+                    <a class="auth-brand auth-brand-inline" href="/" title="ChatCRM">
+                        <span class="auth-brand-mark">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M12 2C7 6 4 10 4 14a8 8 0 0 0 16 0c0-4-3-8-8-12zm0 18c-2.6 0-4.5-1.6-5.4-3.8 1.2.5 2.6.8 4 .8 3.1 0 5.4-1.6 6.4-3.5C16.5 17 14.5 20 12 20z"/>
+                            </svg>
+                        </span>
+                        <span>ChatCRM</span>
+                    </a>
+                    @if (topRightContent != null)
+                    {
+                        <div class="auth-form-topright">@topRightContent(null)</div>
+                    }
+                </div>
                 <div class="auth-card @ViewData["AuthCardClass"]">
                     @if (!string.IsNullOrWhiteSpace(statusMessage))
                     {

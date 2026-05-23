@@ -55,9 +55,27 @@
 
 <section class="profile-shell">
 
+    @* Profile-section side nav — anchor links to each card on this page.
+       Mirrors the Settings layout shown in the reference. *@
+    <aside class="profile-side">
+        <div class="profile-side-group">
+            <h2 class="profile-side-group-title">@T["Profile.Title"]</h2>
+            <nav class="profile-side-nav">
+                <a href="#profileEdit"            class="profile-side-link is-active">@T["Profile.EditTitle"]</a>
+                <a href="#changePasswordSection"  class="profile-side-link">@T["Profile.Password.Title"]</a>
+                <a href="#profileAccount"         class="profile-side-link">@T["Profile.Account.Title"]</a>
+            </nav>
+        </div>
+    </aside>
+
     <main class="profile-main">
         <div class="profile-container">
             <header class="profile-page-head">
+                <div class="profile-crumb">
+                    <span>@T["Rail.Settings"]</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                    <strong>@T["Profile.Title"]</strong>
+                </div>
                 <h1 class="profile-page-title">@T["Profile.Title"]</h1>
                 <p class="profile-page-sub">@T["Profile.Sub"]</p>
             </header>
@@ -91,7 +109,7 @@
             </section>
 
             @* ── Edit profile card ──────────────────────────────────────── *@
-            <section class="profile-card">
+            <section class="profile-card" id="profileEdit">
                 <header class="profile-section-head">
                     <h2>@T["Profile.EditTitle"]</h2>
                     <p>@T["Profile.EditSub"]</p>
@@ -222,7 +240,7 @@
             </section>
 
             @* ── Account card ──────────────────────────────────────────────── *@
-            <section class="profile-card profile-card-quiet">
+            <section class="profile-card profile-card-quiet" id="profileAccount">
                 <header class="profile-section-head">
                     <h2>@T["Profile.Account.Title"]</h2>
                     <p>@T["Profile.Account.Sub"]</p>

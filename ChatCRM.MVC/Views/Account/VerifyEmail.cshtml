@@ -4,35 +4,55 @@
 @{
     Layout = "_AuthLayout";
     ViewData["Title"] = T["Auth.Verify.Title"].Value;
-    ViewData["AuthCardClass"] = "auth-card-verify";
+    ViewData["AuthMainClass"] = "auth-main-split auth-main-split-reverse";
+    ViewData["AuthAside"] = (Func<object, Microsoft.AspNetCore.Html.IHtmlContent>)((_) => new Microsoft.AspNetCore.Html.HtmlString(
+        @"<a href=""/"" class=""auth-aside-brand"" title=""ChatCRM"">
+            <svg width=""26"" height=""26"" viewBox=""0 0 24 24"" fill=""currentColor"" aria-hidden=""true"">
+              <path d=""M12 2C7 6 4 10 4 14a8 8 0 0 0 16 0c0-4-3-8-8-12zm0 18c-2.6 0-4.5-1.6-5.4-3.8 1.2.5 2.6.8 4 .8 3.1 0 5.4-1.6 6.4-3.5C16.5 17 14.5 20 12 20z""/>
+            </svg>
+            <span>ChatCRM</span>
+          </a>"));
 }
 
-<div class="auth-verify-icon" aria-hidden="true">
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="5" width="18" height="14" rx="2"/>
-        <path d="m3 7 9 6 9-6"/>
-    </svg>
-</div>
-
-<h1 class="auth-heading auth-heading-center">@T["Auth.Verify.Heading"]</h1>
-<p class="auth-sub auth-sub-center">@T["Auth.Verify.SubBefore"] <strong>@Model.Email</strong>@T["Auth.Verify.SubAfter"]</p>
-<p class="auth-hint auth-hint-center">@Html.Raw(T["Auth.Verify.DevHint"].Value)</p>
-
-<form asp-action="ResendConfirmationEmail" method="post" novalidate>
-    @Html.AntiForgeryToken()
-
-    <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
-
-    <div class="auth-field">
-        <label asp-for="Email"></label>
-        <input asp-for="Email" class="auth-input" autocomplete="email" placeholder="name@company.com" />
-        <span asp-validation-for="Email" class="auth-error"></span>
+<div class="verify-card">
+    <div class="verify-sparkle-icon" aria-hidden="true">
+        <div class="verify-icon-disc">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="5" width="18" height="14" rx="2"/>
+                <path d="m3 7 9 6 9-6"/>
+            </svg>
+        </div>
+        <span class="verify-spark verify-spark-tl">✦</span>
+        <span class="verify-spark verify-spark-tr">✦</span>
+        <span class="verify-spark verify-spark-bl">·</span>
+        <span class="verify-spark verify-spark-br">✦</span>
     </div>
 
-    <button type="submit" class="auth-btn auth-btn-secondary">@T["Auth.Verify.Submit"]</button>
-</form>
+    <h1 class="verify-heading">@T["Auth.Verify.Heading"]</h1>
+    <p class="verify-sub">@T["Auth.Verify.SubBefore"]<strong>@Model.Email</strong>@T["Auth.Verify.SubAfter"]</p>
 
-<p class="auth-footer">@T["Auth.Verify.Footer"] <a asp-action="Login" class="auth-link">@T["Auth.Verify.SignIn"]</a>.</p>
+    <form asp-action="ResendConfirmationEmail" method="post" novalidate class="verify-resend">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
+
+        <div class="verify-inset">
+            <p class="verify-inset-line">@Html.Raw(T["Auth.Verify.DevHint"].Value)</p>
+
+            <div class="auth-field verify-inset-field">
+                <label asp-for="Email"></label>
+                <input asp-for="Email" class="auth-input" autocomplete="email" placeholder="name@company.com" />
+                <span asp-validation-for="Email" class="auth-error"></span>
+            </div>
+
+            <div class="verify-inset-actions">
+                <button type="submit" class="verify-resend-link">@T["Auth.Verify.Submit"]</button>
+                <a asp-action="Login" class="verify-change-link">@T["Auth.Verify.SignIn"]</a>
+            </div>
+        </div>
+    </form>
+
+    <p class="verify-footer">@T["Auth.Verify.Footer"]</p>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
