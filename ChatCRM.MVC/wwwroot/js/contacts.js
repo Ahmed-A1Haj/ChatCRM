@@ -523,22 +523,27 @@ document.addEventListener('click', async (e) => {
 
         if (action === 'view-details') {
             // Open the contact-details modal in place (no navigation).
-            const convId = row?.dataset.convId;
-            const instId = row?.dataset.instanceId;
-            const chType = row?.dataset.channelType;
-            openContactDetails(convId, instId, chType);
+            const contactId = row?.dataset.id;
+            const convId    = row?.dataset.convId;
+            const instId    = row?.dataset.instanceId;
+            const chType    = row?.dataset.channelType;
+            openContactDetails(convId, instId, chType, contactId);
             return;
         }
 
         if (action === 'view-contact') {
-            // Deep-link straight into the chat conversation.
-            const convId = row?.dataset.convId;
-            const instId = row?.dataset.instanceId;
-            if (!convId || !instId) {
-                showToast(t('Contacts.Toast.NoConversation'), 'error');
+            // Deep-link to the chat when the contact has a conversation; otherwise (imported
+            // contacts that haven't messaged yet) open the contact-details modal in-place so
+            // the user still sees their info — clicking nothing is the worst UX.
+            const contactId = row?.dataset.id;
+            const convId    = row?.dataset.convId;
+            const instId    = row?.dataset.instanceId;
+            const chType    = row?.dataset.channelType;
+            if (convId && instId) {
+                window.location.href = `/dashboard/chats?instance=${instId}&conversation=${convId}`;
                 return;
             }
-            window.location.href = `/dashboard/chats?instance=${instId}&conversation=${convId}`;
+            openContactDetails(null, null, chType, contactId);
             return;
         }
 
@@ -730,39 +735,77 @@ loadContacts();
 // (channel type) and other handlers know what conversation we're editing.
 const _cdCtx = { conversationId: null, instanceId: null, channelType: null, contactId: null };
 
-function openContactDetails(conversationId, instanceId, channelType) {
+function openContactDetails(conversationId, instanceId, channelType, contactId) {
     const modal = document.getElementById('contactDetailsModal');
     if (!modal) return;
 
     _cdCtx.conversationId = conversationId ? parseInt(conversationId, 10) : null;
     _cdCtx.instanceId     = instanceId     ? parseInt(instanceId, 10)     : null;
     _cdCtx.channelType    = (channelType === '' || channelType == null) ? null : parseInt(channelType, 10);
-    _cdCtx.contactId      = null;
+    _cdCtx.contactId      = contactId      ? parseInt(contactId, 10)      : null;
 
     document.getElementById('cdLoading').classList.remove('d-none');
     document.getElementById('cdLoading').textContent = t('Action.Loading');
     document.getElementById('cdContent').classList.add('d-none');
     modal.classList.remove('d-none');
 
-    if (!conversationId) {
+    // When we have a conversation, the chat endpoint is richer (it joins messages, tags, etc).
+    // Otherwise — e.g. a contact imported from Excel that hasn't messaged yet — fall back to
+    // the contact-only endpoint so the modal still works.
+    const fetchPromise = conversationId
+        ? fetch(`/dashboard/chats/${conversationId}/contact`)
+        : (_cdCtx.contactId
+            ? fetch(`/api/contacts/${_cdCtx.contactId}/details`)
+            : Promise.reject(new Error('missing-context')));
+
+    if (!conversationId && !_cdCtx.contactId) {
         document.getElementById('cdLoading').textContent = t('Contacts.NoPrimaryConversation');
         return;
     }
 
-    // Wire the "Open conversation →" link
-    const openLink = document.getElementById('cdOpenChat');
-    if (openLink) {
-        openLink.href = instanceId
-            ? `/dashboard/chats?instance=${instanceId}&conversation=${conversationId}`
-            : '/dashboard/chats';
-    }
-
-    fetch(`/dashboard/chats/${conversationId}/contact`)
+    fetchPromise
         .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
-        .then(d => populateDetails(d))
+        .then(d => {
+            // populateDetails wires the "Open conversation" link off d.conversationId/_cdCtx.instanceId
+            // — paintCdOpenConversation handles the no-conversation case below.
+            populateDetails(d);
+            paintCdOpenConversation(d);
+        })
         .catch(err => {
             document.getElementById('cdLoading').textContent = t('Contacts.LoadFailed', err.message);
         });
+}
+
+/** Toggle the hero "Open Conversation" button + Conversations tab between linked and disabled
+ *  depending on whether the contact actually has a conversation. */
+function paintCdOpenConversation(d) {
+    const openLink = document.getElementById('cdOpenChat');
+    const tabConv  = document.getElementById('cdTabConversations');
+    const hasConv  = !!(d && d.conversationId);
+    // Prefer the row-known instanceId (more reliable than what the server-trimmed DTO carries).
+    const instId   = _cdCtx.instanceId || null;
+
+    if (openLink) {
+        if (hasConv) {
+            openLink.href = instId
+                ? `/dashboard/chats?instance=${instId}&conversation=${d.conversationId}`
+                : `/dashboard/chats?conversation=${d.conversationId}`;
+            openLink.removeAttribute('aria-disabled');
+            openLink.classList.remove('is-disabled');
+            openLink.title = '';
+        } else {
+            openLink.href = '#';
+            openLink.setAttribute('aria-disabled', 'true');
+            openLink.classList.add('is-disabled');
+            openLink.title = t('Contacts.NoPrimaryConversation');
+            openLink.onclick = (e) => { e.preventDefault(); showToast(t('Contacts.NoPrimaryConversation'), 'info'); };
+        }
+    }
+    if (tabConv) {
+        tabConv.classList.toggle('is-disabled', !hasConv);
+        if (!hasConv) tabConv.title = t('Contacts.NoPrimaryConversation');
+        else tabConv.title = '';
+    }
 }
 
 function closeContactDetailsModal() {

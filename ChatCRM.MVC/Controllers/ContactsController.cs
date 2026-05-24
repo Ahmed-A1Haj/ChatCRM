@@ -1,5 +1,6 @@
 using ChatCRM.Application.Chats.DTOs;
 using ChatCRM.Application.Contacts.DTOs;
+using ChatCRM.Application.Contacts.Import;
 using ChatCRM.Application.Interfaces;
 using ChatCRM.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -13,13 +14,25 @@ namespace ChatCRM.MVC.Controllers
     {
         private readonly IContactsService _service;
         private readonly IChatService _chatService;
+        private readonly IContactImportService _import;
         private readonly UserManager<User> _userManager;
         private readonly ILogger<ContactsController> _logger;
 
-        public ContactsController(IContactsService service, IChatService chatService, UserManager<User> userManager, ILogger<ContactsController> logger)
+        // Upload safety net — Excel files past this size are almost always wrong-file mistakes
+        // (.csv exported as .xls, a database dump, etc). Kestrel's default request limit is
+        // 30MB anyway; this just gives a clean 400 instead of a stream-read failure.
+        private const long MaxUploadBytes = 10 * 1024 * 1024;
+
+        public ContactsController(
+            IContactsService service,
+            IChatService chatService,
+            IContactImportService import,
+            UserManager<User> userManager,
+            ILogger<ContactsController> logger)
         {
             _service = service;
             _chatService = chatService;
+            _import = import;
             _userManager = userManager;
             _logger = logger;
         }
@@ -116,12 +129,89 @@ namespace ChatCRM.MVC.Controllers
             catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
         }
 
+        [HttpGet("/api/contacts/{id:int}/details")]
+        public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
+        {
+            var details = await _service.GetDetailsAsync(id, cancellationToken);
+            return details is null ? NotFound() : Json(details);
+        }
+
         [HttpGet("/api/contacts/export")]
         public async Task<IActionResult> Export([FromQuery] ContactsListQuery q, CancellationToken cancellationToken)
         {
             var bytes = await _service.ExportCsvAsync(q, cancellationToken);
             var fileName = $"contacts-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv";
             return File(bytes, "text/csv", fileName);
+        }
+
+        // ── Import ──────────────────────────────────────────────────────
+
+        private const string XlsxMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+        [HttpGet("/api/contacts/import/template")]
+        public async Task<IActionResult> ImportTemplate(CancellationToken cancellationToken)
+        {
+            var bytes = await _import.GenerateTemplateAsync(cancellationToken);
+            return File(bytes, XlsxMime, "contacts-import-template.xlsx");
+        }
+
+        [HttpPost("/api/contacts/import/preview")]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(MaxUploadBytes)]
+        public async Task<IActionResult> ImportPreview([FromForm] IFormFile? file, CancellationToken cancellationToken)
+        {
+            if (file is null || file.Length == 0)
+                return BadRequest(new { error = "No file uploaded." });
+            if (file.Length > MaxUploadBytes)
+                return BadRequest(new { error = "File is too large (max 10 MB)." });
+
+            // Accept only Excel files — CSV imports would need a different parser and the
+            // template we hand out is .xlsx.
+            var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+            if (ext is not ".xlsx" and not ".xls")
+                return BadRequest(new { error = "Only .xlsx and .xls files are supported." });
+
+            await using var stream = file.OpenReadStream();
+            try
+            {
+                var preview = await _import.PreviewAsync(stream, file.FileName, cancellationToken);
+                return Ok(preview);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Contact import preview failed for file '{File}'", file.FileName);
+                return BadRequest(new { error = "Failed to process the uploaded file." });
+            }
+        }
+
+        [HttpPost("/api/contacts/import/confirm")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportConfirm([FromBody] ConfirmImportDto body, CancellationToken cancellationToken)
+        {
+            if (body is null || body.Rows is null || body.Rows.Count == 0)
+                return BadRequest(new { error = "No rows to import." });
+
+            try
+            {
+                var result = await _import.ConfirmAsync(body, cancellationToken);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("/api/contacts/import/error-report")]
+        [ValidateAntiForgeryToken]
+        public IActionResult ImportErrorReport([FromBody] ErrorReportRequestDto body)
+        {
+            if (body is null || body.Errors is null || body.Errors.Count == 0)
+                return BadRequest(new { error = "No errors to report." });
+
+            var bytes = _import.BuildErrorReport(body);
+            var fileName = $"contact-import-errors-{DateTime.UtcNow:yyyyMMdd-HHmmss}.xlsx";
+            return File(bytes, XlsxMime, fileName);
         }
 
         // ── Tiny request bodies ─────────────────────────────────────────

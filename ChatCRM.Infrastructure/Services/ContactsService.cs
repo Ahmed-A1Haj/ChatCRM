@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using ChatCRM.Application.Chats.DTOs;
 using ChatCRM.Application.Contacts.DTOs;
 using ChatCRM.Application.Interfaces;
 using ChatCRM.Domain.Entities;
@@ -43,6 +44,66 @@ namespace ChatCRM.Infrastructure.Services
                 Page  = page,
                 PageSize = pageSize
             };
+        }
+
+        public async Task<ContactDetailsDto?> GetDetailsAsync(int contactId, CancellationToken cancellationToken = default)
+        {
+            var contact = await _db.WhatsAppContacts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == contactId, cancellationToken);
+            if (contact is null) return null;
+
+            // Pick the most-recent conversation (if any) so the modal can still offer
+            // "Open conversation" for contacts that have one and degrade gracefully when
+            // they don't (the imported-from-Excel case).
+            var primary = await _db.Conversations
+                .AsNoTracking()
+                .Include(c => c.Instance)
+                .Include(c => c.AssignedUser)
+                .Include(c => c.Tags).ThenInclude(t => t.Tag)
+                .Where(c => c.ContactId == contactId)
+                .OrderByDescending(c => c.LastMessageAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var dto = new ContactDetailsDto
+            {
+                ContactId = contact.Id,
+                PhoneNumber = contact.PhoneNumber,
+                DisplayName = contact.DisplayName,
+                AvatarUrl = contact.AvatarUrl,
+                ContactCreatedAt = contact.CreatedAt,
+                LifecycleStage = (byte)contact.LifecycleStage,
+                Country = contact.Country,
+                Language = contact.Language,
+                IsBlocked = contact.IsBlocked,
+            };
+
+            if (primary is not null)
+            {
+                var msgCount = await _db.Messages
+                    .CountAsync(m => m.ConversationId == primary.Id && m.Direction != MessageDirection.Note, cancellationToken);
+                var noteCount = await _db.Messages
+                    .CountAsync(m => m.ConversationId == primary.Id && m.Direction == MessageDirection.Note, cancellationToken);
+
+                dto.ConversationId = primary.Id;
+                dto.ConversationCreatedAt = primary.CreatedAt;
+                dto.InstanceDisplayName = primary.Instance.DisplayName;
+                dto.AssignedUserId = primary.AssignedUserId;
+                dto.AssignedUserName = primary.AssignedUser != null
+                    ? (string.IsNullOrWhiteSpace(primary.AssignedUser.FirstName)
+                        ? primary.AssignedUser.Email
+                        : $"{primary.AssignedUser.FirstName} {primary.AssignedUser.LastName}")
+                    : null;
+                dto.ConversationStatus = (byte)primary.Status;
+                dto.MessageCount = msgCount;
+                dto.NoteCount = noteCount;
+                dto.Tags = primary.Tags
+                    .Select(t => new TagDto { Id = t.TagId, Name = t.Tag.Name, Color = t.Tag.Color })
+                    .ToList();
+                dto.HasConversation = true;
+            }
+
+            return dto;
         }
 
         public async Task<byte[]> ExportCsvAsync(ContactsListQuery query, CancellationToken cancellationToken = default)

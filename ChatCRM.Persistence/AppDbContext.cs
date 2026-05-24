@@ -49,6 +49,11 @@ namespace ChatCRM.Persistence
                 builder.Property(x => x.AvatarUrl).HasMaxLength(260);
                 builder.Property(x => x.Country).HasMaxLength(60);
                 builder.Property(x => x.Language).HasMaxLength(40);
+                builder.Property(x => x.Email).HasMaxLength(254);
+                builder.Property(x => x.Company).HasMaxLength(120);
+                builder.Property(x => x.JobTitle).HasMaxLength(120);
+                builder.Property(x => x.Address).HasMaxLength(255);
+                // Notes can be long free-text — keep as nvarchar(max).
 
                 builder.HasOne(x => x.AssignedAgent)
                     .WithMany()

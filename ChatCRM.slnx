@@ -7,4 +7,7 @@
     <Project Path="ChatCRM.MVC/ChatCRM.MVC.csproj" />
     <Project Path="ChatCRM.Persistence/ChatCRM.Persistence.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="ChatCRM.Tests/ChatCRM.Tests.csproj" />
+  </Folder>
 </Solution>
