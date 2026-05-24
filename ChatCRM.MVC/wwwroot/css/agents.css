@@ -38,16 +38,18 @@
     align-items: center;
     justify-content: center;
     border-radius: 14px;
-    background: color-mix(in oklab, var(--brand) 12%, var(--bg-panel));
+    background: #e3ecd9;
     color: var(--brand);
     flex-shrink: 0;
 }
 .agents-page-title {
     margin: 0 0 3px;
-    font-size: 26px;
-    font-weight: 700;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 30px;
+    font-weight: 500;
     color: var(--text);
-    letter-spacing: -0.4px;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
 }
 .agents-page-sub {
     margin: 0;
@@ -58,17 +60,18 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 11px 18px;
-    background: #0f172a;
-    color: white;
+    padding: 11px 22px;
+    background: var(--brand);
+    color: #f6f1e3;
     border: none;
-    border-radius: 10px;
+    border-radius: 999px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
-    transition: background 120ms ease, transform 120ms ease;
+    transition: background 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+    box-shadow: 0 8px 16px -8px rgba(46, 63, 44, 0.55);
 }
-.agents-create-btn:hover { background: #1e293b; transform: translateY(-1px); }
+.agents-create-btn:hover { background: var(--brand-hover); transform: translateY(-1px); }
 .agents-plus { font-size: 18px; line-height: 1; }
 
 /* ─── Toolbar ─────────────────────────────────────────────────────────── */
@@ -221,12 +224,12 @@
        handle color-mix with undefined custom props gracefully. */
 }
 .agent-status-pill.is-active {
-    background: #d1fae5;
-    color: #047857;
+    background: #e3ecd9;
+    color: #2c4a26;
 }
 .agent-status-pill.is-inactive {
-    background: #fee2e2;
-    color: #b91c1c;
+    background: #f1d9d6;
+    color: #762626;
 }
 .agent-status-dot {
     width: 7px;
@@ -248,16 +251,16 @@
     margin-left: 6px;
 }
 .agent-sync-pill.is-synced {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: #d9e2ec;
+    color: #2a3f5f;
 }
 .agent-sync-pill.is-pending {
-    background: #fef3c7;
-    color: #92400e;
+    background: #f4ead0;
+    color: #6b4f1c;
 }
 .agent-sync-pill.is-error {
-    background: #fee2e2;
-    color: #b91c1c;
+    background: #f1d9d6;
+    color: #762626;
 }
 .agent-sync-dot {
     width: 7px;
@@ -325,8 +328,8 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: #d1fae5;
-    color: #047857;
+    background: #e3ecd9;
+    color: #2c4a26;
     padding: 2px 9px;
     border-radius: 999px;
     font-size: 11px;
@@ -350,16 +353,16 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
-    border-radius: 9px;
-    padding: 7px 9px;
-    color: #047857;
+    background: var(--ok-bg);
+    border: 1px solid rgba(74, 124, 69, 0.30);
+    border-radius: 10px;
+    padding: 8px 10px;
+    color: var(--ok-text);
     font-size: 11.5px;
     line-height: 1.35;
 }
 .agent-default-callout-icon {
-    color: #10b981;
+    color: var(--ok);
     flex-shrink: 0;
     font-size: 14px;
 }
@@ -398,8 +401,8 @@
     justify-content: space-between;
     gap: 6px;
     padding: 10px 14px;
-    border-top: 1px solid var(--border);
-    background: #fafbfc;
+    border-top: 1px solid var(--border-soft);
+    background: var(--bg-soft);
     flex-shrink: 0;
 }
 .agent-card-foot-left {
@@ -431,9 +434,9 @@
     white-space: nowrap;
 }
 .agent-set-default-btn:hover {
-    background: #ecfdf5;
-    border-color: #a7f3d0;
-    color: #047857;
+    background: var(--ok-bg);
+    border-color: rgba(74, 124, 69, 0.30);
+    color: var(--ok-text);
 }
 .agent-set-default-btn.is-current {
     background: var(--bg-soft);
@@ -520,17 +523,17 @@
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    background: color-mix(in oklab, var(--brand) 6%, var(--bg-panel));
-    border: 1px solid color-mix(in oklab, var(--brand) 22%, var(--border));
-    border-radius: 12px;
-    padding: 14px 18px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 16px 20px;
 }
 .agents-howitworks-icon {
     width: 32px;
     height: 32px;
     border-radius: 50%;
     background: var(--brand);
-    color: white;
+    color: #f6f1e3;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -583,7 +586,7 @@ input[type="checkbox"]:disabled + .ag-switch { opacity: 0.55; cursor: not-allowe
 .ag-modal {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.55);
+    background: rgba(31, 41, 28, 0.55);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -592,8 +595,8 @@ input[type="checkbox"]:disabled + .ag-switch { opacity: 0.55; cursor: not-allowe
 }
 .ag-modal-inner {
     background: var(--bg-panel);
-    border-radius: 16px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    border-radius: 22px;
+    box-shadow: 0 24px 60px rgba(31, 41, 28, 0.25);
     width: 100%;
     max-width: 560px;
     max-height: calc(100vh - 48px);
@@ -608,7 +611,7 @@ input[type="checkbox"]:disabled + .ag-switch { opacity: 0.55; cursor: not-allowe
     padding: 18px 22px;
     border-bottom: 1px solid var(--border);
 }
-.ag-modal-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.ag-modal-head h2 { margin: 0; font-family: 'Fraunces', 'Times New Roman', serif; font-size: 20px; font-weight: 500; letter-spacing: -0.01em; color: var(--text); }
 .ag-modal-close {
     background: transparent;
     border: none;
@@ -748,7 +751,7 @@ input[type="checkbox"]:disabled + .ag-switch { opacity: 0.55; cursor: not-allowe
 }
 .auth-btn-danger {
     background: var(--danger);
-    color: white;
+    color: #fff;
     border: 1px solid var(--danger);
 }
 .auth-btn-danger:hover { filter: brightness(1.05); }
@@ -760,25 +763,25 @@ input[type="checkbox"]:disabled + .ag-switch { opacity: 0.55; cursor: not-allowe
     inset-inline-end: 24px;
     background: var(--text);
     color: var(--bg-panel);
-    padding: 10px 16px;
-    border-radius: 10px;
+    padding: 11px 18px;
+    border-radius: 12px;
     font-size: 13px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 16px 32px rgba(31, 41, 28, 0.28);
     z-index: 90;
     max-width: 360px;
 }
-.ag-toast.is-error   { background: var(--danger); }
-.ag-toast.is-success { background: var(--success); }
+.ag-toast.is-error   { background: var(--danger); color: #fff; }
+.ag-toast.is-success { background: var(--ok); color: #fff; }
 
 .d-none { display: none !important; }
 
-/* ─── Card accent palette (cycled by JS) ──────────────────────────────── */
-.agent-card.accent-emerald  { --accent: #10b981; --avatar-bg: #d1fae5; --avatar-fg: #065f46; }
-.agent-card.accent-blue     { --accent: #3b82f6; --avatar-bg: #dbeafe; --avatar-fg: #1d4ed8; }
-.agent-card.accent-purple   { --accent: #8b5cf6; --avatar-bg: #ede9fe; --avatar-fg: #6d28d9; }
-.agent-card.accent-rose     { --accent: #ef4444; --avatar-bg: #fee2e2; --avatar-fg: #b91c1c; }
-.agent-card.accent-amber    { --accent: #f59e0b; --avatar-bg: #fef3c7; --avatar-fg: #b45309; }
-.agent-card.accent-cyan     { --accent: #06b6d4; --avatar-bg: #cffafe; --avatar-fg: #0e7490; }
+/* ─── Card accent palette (cycled by JS) — warm parchment-friendly tones. */
+.agent-card.accent-emerald  { --accent: #4a7c45; --avatar-bg: #e3ecd9; --avatar-fg: #2c4a26; }
+.agent-card.accent-blue     { --accent: #6a8aa3; --avatar-bg: #d9e2ec; --avatar-fg: #2a3f5f; }
+.agent-card.accent-purple   { --accent: #8e7aa3; --avatar-bg: #e6dded; --avatar-fg: #5a3f7a; }
+.agent-card.accent-rose     { --accent: #b34141; --avatar-bg: #f1d9d6; --avatar-fg: #762626; }
+.agent-card.accent-amber    { --accent: #c8a96a; --avatar-bg: #f4ead0; --avatar-fg: #6b4f1c; }
+.agent-card.accent-cyan     { --accent: #6f9a99; --avatar-bg: #d6e5e3; --avatar-fg: #2c5450; }
 
 /* ─── Conversation panel agent picker (used from Chats page) ─────────── */
 .chat-agent-picker {
@@ -812,8 +815,8 @@ input[type="checkbox"]:disabled + .ag-switch { opacity: 0.55; cursor: not-allowe
     z-index: 70;
     background: var(--bg-panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.18);
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(31, 41, 28, 0.18);
     min-width: 240px;
     max-height: 320px;
     overflow-y: auto;

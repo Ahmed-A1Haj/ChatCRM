@@ -149,6 +149,12 @@ function selectConversation(id) {
     loadContactDetails(id);
     updateBadge(id, 0);
 
+    // Auto-open the contact panel on wide screens when a conversation opens.
+    // Mobile (≤1100px) keeps the old behavior so the panel doesn't cover the chat.
+    if (window.innerWidth > 1100) {
+        document.getElementById('contactPanel')?.classList.remove('d-none');
+    }
+
     setComposeMode('reply');
 
     if (window.innerWidth <= 768) {

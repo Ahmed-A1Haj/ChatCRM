@@ -1,51 +1,67 @@
+/*  Load the marketing-landing display font (Fraunces serif) and body
+ *  font (Inter) once for every page that pulls in tokens.css. Keeping
+ *  the import here means the rest of the app inherits the typography
+ *  without having to add link tags to each Razor view.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap");
+
 /*
- * ChatCRM design tokens — a single source of truth for colors.
+ * ChatCRM design tokens — single source of truth for colors.
  *
- * Brand color is intentionally NEUTRAL (indigo) so the UI represents a
- * multi-channel CRM, not any single platform. Platform colors (WhatsApp,
- * Instagram, Messenger) are used ONLY on UI that represents that specific
- * channel — channel badges, channel cards, channel filter pills.
+ * The token NAMES are kept exactly as they were so every CSS file, JS
+ * reference and Razor binding keeps working. Only the VALUES have been
+ * repointed onto the existing landing palette (parchment / sage / forest
+ * green / gold) so the whole dashboard inherits the marketing look.
+ *
+ * Palette source: /Public zone/*.png + landing.css.
+ *   Parchment bg     #f1ece0   Cream card-soft   #fbf8f1
+ *   Forest green     #2e3f2c   Sage              #6f8a64
+ *   Gold accent      #c8a96a   Ink               #20281f
+ *   Hairline border  #d8d2c2
+ *
+ * Platform colors (WhatsApp / Instagram / Messenger) are still used only
+ * on UI that represents that specific channel.
  */
 :root {
-    /* ── Primary brand (indigo) ────────────────────────────── */
-    --brand:        #4f46e5;
-    --brand-hover:  #4338ca;
-    --brand-50:     #eef2ff;
-    --brand-100:    #e0e7ff;
-    --brand-200:    #c7d2fe;
-    --brand-text:   #4338ca;
-    --brand-ring:   rgba(79, 70, 229, 0.18);
+    /* ── Primary brand (forest green from landing) ───────────── */
+    --brand:        #2e3f2c;
+    --brand-hover:  #243223;
+    --brand-50:     #f1ece0;   /* parchment tint surface */
+    --brand-100:    #e7d4a6;   /* warm gold tint for hover/badge */
+    --brand-200:    #aabba4;   /* sage soft — secondary accents */
+    --brand-text:   #2e3f2c;
+    --brand-ring:   rgba(46, 63, 44, 0.18);
 
-    /* ── Semantic states ───────────────────────────────────── */
-    --ok:        #16a34a;
-    --ok-bg:     #dcfce7;
-    --ok-text:   #15803d;
+    /* ── Semantic states (warm-cast so they sit on parchment) ── */
+    --ok:        #4a7c45;
+    --ok-bg:     #e3ecd9;
+    --ok-text:   #2c4a26;
 
-    --warn:      #f59e0b;
-    --warn-bg:   #fef3c7;
-    --warn-text: #92400e;
+    --warn:      #c8a96a;
+    --warn-bg:   #f4ead0;
+    --warn-text: #6b4f1c;
 
-    --danger:      #ef4444;
-    --danger-bg:   #fee2e2;
-    --danger-text: #991b1b;
+    --danger:      #b34141;
+    --danger-bg:   #f1d9d6;
+    --danger-text: #762626;
 
-    /* ── Neutrals ──────────────────────────────────────────── */
-    --bg-page:     #f8fafc;
+    /* ── Neutrals (parchment system) ─────────────────────────── */
+    --bg-page:     #f1ece0;
     --bg-panel:    #ffffff;
-    --bg-soft:     #f9fafb;
-    --bg-muted:    #f3f4f6;
-    --border:      #e5e7eb;
-    --border-soft: #f3f4f6;
-    --text:        #0f172a;
-    --text-muted:  #64748b;
-    --text-dim:    #94a3b8;
+    --bg-soft:     #fbf8f1;
+    --bg-muted:    #ebe6d8;
+    --border:      #d8d2c2;
+    --border-soft: #e8e3d4;
+    --text:        #20281f;
+    --text-muted:  #6a7264;
+    --text-dim:    #8a9085;
 
-    /* ── Chat bubbles — neutral, channel-agnostic ──────────── */
+    /* ── Chat bubbles — neutral, channel-agnostic ─────────────── */
     --bubble-incoming: #ffffff;
-    --bubble-outgoing: #eef2ff;     /* soft indigo tint instead of WhatsApp green */
-    --bubble-note:     #fffbeb;
+    --bubble-outgoing: #e3ecd9;   /* soft sage cream */
+    --bubble-note:     #f4ead0;   /* gold tinted note */
 
-    /* ── Platform brand colors — used ONLY on platform UI ──── */
+    /* ── Platform brand colors — used ONLY on platform UI ────── */
     --channel-whatsapp:  #25d366;
     --channel-instagram: #d6249f;
     --channel-messenger: #0084ff;
