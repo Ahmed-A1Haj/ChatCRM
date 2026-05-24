@@ -129,6 +129,13 @@ namespace ChatCRM.MVC.Controllers
             catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
         }
 
+        [HttpGet("/api/contacts/{id:int}/details")]
+        public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
+        {
+            var details = await _service.GetDetailsAsync(id, cancellationToken);
+            return details is null ? NotFound() : Json(details);
+        }
+
         [HttpGet("/api/contacts/export")]
         public async Task<IActionResult> Export([FromQuery] ContactsListQuery q, CancellationToken cancellationToken)
         {

@@ -730,6 +730,15 @@
     border-color: var(--brand-hover);
     color: #f6f1e3;
 }
+.cd-hero-btn.is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: auto; /* keep onclick reachable so we can show a toast */
+}
+.cd-tab.is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
 
 /* Kebab menu (sits next to Open conversation). */
 .cd-kebab-wrap { position: relative; }

@@ -28,6 +28,11 @@ namespace ChatCRM.Application.Chats.DTOs
 
     public class ContactDetailsDto
     {
+        /// <summary>
+        /// 0 when the contact has no conversation yet (e.g. just imported from Excel —
+        /// they haven't messaged us). The client uses this to disable the "Open conversation"
+        /// link and hide conversation-only counters.
+        /// </summary>
         public int ConversationId { get; set; }
         public int ContactId { get; set; }
         public string PhoneNumber { get; set; } = string.Empty;
@@ -42,6 +47,10 @@ namespace ChatCRM.Application.Chats.DTOs
         public byte LifecycleStage { get; set; }
         public int MessageCount { get; set; }
         public int NoteCount { get; set; }
+        public string? Country { get; set; }
+        public string? Language { get; set; }
+        public bool IsBlocked { get; set; }
+        public bool HasConversation { get; set; }
         public List<TagDto> Tags { get; set; } = new();
 
         // ── 24h customer-service window (phase 5) ──────────────────────────
