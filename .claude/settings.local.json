@@ -8,7 +8,9 @@
       "PowerShell($timeout = 120; $elapsed = 0; while \\($elapsed -lt $timeout\\) { try { docker info 2>$null | Out-Null; if \\($LASTEXITCODE -eq 0\\) { \"Docker engine is ready after $elapsed seconds\"; break } } catch {}; Start-Sleep -Seconds 5; $elapsed += 5; \"Waiting... $elapsed s\" })",
       "PowerShell(docker exec evolution_redis redis-cli ping)",
       "PowerShell(\"\")",
-      "PowerShell(\"--- Redis ping test ---\")"
+      "PowerShell(\"--- Redis ping test ---\")",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\Ahmed_Work\\\\ChatCRM\\\\ChatCRM.Domain\" -Recurse -Depth 2 | Where-Object { -not $_.PSIsContainer } | Select-Object FullName)",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\Ahmed_Work\\\\ChatCRM\\\\ChatCRM.Application\" -Recurse -Depth 2 | Where-Object { -not $_.PSIsContainer } | Select-Object FullName)"
     ]
   }
 }
