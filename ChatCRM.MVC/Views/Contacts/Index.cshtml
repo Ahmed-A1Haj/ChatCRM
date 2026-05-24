@@ -50,6 +50,10 @@
                 @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
                 <input type="search" id="searchInput" placeholder="@T["Contacts.SearchPlaceholder"]" />
             </div>
+            <button class="btn-primary-soft has-icon" id="importBtn" type="button">
+                @await Html.PartialAsync("_Icon", new IconModel("upload", size: 14))
+                <span>@T["Contacts.Import"]</span>
+            </button>
             <button class="btn-primary-soft has-icon" id="exportBtn" type="button">
                 @await Html.PartialAsync("_Icon", new IconModel("download", size: 14))
                 <span class="export-label">@T["Contacts.Export"]</span>
@@ -348,6 +352,103 @@
     </div>
 </div>
 
+@* ─── Import Contacts modal ─── *@
+<div class="modal-backdrop d-none" id="importModal" onclick="if(event.target===this) closeImportModal()">
+    <div class="modal-panel import-modal">
+        <div class="modal-header">
+            <h3 id="importModalTitle">@T["Contacts.Import.Title"]</h3>
+            <button class="modal-close" type="button" onclick="closeImportModal()" aria-label="@T["Action.Close"]">✕</button>
+        </div>
+
+        @* Step 1 — choose action *@
+        <div class="modal-body import-step" id="importStepChoose">
+            <p class="import-intro">@T["Contacts.Import.Intro"]</p>
+
+            <div class="import-actions">
+                <a class="import-action-card" id="importDownloadTemplate" href="/api/contacts/import/template" download>
+                    @await Html.PartialAsync("_Icon", new IconModel("download", size: 18))
+                    <div class="import-action-text">
+                        <strong>@T["Contacts.Import.DownloadTemplate"]</strong>
+                        <span>@T["Contacts.Import.DownloadTemplateHint"]</span>
+                    </div>
+                </a>
+
+                <label class="import-dropzone" id="importDropzone">
+                    @await Html.PartialAsync("_Icon", new IconModel("upload", size: 18))
+                    <div class="import-action-text">
+                        <strong>@T["Contacts.Import.UploadFile"]</strong>
+                        <span id="importDropzoneHint">@T["Contacts.Import.UploadHint"]</span>
+                    </div>
+                    <input type="file" id="importFileInput" accept=".xlsx,.xls" hidden />
+                </label>
+            </div>
+
+            <p class="import-required-hint">@T["Contacts.Import.RequiredHint"]</p>
+        </div>
+
+        @* Step 2 — preview *@
+        <div class="modal-body import-step d-none" id="importStepPreview">
+            <div class="import-summary" id="importSummary"></div>
+
+            <div class="import-duplicates d-none" id="importDuplicatesSection">
+                <strong>@T["Contacts.Import.DuplicatesFound"]</strong>
+                <p class="import-duplicates-hint" id="importDuplicatesHint"></p>
+                <div class="import-duplicate-radios">
+                    <label><input type="radio" name="dupStrategy" value="Skip" checked /> @T["Contacts.Import.DupSkip"]</label>
+                    <label><input type="radio" name="dupStrategy" value="Update" /> @T["Contacts.Import.DupUpdate"]</label>
+                    <label><input type="radio" name="dupStrategy" value="ImportAnyway" /> @T["Contacts.Import.DupImportAnyway"]</label>
+                </div>
+            </div>
+
+            <div class="import-table-wrap">
+                <table class="import-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>@T["Contacts.Import.Col.Name"]</th>
+                            <th>@T["Contacts.Import.Col.Phone"]</th>
+                            <th>@T["Contacts.Import.Col.Email"]</th>
+                            <th>@T["Contacts.Import.Col.Company"]</th>
+                            <th>@T["Contacts.Import.Col.Status"]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="importPreviewBody"></tbody>
+                </table>
+            </div>
+
+            <details class="import-errors d-none" id="importErrorsSection">
+                <summary id="importErrorsSummary"></summary>
+                <ul id="importErrorsList"></ul>
+                <button class="btn-ghost" type="button" id="importDownloadErrorsBtn">
+                    @await Html.PartialAsync("_Icon", new IconModel("download", size: 14))
+                    <span>@T["Contacts.Import.DownloadErrors"]</span>
+                </button>
+            </details>
+        </div>
+
+        @* Step 3 — final summary *@
+        <div class="modal-body import-step d-none" id="importStepResult">
+            <div class="import-result" id="importResultContent"></div>
+            <details class="import-errors d-none" id="importResultErrors">
+                <summary id="importResultErrorsSummary"></summary>
+                <ul id="importResultErrorsList"></ul>
+                <button class="btn-ghost" type="button" id="importResultDownloadErrorsBtn">
+                    @await Html.PartialAsync("_Icon", new IconModel("download", size: 14))
+                    <span>@T["Contacts.Import.DownloadErrors"]</span>
+                </button>
+            </details>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" id="importBackBtn">@T["Action.Cancel"]</button>
+            <button class="btn-primary-soft" type="button" id="importConfirmBtn" disabled>
+                <span id="importConfirmLabel">@T["Contacts.Import.Confirm"]</span>
+                <span class="btn-spinner d-none" aria-hidden="true"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="toast-stack" id="toastStack"></div>
 @Html.AntiForgeryToken()
 
@@ -357,6 +458,7 @@
     window.__CURRENT_USER_ID__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(currentUserId));
 </script>
 <script src="~/js/contacts.js" asp-append-version="true"></script>
+<script src="~/js/contacts-import.js" asp-append-version="true"></script>
 
 @* Per-contact AI agent picker popover (anchored to the clicked row's agent chip). *@
 @Html.AntiForgeryToken()

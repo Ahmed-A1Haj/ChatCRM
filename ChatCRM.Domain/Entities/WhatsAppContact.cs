@@ -24,6 +24,16 @@ namespace ChatCRM.Domain.Entities
 
         public bool IsBlocked { get; set; } = false;
 
+        public string? Email { get; set; }
+
+        public string? Company { get; set; }
+
+        public string? JobTitle { get; set; }
+
+        public string? Address { get; set; }
+
+        public string? Notes { get; set; }
+
         /// <summary>
         /// Per-contact AI agent preference. When a new <see cref="Conversation"/> is created
         /// for this contact, the auto-assignment in <c>EvolutionService.HandleIncomingWebhookAsync</c>
