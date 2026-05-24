@@ -90,6 +90,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
@@ -104,10 +107,26 @@
 @await Html.PartialAsync("_DashboardRail", "dashboard")
 
 <section class="dash-shell">
+    @{
+        var userName = User.Identity?.Name ?? string.Empty;
+        var firstName = userName.Contains('@') ? userName.Split('@')[0] : userName;
+        if (string.IsNullOrWhiteSpace(firstName)) firstName = "there";
+        // Capitalize first letter, leave the rest as-is.
+        firstName = char.ToUpperInvariant(firstName[0]) + firstName.Substring(1);
+        var hour = DateTime.Now.Hour;
+        var greetingKey = hour < 12 ? "Dashboard.Greeting.Morning"
+                         : hour < 18 ? "Dashboard.Greeting.Afternoon"
+                         : "Dashboard.Greeting.Evening";
+        var greetingText = translations.TryGetValue(greetingKey, out var greetingVal) && !string.IsNullOrEmpty(greetingVal)
+                         ? greetingVal
+                         : (hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
+        var todayLabel = DateTime.Now.ToString("MMMM d, yyyy", CultureInfo.GetCultureInfo(culture));
+    }
+
     @* ── Top bar ─────────────────────────────────────────────────── *@
     <header class="dash-topbar">
         <div class="dash-topbar-left">
-            <h1>@T["Dashboard.Title"]</h1>
+            <span class="dash-crumb">@T["Dashboard.Title"]</span>
         </div>
         <div class="dash-topbar-right">
             @await Html.PartialAsync("_BalancePill")
@@ -132,17 +151,24 @@
     <main class="dash-main">
         <div class="dash-container">
 
+            @* ── Greeting block ──────────────────────────────────────── *@
+            <section class="dash-greeting">
+                <h1 class="dash-greeting-h">@greetingText, @firstName <span class="dash-wave" aria-hidden="true">👋</span></h1>
+                <p class="dash-greeting-date">@todayLabel</p>
+            </section>
+
+
             @* ── KPI strip ───────────────────────────────────────────── *@
             <section class="dash-kpis">
                 @foreach (var k in Model.Kpis)
                 {
                     var showDot = k.Key == "Unanswered" && k.Value != "0";
                     <div class="dash-kpi @KpiToneClass(k.Tone)">
+                        <span class="dash-kpi-value">@k.Value</span>
                         <span class="dash-kpi-label">
                             @T[k.LabelKey]
                             @if (showDot) { <span class="dash-kpi-dot" aria-hidden="true"></span> }
                         </span>
-                        <span class="dash-kpi-value">@k.Value</span>
                         @if (!string.IsNullOrEmpty(k.DeltaText))
                         {
                             <span class="dash-kpi-delta @(k.DeltaIsPositive ? "dash-kpi-delta-up" : "dash-kpi-delta-down")">

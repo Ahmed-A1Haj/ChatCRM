@@ -15,11 +15,11 @@
 
 /* ─── Preflight + rate-limit banners ───────────────────────────────────── */
 .tpl-rate-banner {
-    background: color-mix(in oklab, var(--warn) 12%, var(--bg-panel));
-    border: 1px solid color-mix(in oklab, var(--warn) 40%, var(--border));
-    color: var(--text);
-    border-radius: 10px;
-    padding: 10px 14px;
+    background: var(--warn-bg);
+    border: 1px solid rgba(200, 169, 106, 0.40);
+    color: var(--warn-text);
+    border-radius: 12px;
+    padding: 11px 14px;
     font-size: 13px;
     line-height: 1.5;
 }
@@ -158,19 +158,19 @@
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
-.tpl-status.s-draft     { background: var(--bg-soft); color: var(--text-muted); }
-.tpl-status.s-submitted { background: color-mix(in oklab, var(--brand) 12%, var(--bg-panel)); color: var(--brand); }
-.tpl-status.s-approved  { background: color-mix(in oklab, var(--success) 14%, var(--bg-panel)); color: var(--success); }
-.tpl-status.s-rejected  { background: color-mix(in oklab, var(--danger) 14%, var(--bg-panel)); color: var(--danger); }
-.tpl-status.s-paused    { background: color-mix(in oklab, var(--warn) 14%, var(--bg-panel)); color: color-mix(in oklab, var(--warn) 70%, var(--text)); }
-.tpl-status.s-disabled  { background: var(--bg-soft); color: var(--text-muted); }
-.tpl-status.s-stuck     { background: color-mix(in oklab, var(--warn) 18%, var(--bg-panel)); color: color-mix(in oklab, var(--warn) 70%, var(--text)); }
+.tpl-status.s-draft     { background: var(--bg-muted); color: var(--text-muted); }
+.tpl-status.s-submitted { background: var(--bg-soft); color: var(--brand); border: 1px solid var(--border-soft); }
+.tpl-status.s-approved  { background: var(--ok-bg);     color: var(--ok-text); }
+.tpl-status.s-rejected  { background: var(--danger-bg); color: var(--danger-text); }
+.tpl-status.s-paused    { background: var(--warn-bg);   color: var(--warn-text); }
+.tpl-status.s-disabled  { background: var(--bg-muted);  color: var(--text-muted); }
+.tpl-status.s-stuck     { background: var(--warn-bg);   color: var(--warn-text); }
 
 /* ─── Modal ─────────────────────────────────────────────────────────────── */
 .tpl-modal {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.5);
+    background: rgba(31, 41, 28, 0.55);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -179,8 +179,8 @@
 }
 .tpl-modal-inner {
     background: var(--bg-panel);
-    border-radius: 14px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    border-radius: 22px;
+    box-shadow: 0 24px 60px rgba(31, 41, 28, 0.25);
     width: 100%;
     max-width: 640px;
     max-height: calc(100vh - 48px);
@@ -196,8 +196,11 @@
 }
 .tpl-modal-head h2 {
     margin: 0;
-    font-size: 16px;
-    font-weight: 600;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -0.01em;
 }
 .tpl-modal-close {
     background: transparent;
@@ -288,14 +291,14 @@
     inset-inline-end: 24px;
     background: var(--text);
     color: var(--bg-panel);
-    padding: 10px 16px;
-    border-radius: 10px;
+    padding: 11px 18px;
+    border-radius: 12px;
     font-size: 13px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 16px 32px rgba(31, 41, 28, 0.28);
     z-index: 90;
     max-width: 360px;
 }
-.tpl-toast.is-error   { background: var(--danger); }
-.tpl-toast.is-success { background: var(--success); }
+.tpl-toast.is-error   { background: var(--danger); color: #fff; }
+.tpl-toast.is-success { background: var(--ok); color: #fff; }
 
 .d-none { display: none !important; }

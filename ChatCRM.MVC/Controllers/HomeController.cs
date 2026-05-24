@@ -7,9 +7,8 @@ namespace ChatCRM.MVC.Controllers
     public class HomeController : Controller
     {
         /// <summary>
-        /// Root URL handler. Authenticated users go straight to the inbox; everyone else is
-        /// punted to the sign-in page. There is intentionally no view — the legacy marketing
-        /// landing page was removed in favour of taking the user to the actual product.
+        /// Root URL handler. Authenticated users go straight to the inbox; guests see the
+        /// public marketing landing page (see Views/Home/Index.cshtml).
         /// </summary>
         public IActionResult Index()
         {
@@ -18,7 +17,7 @@ namespace ChatCRM.MVC.Controllers
                 return Redirect("/dashboard");
             }
 
-            return RedirectToAction(nameof(AccountController.Login), "Account");
+            return View();
         }
 
         public IActionResult Privacy()

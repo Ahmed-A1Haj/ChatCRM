@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell($stripeExe = \"C:\\\\Users\\\\TSC\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Links\\\\stripe.exe\"; & $stripeExe trigger checkout.session.completed 2>&1 | Out-String)"
+      "PowerShell($stripeExe = \"C:\\\\Users\\\\TSC\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Links\\\\stripe.exe\"; & $stripeExe trigger checkout.session.completed 2>&1 | Out-String)",
+      "Bash(dotnet build *)",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\")",
+      "PowerShell(\"Docker Desktop launching...\")",
+      "PowerShell($timeout = 120; $elapsed = 0; while \\($elapsed -lt $timeout\\) { try { docker info 2>$null | Out-Null; if \\($LASTEXITCODE -eq 0\\) { \"Docker engine is ready after $elapsed seconds\"; break } } catch {}; Start-Sleep -Seconds 5; $elapsed += 5; \"Waiting... $elapsed s\" })",
+      "PowerShell(docker exec evolution_redis redis-cli ping)",
+      "PowerShell(\"\")",
+      "PowerShell(\"--- Redis ping test ---\")"
     ]
   }
 }

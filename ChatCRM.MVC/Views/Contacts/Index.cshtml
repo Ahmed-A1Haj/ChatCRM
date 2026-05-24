@@ -19,6 +19,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@T["Contacts.Title"] — ChatCRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
@@ -38,11 +41,15 @@
 <main class="contacts-page">
 
     <header class="contacts-header">
-        <div>
+        <div class="contacts-header-title">
             <h1 class="contacts-title">@T["Contacts.Title"]</h1>
             <p class="contacts-sub">@T["Contacts.Subtitle"]</p>
         </div>
         <div class="contacts-toolbar">
+            <div class="filter-search contacts-header-search">
+                @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
+                <input type="search" id="searchInput" placeholder="@T["Contacts.SearchPlaceholder"]" />
+            </div>
             <button class="btn-primary-soft has-icon" id="exportBtn" type="button">
                 @await Html.PartialAsync("_Icon", new IconModel("download", size: 14))
                 <span class="export-label">@T["Contacts.Export"]</span>
@@ -52,11 +59,6 @@
     </header>
 
     <section class="contacts-filters">
-        <div class="filter-search">
-            @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
-            <input type="search" id="searchInput" placeholder="@T["Contacts.SearchPlaceholder"]" />
-        </div>
-
         <select id="lifecycleFilter" class="filter-select" aria-label="@T["Contacts.Filter.Lifecycle"]">
             <option value="">@T["Contacts.Filter.AllLifecycles"]</option>
             <option value="0">@T["Lifecycle.NewClient"]</option>
@@ -137,70 +139,193 @@
     </footer>
 </main>
 
-@* ─── Contact Details modal ─── *@
+@* ─── Contact Details modal (Lead card detail reference) ─── *@
 <div class="modal-backdrop d-none" id="contactDetailsModal" onclick="if(event.target===this) closeContactDetailsModal()">
-    <div class="modal-panel modal-panel-detail">
-        <div class="modal-header">
-            <h3>@T["Contacts.Modal.Title"]</h3>
-            <button class="modal-close" type="button" onclick="closeContactDetailsModal()">✕</button>
-        </div>
-        <div class="modal-body cd-body">
+    <div class="modal-panel modal-panel-detail cd-shell">
+        <button class="cd-close" type="button" onclick="closeContactDetailsModal()" aria-label="@T["Action.Close"]">✕</button>
+
+        <div class="cd-body">
             <div class="cd-loading" id="cdLoading">@T["Action.Loading"]</div>
 
             <div class="cd-content d-none" id="cdContent">
-                <div class="cd-hero">
-                    <div class="cd-avatar" id="cdAvatar">?</div>
-                    <div class="cd-name" id="cdName">—</div>
-                    <div class="cd-phone" id="cdPhone">—</div>
-                </div>
 
-                <dl class="cd-grid">
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.Lifecycle"]</dt>
-                        <dd id="cdLifecycle"><span class="badge-btn lc-gray"><span class="badge-dot"></span>—</span></dd>
+                @* ── HERO ROW ─────────────────────────────────────────── *@
+                <header class="cd-hero">
+                    <div class="cd-hero-avatar-wrap">
+                        <div class="cd-avatar" id="cdAvatar">?</div>
                     </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.Channel"]</dt>
-                        <dd id="cdChannel">—</dd>
+
+                    <div class="cd-hero-meta">
+                        <div class="cd-hero-name-row">
+                            <h2 class="cd-name" id="cdName">—</h2>
+                            <span class="cd-pill" id="cdLifecycle"><span class="badge-dot"></span>—</span>
+                        </div>
+                        <div class="cd-company" id="cdChannel">—</div>
+                        <div class="cd-hero-channels" id="cdChannelChips"></div>
                     </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.Country"]</dt>
-                        <dd id="cdCountry">—</dd>
+
+                    <div class="cd-hero-stage">
+                        <span class="cd-hero-label">@T["Contacts.Column.Lifecycle"]</span>
+                        <div class="cd-hero-stage-display" id="cdHeroStageDisplay" title="@T["Contacts.Column.Lifecycle"]">
+                            <span id="cdHeroStageText">—</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
                     </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.Language"]</dt>
-                        <dd id="cdLanguage">—</dd>
+
+                    <div class="cd-hero-deal">
+                        <span class="cd-hero-label">@T["Contacts.TotalMessages"]</span>
+                        <div class="cd-hero-deal-value" id="cdHeroMsgValue">0</div>
+                        <div class="cd-hero-deal-sub">@T["Contacts.FirstContact"]: <span id="cdHeroCreated">—</span></div>
                     </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.AssignedTo"]</dt>
-                        <dd id="cdAssigned">@T["Inbox.Unassigned"]</dd>
+
+                    <div class="cd-hero-actions">
+                        <a href="#" class="cd-hero-btn cd-hero-btn-primary" id="cdOpenChat">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            <span>@T["Contacts.OpenConversation"]</span>
+                        </a>
+                        <div class="cd-kebab-wrap">
+                            <button type="button" class="cd-hero-btn cd-hero-kebab" id="cdKebabBtn" aria-haspopup="menu" aria-label="@T["Roles.Action.ActionsAria"]" title="@T["Roles.Action.ActionsAria"]">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+                            </button>
+                            <div class="cd-kebab-menu d-none" id="cdKebabMenu" role="menu">
+                                <button type="button" class="cd-kebab-item" id="cdKebabBlock">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                    <span id="cdKebabBlockLabel">@T["Contacts.Confirm.Block.Action"]</span>
+                                </button>
+                                <button type="button" class="cd-kebab-item cd-kebab-item-danger" id="cdKebabDelete">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    <span>@T["Contacts.Confirm.Delete.Action"]</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Column.Status"]</dt>
-                        <dd id="cdStatus"><span class="badge-btn status-badge status-open"><span class="status-dot-inline"></span>@T["Inbox.Open"]</span></dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.Blocked"]</dt>
-                        <dd id="cdBlocked">@T["Contacts.NotBlocked"]</dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.FirstContact"]</dt>
-                        <dd id="cdCreated">—</dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.TotalMessages"]</dt>
-                        <dd id="cdMsgCount">0</dd>
-                    </div>
-                    <div class="cd-row">
-                        <dt>@T["Contacts.InternalNotes"]</dt>
-                        <dd id="cdNoteCount">0</dd>
-                    </div>
-                </dl>
+                </header>
+
+                @* ── TAB BAR — Overview is the live tab; the others are visual
+                   placeholders to mirror the reference. *@
+                <nav class="cd-tabs" aria-label="@T["Contacts.Modal.Title"]">
+                    <button type="button" class="cd-tab is-active" data-cd-tab="overview">@T["Dashboard.Pipeline.Title"]</button>
+                    <button type="button" class="cd-tab" data-cd-tab="conversations" id="cdTabConversations">@T["Inbox.Title"]</button>
+                    <button type="button" class="cd-tab" data-cd-tab="activity">@T["Dashboard.Activity.Title"]</button>
+                </nav>
+
+                @* ── BODY 4-COLUMN GRID (collapses on smaller screens). *@
+                <div class="cd-grid-cols">
+
+                    @* LEFT — Contact Info ─────────────────────────────── *@
+                    <section class="cd-card cd-card-info">
+                        <header class="cd-card-head">
+                            <h3>@T["Contacts.Modal.Title"]</h3>
+                        </header>
+                        <ul class="cd-info-list">
+                            <li class="cd-info-row">
+                                <span class="cd-info-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.1 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"/></svg></span>
+                                <span class="cd-info-val" id="cdPhone">—</span>
+                            </li>
+                            <li class="cd-info-row">
+                                <span class="cd-info-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                                <span class="cd-info-val" id="cdCountry">—</span>
+                            </li>
+                            <li class="cd-info-row">
+                                <span class="cd-info-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span>
+                                <span class="cd-info-val" id="cdLanguage">—</span>
+                            </li>
+                            <li class="cd-info-row">
+                                <span class="cd-info-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+                                <span class="cd-info-val" id="cdAssigned">@T["Inbox.Unassigned"]</span>
+                            </li>
+                        </ul>
+                    </section>
+
+                    @* MIDDLE — Deal Information (stages stepper + meta + tags) *@
+                    <section class="cd-card cd-card-deal">
+                        <header class="cd-card-head">
+                            <h3>@T["Contacts.Column.Lifecycle"]</h3>
+                        </header>
+
+                        <div class="cd-stages" id="cdStages" aria-label="@T["Contacts.Column.Lifecycle"]">
+                            <span class="cd-stage" data-stage="0">@T["Lifecycle.NewClient"]</span>
+                            <span class="cd-stage" data-stage="1">@T["Lifecycle.NotResponding"]</span>
+                            <span class="cd-stage" data-stage="2">@T["Lifecycle.Interested"]</span>
+                            <span class="cd-stage" data-stage="3">@T["Lifecycle.Thinking"]</span>
+                            <span class="cd-stage" data-stage="4">@T["Lifecycle.WantsAMeeting"]</span>
+                            <span class="cd-stage" data-stage="5">@T["Lifecycle.WaitingForMeeting"]</span>
+                            <span class="cd-stage" data-stage="6">@T["Lifecycle.Discussed"]</span>
+                            <span class="cd-stage" data-stage="7">@T["Lifecycle.PotentialClient"]</span>
+                            <span class="cd-stage" data-stage="8">@T["Lifecycle.WillMakePayment"]</span>
+                            <span class="cd-stage" data-stage="9">@T["Lifecycle.WaitingForContract"]</span>
+                            <span class="cd-stage" data-stage="10">@T["Lifecycle.OurClient"]</span>
+                        </div>
+
+                        <div class="cd-deal-meta">
+                            <div>
+                                <div class="cd-deal-meta-label">@T["Contacts.Column.Status"]</div>
+                                <div class="cd-deal-meta-val" id="cdStatus"><span class="badge-btn status-badge status-open"><span class="status-dot-inline"></span>@T["Inbox.Open"]</span></div>
+                            </div>
+                            <div>
+                                <div class="cd-deal-meta-label">@T["Contacts.Blocked"]</div>
+                                <div class="cd-deal-meta-val" id="cdBlocked">@T["Contacts.NotBlocked"]</div>
+                            </div>
+                        </div>
+
+                        <div class="cd-tags-row">
+                            <span class="cd-tags-label">Tags</span>
+                            <div class="cd-tags" id="cdTags"></div>
+                        </div>
+                    </section>
+
+                    @* RIGHT — Engagement summary + Add note quick-form *@
+                    <section class="cd-card cd-card-insights">
+                        <header class="cd-card-head">
+                            <h3>Engagement</h3>
+                        </header>
+                        <ul class="cd-insights-list">
+                            <li>
+                                <span class="cd-insights-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14 9l7 2-7 2-2 7-2-7-7-2 7-2 2-7z"/></svg></span>
+                                <div class="cd-insights-body">
+                                    <span class="cd-insights-label">@T["Contacts.TotalMessages"]</span>
+                                    <strong id="cdMsgCount">0</strong>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="cd-insights-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                                <div class="cd-insights-body">
+                                    <span class="cd-insights-label">@T["Contacts.InternalNotes"]</span>
+                                    <strong id="cdNoteCount">0</strong>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="cd-insights-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+                                <div class="cd-insights-body">
+                                    <span class="cd-insights-label">@T["Contacts.FirstContact"]</span>
+                                    <strong id="cdCreated">—</strong>
+                                </div>
+                            </li>
+                        </ul>
+
+                        <form class="cd-note-form" id="cdNoteForm">
+                            <label class="cd-note-form-label" for="cdNoteInput">@T["Compose.Note"]</label>
+                            <textarea id="cdNoteInput" class="cd-note-input" rows="2" placeholder="@T["TemplatePicker.SearchPlaceholder"]" maxlength="2000"></textarea>
+                            <div class="cd-note-form-foot">
+                                <span class="cd-note-feedback" id="cdNoteFeedback"></span>
+                                <button type="submit" class="cd-note-submit" id="cdNoteSubmit">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                    <span>@T["Compose.Note"]</span>
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+
+                    @* FAR-RIGHT — Activity timeline (seeded from existing data) *@
+                    <section class="cd-card cd-card-activity">
+                        <header class="cd-card-head">
+                            <h3>@T["Dashboard.Activity.Title"]</h3>
+                        </header>
+                        <ol class="cd-timeline" id="cdTimeline"></ol>
+                    </section>
+
+                </div>
             </div>
-        </div>
-        <div class="modal-actions cd-actions">
-            <button class="btn-ghost" type="button" onclick="closeContactDetailsModal()">@T["Action.Close"]</button>
-            <a href="#" class="btn-primary-soft" id="cdOpenChat">@T["Contacts.OpenConversation"]</a>
         </div>
     </div>
 </div>

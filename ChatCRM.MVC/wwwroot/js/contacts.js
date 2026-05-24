@@ -255,7 +255,7 @@ function renderRow(c) {
     const blockedTag = c.isBlocked ? `<span class="cell-blocked-tag">${escapeHtml(t('Contacts.Blocked'))}</span>` : '';
 
     return `
-    <tr data-id="${c.id}" data-conv-id="${c.primaryConversationId ?? ''}" data-instance-id="${c.primaryInstanceId ?? ''}" class="${c.isBlocked ? 'is-blocked' : ''}">
+    <tr data-id="${c.id}" data-conv-id="${c.primaryConversationId ?? ''}" data-instance-id="${c.primaryInstanceId ?? ''}" data-channel-type="${c.channelType ?? ''}" data-name="${escapeHtml(c.displayName || c.phoneNumber || '')}" class="${c.isBlocked ? 'is-blocked' : ''}">
         <td>
             <div class="cell-contact">
                 <span class="cell-avatar">${escapeHtml(initials)}</span>
@@ -467,6 +467,12 @@ document.addEventListener('click', async (e) => {
         } else {
             showToast(t('Contacts.Toast.LifecycleUpdated', stageName(stage)), 'success');
             loadContacts();
+            // If the modal is open with this contact, repaint its stage live.
+            if (_cdCtx.contactId === id) {
+                paintCdLifecycle(stage);
+                const trigger = document.getElementById('cdHeroStageDisplay');
+                if (trigger) trigger.dataset.current = String(stage);
+            }
         }
         closeAllPopovers();
         return;
@@ -482,6 +488,7 @@ document.addEventListener('click', async (e) => {
         } else {
             showToast(status === 2 ? t('Contacts.Toast.MarkedClosed') : t('Contacts.Toast.Reopened'), 'success');
             loadContacts();
+            if (_cdCtx.contactId === id) paintCdStatus(status);
         }
         closeAllPopovers();
         return;
@@ -497,6 +504,12 @@ document.addEventListener('click', async (e) => {
         } else {
             showToast(userId ? t('Contacts.Toast.Assigned') : t('Contacts.Toast.Unassigned'), 'success');
             loadContacts();
+            if (_cdCtx.contactId === id) {
+                // Look up the display name from the team list we already have.
+                const team = (window.__TEAM__ || []);
+                const found = team.find(u => u.id === userId);
+                paintCdAssigned(found ? found.name : null);
+            }
         }
         closeAllPopovers();
         return;
@@ -512,7 +525,8 @@ document.addEventListener('click', async (e) => {
             // Open the contact-details modal in place (no navigation).
             const convId = row?.dataset.convId;
             const instId = row?.dataset.instanceId;
-            openContactDetails(convId, instId);
+            const chType = row?.dataset.channelType;
+            openContactDetails(convId, instId, chType);
             return;
         }
 
@@ -711,10 +725,19 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
 /* ─── Boot ──────────────────────────────────────────────────────────── */
 loadContacts();
 
-/* ─── Contact Details modal ───────────────────────────────────────── */
-function openContactDetails(conversationId, instanceId) {
+/* ─── Contact Details modal (Lead Card Detail) ────────────────────── */
+// Stashed per-open so populateDetails() can use what the row already knows
+// (channel type) and other handlers know what conversation we're editing.
+const _cdCtx = { conversationId: null, instanceId: null, channelType: null, contactId: null };
+
+function openContactDetails(conversationId, instanceId, channelType) {
     const modal = document.getElementById('contactDetailsModal');
     if (!modal) return;
+
+    _cdCtx.conversationId = conversationId ? parseInt(conversationId, 10) : null;
+    _cdCtx.instanceId     = instanceId     ? parseInt(instanceId, 10)     : null;
+    _cdCtx.channelType    = (channelType === '' || channelType == null) ? null : parseInt(channelType, 10);
+    _cdCtx.contactId      = null;
 
     document.getElementById('cdLoading').classList.remove('d-none');
     document.getElementById('cdLoading').textContent = t('Action.Loading');
@@ -744,55 +767,405 @@ function openContactDetails(conversationId, instanceId) {
 
 function closeContactDetailsModal() {
     document.getElementById('contactDetailsModal')?.classList.add('d-none');
+    // Trigger a refresh of the underlying table so any edits made inside the
+    // modal (lifecycle / status / assignee / language / name) are visible.
+    if (typeof loadContacts === 'function') loadContacts();
 }
 window.closeContactDetailsModal = closeContactDetailsModal;
+
+/* Update the cd-stages bar to highlight a given stage. */
+function paintCdStages(stage) {
+    const stagesBar = document.getElementById('cdStages');
+    if (!stagesBar) return;
+    stagesBar.querySelectorAll('.cd-stage').forEach(el => {
+        const idx = parseInt(el.getAttribute('data-stage'), 10);
+        el.classList.remove('is-active', 'is-done');
+        if (idx < stage) el.classList.add('is-done');
+        else if (idx === stage) el.classList.add('is-active');
+    });
+}
+
+/* Repaint the hero stage pill + the side-column lifecycle badge. */
+function paintCdLifecycle(stage) {
+    const s = STAGES[stage] ?? STAGES[0];
+    const heroText = document.getElementById('cdHeroStageText');
+    if (heroText) heroText.textContent = t(s.key);
+    const pill = document.getElementById('cdLifecycle');
+    if (pill) {
+        pill.className = 'cd-pill';
+        pill.innerHTML = `<span class="badge-btn lc-${s.cls}" style="cursor:default"><span class="badge-dot"></span>${escapeHtml(t(s.key))}</span>`;
+    }
+    paintCdStages(stage);
+}
+
+/* Repaint the status badge (Open / Closed). */
+function paintCdStatus(status) {
+    const isClosed = status === 2;
+    const el = document.getElementById('cdStatus');
+    if (!el) return;
+    el.innerHTML =
+        `<button type="button" class="badge-btn status-badge ${isClosed ? 'status-closed' : 'status-open'} cd-status-toggle"
+                title="${escapeHtml(isClosed ? t('Contacts.Toast.Reopened') : t('Contacts.Toast.MarkedClosed'))}">
+            <span class="status-dot-inline"></span>${escapeHtml(isClosed ? t('Inbox.Closed') : t('Inbox.Open'))}
+        </button>`;
+}
+
+/* Repaint the assigned-user value as a popover trigger so click opens the team picker. */
+function paintCdAssigned(name) {
+    const el = document.getElementById('cdAssigned');
+    if (!el) return;
+    const id = _cdCtx.contactId;
+    // Look up current userId from the team list if we have a match by name.
+    const team = (window.__TEAM__ || []);
+    const matched = team.find(u => u.name === name);
+    const currentId = matched ? matched.id : '';
+    const inner = name
+        ? `<span class="cd-assignee"><span class="assignee-avatar">${escapeHtml(avatarInitials(name))}</span>${escapeHtml(name)}</span>`
+        : `<span class="cell-muted">${escapeHtml(t('Inbox.Unassigned'))}</span>`;
+    el.innerHTML = id
+        ? `<button type="button" class="cd-assigned-btn" data-popover="assignee" data-id="${id}" data-current="${escapeHtml(currentId)}">
+              ${inner}
+              <span class="chev">▾</span>
+           </button>`
+        : inner;
+}
 
 function populateDetails(d) {
     document.getElementById('cdLoading').classList.add('d-none');
     document.getElementById('cdContent').classList.remove('d-none');
 
+    // Stash the contactId so the wired controls can call /api/contacts/{id}/...
+    _cdCtx.contactId = d.contactId;
+
+    // ── Hero: avatar (image OR initials) ──
     const initials = avatarInitials(d.displayName || d.phoneNumber);
-    document.getElementById('cdAvatar').textContent = initials;
-    document.getElementById('cdName').textContent  = d.displayName || d.phoneNumber;
-    document.getElementById('cdPhone').textContent = d.phoneNumber ? '+' + d.phoneNumber : '—';
+    const avatarEl = document.getElementById('cdAvatar');
+    if (d.avatarUrl) {
+        avatarEl.innerHTML = `<img src="${escapeHtml(d.avatarUrl)}" alt="">`;
+    } else {
+        avatarEl.textContent = initials;
+    }
 
-    // Lifecycle
-    const stage = STAGES[d.lifecycleStage] ?? STAGES[0];
-    document.getElementById('cdLifecycle').innerHTML =
-        `<span class="badge-btn lc-${stage.cls}" style="cursor:default"><span class="badge-dot"></span>${escapeHtml(t(stage.key))}</span>`;
+    // Name — static display (no rename API on the backend).
+    document.getElementById('cdName').textContent = d.displayName || d.phoneNumber || '—';
 
-    // Channel
+    // Company / channel line under the name (display only — derived from instance).
     document.getElementById('cdChannel').textContent = d.instanceDisplayName || '—';
 
-    // Country / Language with muted Unknown
+    // Channel chip uses the row's known channelType, falling back to instance name.
+    renderChannelChip(d);
+
+    // Lifecycle pill + hero stage display (wire it as a popover trigger).
+    paintCdLifecycle(d.lifecycleStage ?? 0);
+    const heroStage = document.getElementById('cdHeroStageDisplay');
+    if (heroStage && d.contactId) {
+        heroStage.setAttribute('data-popover', 'lifecycle');
+        heroStage.setAttribute('data-id', String(d.contactId));
+        heroStage.setAttribute('data-current', String(d.lifecycleStage ?? 0));
+    }
+
+    // ── Contact-info column rows ──
+    document.getElementById('cdPhone').textContent = d.phoneNumber ? '+' + d.phoneNumber : '—';
     document.getElementById('cdCountry').innerHTML = d.country
         ? escapeHtml(d.country)
         : `<span class="cell-muted">${escapeHtml(t('Contacts.Unknown'))}</span>`;
-    document.getElementById('cdLanguage').innerHTML = d.language
-        ? escapeHtml(d.language)
-        : `<span class="cell-muted">${escapeHtml(t('Contacts.Unknown'))}</span>`;
 
-    // Assignee
-    if (d.assignedUserName) {
-        document.getElementById('cdAssigned').innerHTML =
-            `<span class="cd-assignee"><span class="assignee-avatar">${escapeHtml(avatarInitials(d.assignedUserName))}</span>${escapeHtml(d.assignedUserName)}</span>`;
-    } else {
-        document.getElementById('cdAssigned').innerHTML = `<span class="cell-muted">${escapeHtml(t('Inbox.Unassigned'))}</span>`;
-    }
+    // Language row → inline editor (click-to-edit, posts to /api/contacts/{id}/language).
+    const langEl = document.getElementById('cdLanguage');
+    langEl.innerHTML = d.language
+        ? `<span class="cd-editable" id="cdLangText">${escapeHtml(d.language)}</span>`
+        : `<span class="cell-muted cd-editable" id="cdLangText">${escapeHtml(t('Contacts.Unknown'))}</span>`;
+    const langText = document.getElementById('cdLangText');
+    langText.title = 'Click to edit';
+    langText.onclick = () => startInlineEdit(langText, async (next) => {
+        const id = _cdCtx.contactId; if (!id) return false;
+        const resp = await postJson(`/api/contacts/${id}/language`, { contactId: id, language: next });
+        if (resp.ok) { showToast('Updated', 'success'); return true; }
+        showToast('Update failed', 'error'); return false;
+    });
 
-    // Status
-    const isClosed = d.conversationStatus === 2;
-    document.getElementById('cdStatus').innerHTML =
-        `<span class="badge-btn status-badge ${isClosed ? 'status-closed' : 'status-open'}" style="cursor:default">
-            <span class="status-dot-inline"></span>${escapeHtml(isClosed ? t('Inbox.Closed') : t('Inbox.Open'))}
-        </span>`;
+    // Assignee row (click → popover with team list)
+    paintCdAssigned(d.assignedUserName);
 
-    // Other fields
+    // Status (button — click to toggle Open/Closed)
+    paintCdStatus(d.conversationStatus ?? 0);
+
+    // Blocked
     const blocked = d.isBlocked === true;
     document.getElementById('cdBlocked').innerHTML = blocked
         ? `<span class="cell-blocked-tag">${escapeHtml(t('Contacts.Blocked'))}</span>`
         : escapeHtml(t('Contacts.NotBlocked'));
-    document.getElementById('cdCreated').textContent = fmtDate(d.contactCreatedAt) || '—';
+
+    // ── Engagement counters ──
+    const created = fmtDate(d.contactCreatedAt) || '—';
+    document.getElementById('cdCreated').textContent = created;
     document.getElementById('cdMsgCount').textContent = d.messageCount ?? 0;
     document.getElementById('cdNoteCount').textContent = d.noteCount ?? 0;
+    const heroCreated = document.getElementById('cdHeroCreated');
+    const heroMsgVal  = document.getElementById('cdHeroMsgValue');
+    if (heroCreated) heroCreated.textContent = created;
+    if (heroMsgVal)  heroMsgVal.textContent  = d.messageCount ?? 0;
+
+    // ── Tags row ──
+    const tagsHost = document.getElementById('cdTags');
+    if (tagsHost) {
+        const tags = Array.isArray(d.tags) ? d.tags : [];
+        if (tags.length === 0) {
+            tagsHost.innerHTML = `<span class="cd-tag-empty">${escapeHtml(t('Contacts.Unknown'))}</span>`;
+        } else {
+            tagsHost.innerHTML = tags.map(tag => {
+                const color = tag.color || '#aabba4';
+                return `<span class="cd-tag" style="border-color:${color}33;color:${color}">${escapeHtml(tag.name || '')}</span>`;
+            }).join('');
+        }
+    }
+
+    // ── Activity timeline — seeded from the existing counts/dates. ──
+    renderCdTimeline(d);
+
+    // Tabs: route "Conversations" to the chat link.
+    const tabConv = document.getElementById('cdTabConversations');
+    const openLink = document.getElementById('cdOpenChat');
+    if (tabConv && openLink) {
+        tabConv.onclick = (e) => { e.preventDefault(); if (openLink.href) window.location.href = openLink.href; };
+    }
 }
+
+/* Channel chip in the hero — uses the channelType we stashed when the modal
+   was opened (falls back to inferring from the instance display name). */
+function renderChannelChip(d) {
+    const chipsHost = document.getElementById('cdChannelChips');
+    if (!chipsHost) return;
+
+    const CHANNEL_PALETTE = [
+        { name: 'WhatsApp',  bg: '#25d366', letter: 'W' },
+        { name: 'Instagram', bg: 'linear-gradient(135deg,#feda77,#d6249f,#4f5bd5)', letter: 'I' },
+        { name: 'Messenger', bg: '#0084ff', letter: 'M' },
+        { name: 'Telegram',  bg: '#229ed9', letter: 'T' }
+    ];
+    let pick = null;
+    if (_cdCtx.channelType != null && CHANNEL_PALETTE[_cdCtx.channelType]) {
+        pick = CHANNEL_PALETTE[_cdCtx.channelType];
+    } else {
+        const ch = (d.instanceDisplayName || '').toLowerCase();
+        if      (ch.includes('whatsapp'))  pick = CHANNEL_PALETTE[0];
+        else if (ch.includes('instagram')) pick = CHANNEL_PALETTE[1];
+        else if (ch.includes('messenger') || ch.includes('facebook')) pick = CHANNEL_PALETTE[2];
+        else if (ch.includes('telegram'))  pick = CHANNEL_PALETTE[3];
+    }
+    if (!pick) pick = { name: d.instanceDisplayName || '—', bg: '#6f8a64', letter: (d.instanceDisplayName || '?')[0].toUpperCase() };
+
+    chipsHost.innerHTML = `
+      <span class="cd-hero-chip" title="${escapeHtml(d.instanceDisplayName || '')}">
+        <span class="cd-hero-chip-dot" style="background:${pick.bg}">${escapeHtml(pick.letter)}</span>
+        <span>${escapeHtml(pick.name)}</span>
+        <svg class="cd-hero-chip-check" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>`;
+}
+
+/* Activity timeline (right column) — seeded from real data we have today. */
+function renderCdTimeline(d) {
+    const timeline = document.getElementById('cdTimeline');
+    if (!timeline) return;
+
+    const iconSvg = (kind) => {
+        if (kind === 'message') return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+        if (kind === 'note')    return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+        return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+    };
+
+    const items = [];
+    if (d.lastIncomingAtUtc) {
+        items.push({ icon: 'message', title: t('Inbox.Title'), time: fmtDate(d.lastIncomingAtUtc), sub: d.displayName || d.phoneNumber || '' });
+    }
+    if (d.messageCount > 0) {
+        items.push({ icon: 'message', title: `${d.messageCount} ${t('Contacts.TotalMessages').toLowerCase()}`, time: '', sub: d.instanceDisplayName || '' });
+    }
+    if (d.noteCount > 0) {
+        items.push({ icon: 'note', title: `${d.noteCount} ${t('Contacts.InternalNotes').toLowerCase()}`, time: '', sub: '' });
+    }
+    if (d.contactCreatedAt) {
+        items.push({ icon: 'plus', title: t('Dashboard.Activity.Title'), time: fmtDate(d.contactCreatedAt), sub: d.displayName || d.phoneNumber || '' });
+    }
+
+    timeline.innerHTML = items.length === 0
+        ? `<li class="cd-timeline-empty">${escapeHtml(t('Dashboard.Attention.EmptyTitle'))}</li>`
+        : items.map(item => `
+            <li class="cd-timeline-item">
+                <span class="cd-timeline-icon">${iconSvg(item.icon)}</span>
+                <div class="cd-timeline-body">
+                    <div class="cd-timeline-title">${escapeHtml(item.title)}</div>
+                    ${item.time ? `<div class="cd-timeline-time">${escapeHtml(item.time)}</div>` : ''}
+                    ${item.sub  ? `<div class="cd-timeline-sub">${escapeHtml(item.sub)}</div>`  : ''}
+                </div>
+            </li>`).join('');
+}
+
+/* ─── Inline-edit helper (used by name + language) ─────────────────────
+   Replaces the target element with a text input, restores it on Esc/blur.
+   onSave(value) returns a promise<boolean>; on success the new value sticks. */
+function startInlineEdit(el, onSave) {
+    if (el.dataset.editing === '1') return;
+    el.dataset.editing = '1';
+    const original = el.textContent;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = original.trim() === '—' || el.classList.contains('cell-muted') ? '' : original.trim();
+    input.className = 'cd-inline-input';
+    el.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const finish = async (commit) => {
+        if (input._done) return;
+        input._done = true;
+        if (commit && input.value.trim() && input.value.trim() !== original.trim()) {
+            const ok = await onSave(input.value.trim());
+            if (ok) el.textContent = input.value.trim();
+        }
+        // Restore the original element (with whatever textContent it now has).
+        el.dataset.editing = '0';
+        input.replaceWith(el);
+    };
+
+    input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+        if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', () => finish(true));
+}
+
+/* ─── Modal-scoped event wiring (status toggle, kebab, note submit) ───── */
+document.addEventListener('click', async (e) => {
+    // STATUS TOGGLE — click the Open/Closed pill to flip it.
+    const statusBtn = e.target.closest('.cd-status-toggle');
+    if (statusBtn) {
+        const id = _cdCtx.contactId;
+        if (!id) return;
+        const isClosed = statusBtn.classList.contains('status-closed');
+        const next = isClosed ? 0 : 2;
+        const resp = await postJson(`/api/contacts/${id}/status`, { status: next });
+        if (resp.ok) {
+            showToast(next === 2 ? t('Contacts.Toast.MarkedClosed') : t('Contacts.Toast.Reopened'), 'success');
+            paintCdStatus(next);
+            if (typeof loadContacts === 'function') loadContacts();
+        } else {
+            showToast(t('Contacts.Toast.StatusFailed'), 'error');
+        }
+        return;
+    }
+
+    // KEBAB toggle
+    const kebabBtn = e.target.closest('#cdKebabBtn');
+    if (kebabBtn) {
+        const menu = document.getElementById('cdKebabMenu');
+        if (menu) menu.classList.toggle('d-none');
+        return;
+    }
+
+    // KEBAB → Block / Unblock
+    const blockItem = e.target.closest('#cdKebabBlock');
+    if (blockItem) {
+        document.getElementById('cdKebabMenu')?.classList.add('d-none');
+        const id = _cdCtx.contactId; if (!id) return;
+        const blockedTagEl = document.querySelector('#cdBlocked .cell-blocked-tag');
+        const isBlocked = !!blockedTagEl;
+        const next = !isBlocked;
+        const resp = await postJson(`/api/contacts/${id}/block`, { blocked: next });
+        if (resp.ok) {
+            showToast(next ? t('Contacts.Toast.Blocked') : t('Contacts.Toast.Unblocked'), 'success');
+            document.getElementById('cdBlocked').innerHTML = next
+                ? `<span class="cell-blocked-tag">${escapeHtml(t('Contacts.Blocked'))}</span>`
+                : escapeHtml(t('Contacts.NotBlocked'));
+            const lbl = document.getElementById('cdKebabBlockLabel');
+            if (lbl) lbl.textContent = next ? t('Contacts.Confirm.Unblock.Action') : t('Contacts.Confirm.Block.Action');
+            if (typeof loadContacts === 'function') loadContacts();
+        } else {
+            showToast(t('Contacts.Toast.BlockFailed'), 'error');
+        }
+        return;
+    }
+
+    // KEBAB → Delete (uses the page's existing confirm modal)
+    const delItem = e.target.closest('#cdKebabDelete');
+    if (delItem) {
+        document.getElementById('cdKebabMenu')?.classList.add('d-none');
+        const id = _cdCtx.contactId; if (!id) return;
+        const name = document.getElementById('cdName')?.textContent?.trim() || t('Contacts.ThisContact');
+        openConfirm({
+            title: t('Contacts.Confirm.Delete.Title'),
+            body: `<strong>${escapeHtml(name)}</strong>`,
+            bullets: [t('Contacts.Confirm.Delete.Bullet1'), t('Contacts.Confirm.Delete.Bullet2')],
+            confirmLabel: t('Contacts.Confirm.Delete.Action'),
+            isDanger: true,
+            onConfirm: async () => {
+                const resp = await fetch(`/api/contacts/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'RequestVerificationToken': token() }
+                });
+                if (resp.ok) {
+                    showToast(t('Contacts.Toast.Deleted'), 'success');
+                    closeContactDetailsModal();
+                } else {
+                    showToast(t('Contacts.Toast.DeleteFailed'), 'error');
+                }
+            }
+        });
+        return;
+    }
+
+    // Close kebab when clicking outside it
+    if (!e.target.closest('.cd-kebab-wrap')) {
+        document.getElementById('cdKebabMenu')?.classList.add('d-none');
+    }
+});
+
+/* Add-note form (POST /dashboard/chats/note) */
+document.addEventListener('submit', async (e) => {
+    const form = e.target.closest('#cdNoteForm');
+    if (!form) return;
+    e.preventDefault();
+
+    const convId = _cdCtx.conversationId;
+    const input  = document.getElementById('cdNoteInput');
+    const feedback = document.getElementById('cdNoteFeedback');
+    const submit = document.getElementById('cdNoteSubmit');
+    const body = (input?.value || '').trim();
+    if (!convId || !body) {
+        if (feedback) feedback.textContent = t('Compose.Note') + '…';
+        return;
+    }
+    submit.disabled = true;
+    try {
+        const resp = await postJson('/dashboard/chats/note', { conversationId: convId, body });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.error || 'Failed', 'error');
+            return;
+        }
+        showToast(t('Contacts.Toast.Updated') || 'Note added', 'success');
+        if (input) input.value = '';
+        // Bump note count + add a new timeline entry locally.
+        const noteEl = document.getElementById('cdNoteCount');
+        if (noteEl) noteEl.textContent = String((parseInt(noteEl.textContent, 10) || 0) + 1);
+        const timeline = document.getElementById('cdTimeline');
+        if (timeline) {
+            const li = document.createElement('li');
+            li.className = 'cd-timeline-item';
+            li.innerHTML = `
+                <span class="cd-timeline-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                <div class="cd-timeline-body">
+                    <div class="cd-timeline-title">${escapeHtml(t('Compose.Note'))}</div>
+                    <div class="cd-timeline-time">${escapeHtml('just now')}</div>
+                    <div class="cd-timeline-sub">${escapeHtml(body.length > 80 ? body.slice(0, 77) + '…' : body)}</div>
+                </div>`;
+            // Insert at the top of the timeline (most-recent first).
+            if (timeline.firstChild?.classList?.contains('cd-timeline-empty')) {
+                timeline.innerHTML = '';
+            }
+            timeline.insertBefore(li, timeline.firstChild);
+        }
+    } finally {
+        submit.disabled = false;
+    }
+});

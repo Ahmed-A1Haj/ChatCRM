@@ -1,0 +1,1105 @@
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@{
+    Layout = "~/Views/Shared/_LandingLayout.cshtml";
+    ViewData["Title"] = T["Landing.Meta.Title"].Value;
+
+    var currentLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant();
+    var landingLanguages = new (string Code, string Native, string Flag)[]
+    {
+        ("en", "English",   "🇬🇧"),
+        ("ru", "Русский",   "🇷🇺"),
+        ("ro", "Română",    "🇷🇴"),
+        ("tr", "Türkçe",    "🇹🇷")
+    };
+    var activeLang = landingLanguages.FirstOrDefault(l => l.Code == currentLang);
+    if (activeLang.Code is null) activeLang = landingLanguages[0];
+    var landingReturnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+
+@* ───────────────────────── NAV ───────────────────────── *@
+<header class="pz-nav" id="pzNav">
+    <div class="pz-container pz-nav__inner">
+        <a href="/" class="pz-brand" aria-label="ChatCRM home">
+            <svg class="pz-brand__leaf" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M12 2C7 6 4 10 4 14a8 8 0 0 0 16 0c0-4-3-8-8-12zm0 18c-2.6 0-4.5-1.6-5.4-3.8 1.2.5 2.6.8 4 .8 3.1 0 5.4-1.6 6.4-3.5C16.5 17 14.5 20 12 20z"/>
+            </svg>
+            ChatCRM
+        </a>
+
+        <nav class="pz-nav__links" aria-label="Primary">
+            <a href="#omnichannel">@T["Landing.Nav.Product"]</a>
+            <a href="#ai">@T["Landing.Nav.AI"]</a>
+            <a href="#channels">@T["Landing.Nav.Channels"]</a>
+            <a href="#pricing">@T["Landing.Nav.Pricing"]</a>
+            <a href="#use-cases">@T["Landing.Nav.Resources"]</a>
+        </nav>
+
+        <div class="pz-nav__cta">
+            <div class="pz-lang pz-lang--nav" data-pz-lang>
+                <button type="button" class="pz-lang__btn" data-pz-lang-toggle aria-haspopup="listbox" aria-expanded="false" aria-label="@T["Language.Switch"]">
+                    <span class="pz-lang__flag" aria-hidden="true">@activeLang.Flag</span>
+                    <span class="pz-lang__code">@activeLang.Code.ToUpperInvariant()</span>
+                    <svg class="pz-lang__chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </button>
+                <div class="pz-lang__menu" data-pz-lang-menu role="listbox" hidden>
+                    @foreach (var lang in landingLanguages)
+                    {
+                        <form method="post" asp-controller="Language" asp-action="Set" class="pz-lang__form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="culture" value="@lang.Code" />
+                            <input type="hidden" name="returnUrl" value="@landingReturnUrl" />
+                            <button type="submit" class="pz-lang__item @(lang.Code == currentLang ? "is-active" : "")" role="option" aria-selected="@(lang.Code == currentLang ? "true" : "false")">
+                                <span class="pz-lang__flag" aria-hidden="true">@lang.Flag</span>
+                                <span class="pz-lang__name">@lang.Native</span>
+                                @if (lang.Code == currentLang)
+                                {
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                }
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+            <a class="pz-btn pz-btn--ghost" href="/Account/Login">@T["Landing.Nav.Login"]</a>
+            <a class="pz-btn pz-btn--primary" href="/Account/Register">@T["Landing.Nav.GetStarted"]</a>
+            <button class="pz-nav__toggle" id="pzNavToggle" type="button" aria-expanded="false" aria-controls="pzNavMenu" aria-label="@T["Landing.Nav.OpenMenu"]">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div id="pzNavMenu" class="pz-nav__menu" role="menu">
+        <a href="#omnichannel">@T["Landing.Nav.Product"]</a>
+        <a href="#ai">@T["Landing.Nav.AI"]</a>
+        <a href="#channels">@T["Landing.Nav.Channels"]</a>
+        <a href="#pricing">@T["Landing.Nav.Pricing"]</a>
+        <a href="#use-cases">@T["Landing.Nav.Resources"]</a>
+        <a href="/Account/Login">@T["Landing.Nav.Login"]</a>
+        <a class="pz-btn pz-btn--primary" href="/Account/Register">@T["Landing.Nav.GetStarted"]</a>
+    </div>
+</header>
+
+@* ───────────────────────── HERO ───────────────────────── *@
+<section class="pz-hero">
+    <div class="pz-container pz-hero__grid">
+        <div class="pz-hero__copy pz-reveal">
+            <h1>@T["Landing.Hero.H1.Line1"]<br />@T["Landing.Hero.H1.Line2"]<br />@T["Landing.Hero.H1.Line3"]</h1>
+            <p class="pz-hero__sub">
+                @Html.Raw(T["Landing.Hero.Sub"].Value)
+            </p>
+
+            <div class="pz-hero__cta">
+                <a class="pz-btn pz-btn--primary pz-btn--lg" href="/Account/Register">@T["Landing.Hero.CTA.StartFreeTrial"]</a>
+                <a class="pz-btn pz-btn--outline pz-btn--lg" href="#how-it-works">@T["Landing.Hero.CTA.WatchDemo"]</a>
+            </div>
+
+            <div class="pz-trust">
+                <span class="pz-trust__label">@T["Landing.Hero.TrustedBy"]</span>
+                <div class="pz-trust__logos">
+                    @* Mercury *@
+                    <span class="pz-trust__logo" aria-label="Mercury">
+                        <svg viewBox="0 0 120 28" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
+                            <circle cx="14" cy="14" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="14" cy="14" r="3.5"/>
+                            <text x="32" y="19" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="600" letter-spacing="-0.02em">Mercury</text>
+                        </svg>
+                    </span>
+                    @* ramp *@
+                    <span class="pz-trust__logo" aria-label="Ramp">
+                        <svg viewBox="0 0 80 28" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
+                            <text x="0" y="20" font-family="Inter,system-ui,sans-serif" font-size="18" font-weight="700" letter-spacing="-0.03em">ramp</text>
+                        </svg>
+                    </span>
+                    @* airbnb *@
+                    <span class="pz-trust__logo" aria-label="Airbnb">
+                        <svg viewBox="0 0 110 28" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
+                            <path d="M14 4c-2.4 0-4.4 1.6-5.2 3.9-1.4 4-4.6 11-4.6 13.4 0 3.1 2.4 4.7 4.7 4.7 1.5 0 3.1-.8 5.1-3 2 2.2 3.6 3 5.1 3 2.3 0 4.7-1.6 4.7-4.7 0-2.4-3.2-9.4-4.6-13.4C18.4 5.6 16.4 4 14 4zm0 2.2c1.3 0 2.4.9 2.9 2.3 1.3 3.8 4.3 10.5 4.3 12.7 0 1.8-1.2 2.8-2.7 2.8-1 0-2.1-.5-3.7-2.5 1.4-2 2.7-4.5 2.7-6.5 0-2.3-1.4-3.6-3.5-3.6s-3.5 1.3-3.5 3.6c0 2 1.3 4.5 2.7 6.5-1.6 2-2.7 2.5-3.7 2.5-1.5 0-2.7-1-2.7-2.8 0-2.2 3-8.9 4.3-12.7.5-1.4 1.6-2.3 2.9-2.3zm0 6.5c.9 0 1.5.6 1.5 1.6 0 1.2-.8 2.9-1.5 4-.7-1.1-1.5-2.8-1.5-4 0-1 .6-1.6 1.5-1.6z"/>
+                            <text x="32" y="20" font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="700" letter-spacing="-0.04em">airbnb</text>
+                        </svg>
+                    </span>
+                    @* Linear *@
+                    <span class="pz-trust__logo" aria-label="Linear">
+                        <svg viewBox="0 0 110 28" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
+                            <path d="M4 14a10 10 0 0 1 10-10 10 10 0 0 1 10 10 10 10 0 0 1-10 10A10 10 0 0 1 4 14zm2.3-2.4 12.1 12.1c-1.3.6-2.8 1-4.4 1L4.2 14.5c0-1 .4-2 .8-2.9zm.7-2.7 13.4 13.4c-.7.7-1.5 1.3-2.4 1.8L5.7 11c.4-.7.8-1.4 1.3-2.1zm2.2-2.3L21 18.5c-.4.7-.9 1.4-1.5 2L8.2 8.9c.4-.6.8-1.1 1.3-1.6.3-.2.4-.3.7-.7zm3.4-1.8a10 10 0 0 1 9.9 9.9z"/>
+                            <text x="30" y="20" font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="600" letter-spacing="-0.02em">Linear</text>
+                        </svg>
+                    </span>
+                    @* stripe *@
+                    <span class="pz-trust__logo" aria-label="Stripe">
+                        <svg viewBox="0 0 80 28" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
+                            <text x="0" y="20" font-family="Inter,system-ui,sans-serif" font-size="18" font-weight="700" font-style="italic" letter-spacing="-0.03em">stripe</text>
+                        </svg>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="pz-hero__visual pz-reveal" aria-hidden="true">
+            <div class="pz-tablet">
+                <div class="pz-tablet__topbar">
+                    <span class="pz-tablet__title">@T["Landing.Tablet.Inbox"]</span>
+                    <span class="pz-tablet__search">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.5" y2="16.5"/></svg>
+                        @T["Landing.Tablet.Search"]
+                    </span>
+                    <span class="pz-tablet__topbar-right">
+                        <span class="pz-tablet__bell">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9z"/></svg>
+                        </span>
+                        <span class="pz-tablet__me"></span>
+                    </span>
+                </div>
+                <div class="pz-tablet__body">
+                    <div class="pz-tablet__inbox">
+                        <div class="pz-tablet__tabs">
+                            <span class="pz-tablet__tab is-active">@T["Landing.Tablet.Tab.AllLive"]</span>
+                            <span class="pz-tablet__tab">@T["Landing.Tablet.Tab.Threads"]</span>
+                            <span class="pz-tablet__tab">@T["Landing.Tablet.Tab.Channels"]</span>
+                            <span class="pz-tablet__tabs-spacer"></span>
+                            <span class="pz-tablet__filter">@T["Landing.Tablet.Filters"]</span>
+                        </div>
+                        <div class="pz-inbox-row">
+                            <span class="pz-inbox-row__icon" style="background:var(--c-whatsapp)">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11.9a8 8 0 0 1-12 6.9L4 20l1.3-3.8A8 8 0 1 1 20 11.9z"/></svg>
+                            </span>
+                            <div class="pz-inbox-row__main">
+                                <div class="pz-inbox-row__top">
+                                    <span class="pz-inbox-row__name">WhatsApp</span>
+                                    <span class="pz-inbox-row__pill">WhatsApp</span>
+                                </div>
+                                <span class="pz-inbox-row__msg">Hi, my message reached you — first time on...</span>
+                            </div>
+                            <span class="pz-inbox-row__time">10:35 AM</span>
+                            <span class="pz-inbox-row__avatar"></span>
+                        </div>
+                        <div class="pz-inbox-row">
+                            <span class="pz-inbox-row__icon" style="background:linear-gradient(135deg,#feda77,#d6249f,#4f5bd5)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/></svg>
+                            </span>
+                            <div class="pz-inbox-row__main">
+                                <div class="pz-inbox-row__top">
+                                    <span class="pz-inbox-row__name">Instagram</span>
+                                    <span class="pz-inbox-row__pill">Instagram</span>
+                                </div>
+                                <span class="pz-inbox-row__msg">Hey — saw your latest message</span>
+                            </div>
+                            <span class="pz-inbox-row__time">9:37 AM</span>
+                            <span class="pz-inbox-row__avatar" style="background:linear-gradient(135deg,#f0b9d1,#d6249f)"></span>
+                        </div>
+                        <div class="pz-inbox-row">
+                            <span class="pz-inbox-row__icon" style="background:var(--c-messenger)">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.2 2 11.3c0 2.9 1.4 5.5 3.6 7.2v3.5l3.3-1.8c.9.3 1.9.4 3.1.4 5.5 0 10-4.2 10-9.3S17.5 2 12 2z"/></svg>
+                            </span>
+                            <div class="pz-inbox-row__main">
+                                <div class="pz-inbox-row__top">
+                                    <span class="pz-inbox-row__name">Facebook Messenger</span>
+                                </div>
+                                <span class="pz-inbox-row__msg">Thank you for your message — moving to your...</span>
+                            </div>
+                            <span class="pz-inbox-row__time">8:33 AM</span>
+                            <span class="pz-inbox-row__avatar" style="background:linear-gradient(135deg,#cfe1f7,#0084ff)"></span>
+                        </div>
+                        <div class="pz-inbox-row">
+                            <span class="pz-inbox-row__icon" style="background:var(--c-telegram)">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 4.2 18.7 19c-.2 1-.8 1.2-1.6.8l-4.5-3.3-2.2 2.1.3-4.5 8.2-7.4-10.4 6.4-4.4-1.4 17.2-6.6c.8-.3 1.5.2 1.2 1.6z"/></svg>
+                            </span>
+                            <div class="pz-inbox-row__main">
+                                <div class="pz-inbox-row__top">
+                                    <span class="pz-inbox-row__name">Telegram</span>
+                                    <span class="pz-inbox-row__pill">Telegram</span>
+                                </div>
+                                <span class="pz-inbox-row__msg">Hey! Your message has arrived — can I help you?</span>
+                            </div>
+                            <span class="pz-inbox-row__time">10:35 AM</span>
+                            <span class="pz-inbox-row__avatar" style="background:linear-gradient(135deg,#cfe7f8,#229ed9)"></span>
+                        </div>
+                        <div class="pz-inbox-row">
+                            <span class="pz-inbox-row__icon" style="background:var(--c-tiktok)">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 8.5c-1.6 0-3-.6-4.1-1.6V15a5.5 5.5 0 1 1-5.5-5.5v2.8a2.8 2.8 0 1 0 2.8 2.7V3h2.7c.3 1.7 1.4 3 3.2 3.3v2.2z"/></svg>
+                            </span>
+                            <div class="pz-inbox-row__main">
+                                <div class="pz-inbox-row__top">
+                                    <span class="pz-inbox-row__name">TikTok</span>
+                                    <span class="pz-inbox-row__pill">TikTok</span>
+                                </div>
+                                <span class="pz-inbox-row__msg">Hey! Your message — link to your bio</span>
+                            </div>
+                            <span class="pz-inbox-row__time">10:35 AM</span>
+                            <span class="pz-inbox-row__avatar" style="background:linear-gradient(135deg,#dcdcdc,#404040)"></span>
+                        </div>
+                    </div>
+
+                    <div class="pz-tablet__contact">
+                        <div class="pz-contact__head">
+                            <div class="pz-contact__avatar"></div>
+                            <div class="pz-contact__name">Jenna Smith</div>
+                            <div class="pz-contact__role">@T["Landing.Tablet.ContactOwner"]</div>
+                        </div>
+                        <div class="pz-contact__details">
+                            <span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                                contact@home.com
+                            </span>
+                            <span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.1 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"/></svg>
+                                (555) 255-7563
+                            </span>
+                            <span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                                jenna@example.com
+                            </span>
+                        </div>
+                        <div class="pz-contact__section">
+                            <div class="pz-contact__section-title">
+                                <span>@T["Landing.Tablet.Activity"]</span>
+                                <span>⌄</span>
+                            </div>
+                            <div class="pz-contact__activity">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                @T["Landing.Tablet.Activity1"]
+                                <small>@T["Landing.Tablet.Activity1.Time"]</small>
+                            </div>
+                            <div class="pz-contact__activity">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                @T["Landing.Tablet.Activity2"]
+                                <small>@T["Landing.Tablet.Activity2.Time"]</small>
+                            </div>
+                            <div class="pz-contact__insight">
+                                <strong>
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14 9l7 2-7 2-2 7-2-7-7-2 7-2 2-7z"/></svg>
+                                    @T["Landing.Tablet.AIInsights"]
+                                </strong>
+                                @T["Landing.Tablet.AIInsights.Body"]
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <span class="pz-hero__spark pz-hero__spark--tl" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14 9l7 2-7 2-2 7-2-7-7-2 7-2 2-7z"/></svg>
+            </span>
+            <span class="pz-hero__spark pz-hero__spark--tr" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14 9l7 2-7 2-2 7-2-7-7-2 7-2 2-7z"/></svg>
+            </span>
+            <span class="pz-hero__spark pz-hero__spark--bl pz-hero__spark--sm" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14 9l7 2-7 2-2 7-2-7-7-2 7-2 2-7z"/></svg>
+            </span>
+            <span class="pz-hero__spark pz-hero__spark--br" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14 9l7 2-7 2-2 7-2-7-7-2 7-2 2-7z"/></svg>
+            </span>
+        </div>
+    </div>
+</section>
+
+@* ──────────────────── OMNICHANNEL VIS ──────────────────── *@
+<section class="pz-section" id="omnichannel">
+    <div class="pz-container">
+        <div class="pz-section__head pz-reveal">
+            <h2>@T["Landing.Omni.H2.Part1"] <em>@T["Landing.Omni.H2.Em"]</em></h2>
+            <p>@T["Landing.Omni.Sub"]</p>
+        </div>
+
+        <div class="pz-omni__stage pz-reveal" aria-hidden="true">
+            @* Subtle elegant orbits *@
+            <svg class="pz-omni__svg" viewBox="0 0 1100 620" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                <defs>
+                    <radialGradient id="pzOmniGlow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.0"/>
+                        <stop offset="55%" stop-color="#d8dec5" stop-opacity="0.30"/>
+                        <stop offset="100%" stop-color="#aabba4" stop-opacity="0"/>
+                    </radialGradient>
+                    <linearGradient id="pzRibbon" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%"  stop-color="#b9c7af"/>
+                        <stop offset="50%" stop-color="#8ea183"/>
+                        <stop offset="100%" stop-color="#b9c7af"/>
+                    </linearGradient>
+                </defs>
+                <circle cx="550" cy="320" r="280" fill="url(#pzOmniGlow)"/>
+
+                <g fill="none" stroke="url(#pzRibbon)" stroke-width="1.2" stroke-linecap="round" opacity="0.40">
+                    <ellipse cx="550" cy="320" rx="260" ry="160" transform="rotate(-15 550 320)"/>
+                    <ellipse cx="550" cy="320" rx="240" ry="170" transform="rotate(20 550 320)"/>
+                </g>
+            </svg>
+
+            @* Polished marble sphere — clean radial gradient, no yin-yang *@
+            <div class="pz-omni__swirl-wrap">
+                <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
+                    <defs>
+                        <radialGradient id="pzOrbBase" cx="35%" cy="28%" r="80%">
+                            <stop offset="0%"  stop-color="#ffffff"/>
+                            <stop offset="18%" stop-color="#f6efd9"/>
+                            <stop offset="50%" stop-color="#d6dec4"/>
+                            <stop offset="80%" stop-color="#7e9576"/>
+                            <stop offset="100%" stop-color="#3a4f36"/>
+                        </radialGradient>
+                        <radialGradient id="pzOrbHighlight" cx="32%" cy="22%" r="22%">
+                            <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.95"/>
+                            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+                        </radialGradient>
+                        <radialGradient id="pzOrbBottomShade" cx="65%" cy="80%" r="40%">
+                            <stop offset="0%"  stop-color="#2c3a26" stop-opacity="0.20"/>
+                            <stop offset="100%" stop-color="#2c3a26" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+
+                    <circle cx="50" cy="50" r="46" fill="url(#pzOrbBase)"/>
+                    <circle cx="50" cy="50" r="46" fill="url(#pzOrbBottomShade)"/>
+                    <ellipse cx="38" cy="28" rx="16" ry="9" fill="url(#pzOrbHighlight)"/>
+                    <circle cx="50" cy="50" r="46" fill="none" stroke="#3a4a35" stroke-width="0.4" opacity="0.25"/>
+                </svg>
+            </div>
+
+            @* Decorative chat bubble with realistic copy *@
+            <div class="pz-omni__deco pz-omni__deco--chat">
+                <span class="pz-omni__deco-avatar"></span>
+                <span>@Html.Raw(T["Landing.Omni.ChatBubble"].Value)</span>
+            </div>
+
+            <div class="pz-omni__deco pz-omni__deco--contact">
+                <span class="pz-omni__deco-avatar"></span>
+                Emma Müller
+            </div>
+
+            <div class="pz-omni__deco pz-omni__deco--typing" aria-label="typing">
+                <span></span><span></span><span></span>
+            </div>
+
+            <div class="pz-omni__deco pz-omni__deco--voice">
+                <span class="pz-omni__voice-play">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
+                </span>
+                <span class="pz-omni__voice-wave">
+                    <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                </span>
+            </div>
+
+            <div class="pz-omni__nodes-wrap">
+                <div class="pz-omni__node pz-omni__node--wa">
+                    <span class="pz-omni__chip" style="background:var(--c-whatsapp)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11.9a8 8 0 0 1-12 6.9L4 20l1.3-3.8A8 8 0 1 1 20 11.9z"/></svg>
+                    </span>
+                    WhatsApp
+                </div>
+                <div class="pz-omni__node pz-omni__node--ig">
+                    <span class="pz-omni__chip" style="background:var(--c-instagram)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/></svg>
+                    </span>
+                    Instagram
+                </div>
+                <div class="pz-omni__node pz-omni__node--fb">
+                    <span class="pz-omni__chip" style="background:var(--c-messenger)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.2 2 11.3c0 2.9 1.4 5.5 3.6 7.2v3.5l3.3-1.8c.9.3 1.9.4 3.1.4 5.5 0 10-4.2 10-9.3S17.5 2 12 2z"/></svg>
+                    </span>
+                    Facebook Messenger
+                </div>
+                <div class="pz-omni__node pz-omni__node--tg">
+                    <span class="pz-omni__chip" style="background:var(--c-telegram)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 4.2 18.7 19c-.2 1-.8 1.2-1.6.8l-4.5-3.3-2.2 2.1.3-4.5 8.2-7.4-10.4 6.4-4.4-1.4 17.2-6.6c.8-.3 1.5.2 1.2 1.6z"/></svg>
+                    </span>
+                    Telegram
+                </div>
+                <div class="pz-omni__node pz-omni__node--tt">
+                    <span class="pz-omni__chip" style="background:var(--c-tiktok)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 8.5c-1.6 0-3-.6-4.1-1.6V15a5.5 5.5 0 1 1-5.5-5.5v2.8a2.8 2.8 0 1 0 2.8 2.7V3h2.7c.3 1.7 1.4 3 3.2 3.3v2.2z"/></svg>
+                    </span>
+                    TikTok
+                </div>
+                <div class="pz-omni__node pz-omni__node--em">
+                    <span class="pz-omni__chip" style="background:var(--c-email)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                    </span>
+                    Email
+                </div>
+                <div class="pz-omni__node pz-omni__node--sms">
+                    <span class="pz-omni__chip" style="background:var(--c-sms)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12c0 4.4-4 8-9 8-1.4 0-2.6-.3-3.8-.7L3 21l1.7-4C3.6 15.6 3 13.9 3 12c0-4.4 4-8 9-8s9 3.6 9 8z"/></svg>
+                    </span>
+                    SMS
+                </div>
+                <div class="pz-omni__node pz-omni__node--wc">
+                    <span class="pz-omni__chip" style="background:var(--c-webchat)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v12H6l-2 3V4z"/></svg>
+                    </span>
+                    Webchat
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ──────────────────── AI CAPABILITIES ──────────────────── *@
+<section class="pz-section pz-section--tinted" id="ai">
+    <div class="pz-container">
+        <div class="pz-section__head pz-reveal">
+            <h2>@T["Landing.AI.H2.Part1"] <em>@T["Landing.AI.H2.Em"]</em></h2>
+            <p>@T["Landing.AI.Sub"]</p>
+        </div>
+
+        <div class="pz-ai__grid">
+            <article class="pz-card pz-reveal">
+                <span class="pz-card__icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9 10c.5-1 1.5-2 3-2s2.5 1 3 2-.5 2.5-2 3"/><circle cx="12" cy="17" r="0.8" fill="currentColor"/></svg>
+                </span>
+                <h3 class="pz-card__title">@T["Landing.AI.Card1.Title"]</h3>
+                <div class="pz-card__chat">
+                    <div class="pz-bubble pz-bubble--in">@T["Landing.AI.Card1.Bubble1"]</div>
+                    <div class="pz-bubble pz-bubble--ai">@T["Landing.AI.Card1.Bubble2"]</div>
+                    <div class="pz-bubble pz-bubble--in">@T["Landing.AI.Card1.Bubble3"]</div>
+                    <div class="pz-bubble pz-bubble--ai">@T["Landing.AI.Card1.Bubble4"]</div>
+                </div>
+                <p class="pz-card__desc">@T["Landing.AI.Card1.Desc"]</p>
+            </article>
+
+            <article class="pz-card pz-reveal">
+                <span class="pz-card__icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v10H8l-4 4V5z"/><path d="M8 10h8M8 13h5"/></svg>
+                </span>
+                <h3 class="pz-card__title">@T["Landing.AI.Card2.Title"]</h3>
+                <div class="pz-card__chat">
+                    <div class="pz-bubble pz-bubble--in">¿Tienen envío internacional?</div>
+                    <div class="pz-bubble pz-bubble--out">@T["Landing.AI.Card2.Reply"]</div>
+                    <div class="pz-card__suggestion">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 14 9l7 2-7 2-2 7-2-7-7-2 7-2 2-7z"/></svg>
+                        @T["Landing.AI.Card2.Suggestion"]
+                    </div>
+                </div>
+                <p class="pz-card__desc">@T["Landing.AI.Card2.Desc"]</p>
+            </article>
+
+            <article class="pz-card pz-reveal">
+                <span class="pz-badge--soon">@T["Landing.AI.Card3.Badge"]</span>
+                <span class="pz-card__icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg>
+                </span>
+                <h3 class="pz-card__title">@T["Landing.AI.Card3.Title"]</h3>
+                <div class="pz-card__media">
+                    <div class="pz-card__media-row">
+                        <span class="pz-mark" style="background:linear-gradient(135deg,#ea4335,#bf360c)">A</span>
+                        <div class="pz-media-meta">
+                            <span class="pz-media-title">@T["Landing.AI.Card3.Ads.Title"]</span>
+                            <span class="pz-media-sub">@T["Landing.AI.Card3.Ads.Sub"]</span>
+                        </div>
+                    </div>
+                    <div class="pz-card__media-row">
+                        <span class="pz-mark" style="background:linear-gradient(135deg,#6f8a64,#2e3f2c)">V</span>
+                        <div class="pz-media-meta">
+                            <span class="pz-media-title">@T["Landing.AI.Card3.Video.Title"]</span>
+                            <span class="pz-media-sub">@T["Landing.AI.Card3.Video.Sub"]</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="pz-card__desc">@T["Landing.AI.Card3.Desc"]</p>
+            </article>
+        </div>
+
+        <div class="pz-ai__footer pz-reveal">
+            <span>@T["Landing.AI.Footer"]</span>
+            <span class="pz-ai__footer-logos">
+                @* OpenAI / GPT *@
+                <span class="pz-brand-logo" aria-label="OpenAI GPT">
+                    <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
+                        <path d="M21.5 9.8c.5-1.4.3-2.9-.5-4.1-1.2-2-3.6-3-5.9-2.4-1-1.2-2.5-1.8-4-1.8-2.4 0-4.5 1.5-5.3 3.8-1.5.3-2.7 1.2-3.5 2.5-1.2 2-1 4.5.6 6.3-.5 1.4-.3 2.9.5 4.1 1.2 2 3.6 3 5.9 2.4 1 1.2 2.5 1.8 4 1.8 2.4 0 4.5-1.5 5.3-3.8 1.5-.3 2.7-1.2 3.5-2.5 1.2-2 1-4.5-.6-6.3zm-8.3 11.7c-1 0-1.9-.3-2.6-1l.1-.1 4.4-2.5c.2-.1.4-.4.4-.6V11l1.9 1.1v5.1c-.1 1.8-1.6 3.3-4.2 3.3zM4.6 17.7c-.5-.8-.7-1.8-.5-2.7l.1.1 4.4 2.5c.2.1.5.1.7 0l5.4-3.1v2.2c0 .1-.1.2-.2.2l-4.5 2.6c-2 1.1-4.5.4-5.4-1.8zm-1-9.1c.5-.8 1.2-1.4 2.1-1.7v5.3c0 .2.1.5.4.6l5.4 3.1-1.9 1.1c-.1.1-.2.1-.3 0L4.8 14.5c-2-1.1-2.7-3.7-1.6-5.6 0-.1.1-.2.1-.3z"/>
+                        <text x="28" y="17" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="600">GPT</text>
+                    </svg>
+                </span>
+                @* Anthropic Claude *@
+                <span class="pz-brand-logo" aria-label="Anthropic Claude">
+                    <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
+                        <path d="M5 19h2.5l1-2.6h4.4l1 2.6H16L11.8 8h-2.6L5 19zm4.4-4.5 1.4-3.7 1.4 3.7H9.4zM18 5v14h2V5h-2z"/>
+                        <text x="26" y="17" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="600">Claude</text>
+                    </svg>
+                </span>
+                @* Google Gemini *@
+                <span class="pz-brand-logo" aria-label="Google Gemini">
+                    <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
+                        <path d="M12 2C6 4 4 6 2 12c2 6 4 8 10 10 6-2 8-4 10-10-2-6-4-8-10-10zm0 3.5c1 3.5 2 4.7 4.5 5.5-2.5 1-3.5 2.1-4.5 5.5-1-3.4-2-4.5-4.5-5.5C10 10.2 11 9 12 5.5z"/>
+                        <text x="26" y="17" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="600">Gemini</text>
+                    </svg>
+                </span>
+            </span>
+        </div>
+    </div>
+</section>
+
+@* ──────────────────── HOW IT WORKS ──────────────────── *@
+<section class="pz-section" id="how-it-works">
+    <div class="pz-container">
+        <div class="pz-section__head pz-reveal">
+            <h2>@T["Landing.How.H2.Part1"] <em>@T["Landing.How.H2.Em"]</em></h2>
+        </div>
+
+        <div class="pz-how__steps">
+            <article class="pz-step pz-reveal">
+                <div class="pz-step__text">
+                    <span class="pz-step__num">1</span>
+                    <h3 class="pz-step__title">@Html.Raw(T["Landing.How.Step1.Title"].Value)</h3>
+                    <p class="pz-step__desc">@T["Landing.How.Step1.Desc"]</p>
+                </div>
+                <div class="pz-step__visual">
+                    <div class="pz-msg-card">
+                        <span class="pz-avatar">EM</span>
+                        <div class="pz-msg-body">
+                            Emma Müller
+                            <small>@T["Landing.How.Step1.Quote"]</small>
+                        </div>
+                    </div>
+                    <span class="pz-msg-pill">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        @T["Landing.How.Step1.Accepted"]
+                    </span>
+                </div>
+            </article>
+
+            <article class="pz-step pz-reveal">
+                <div class="pz-step__text">
+                    <span class="pz-step__num">2</span>
+                    <h3 class="pz-step__title">@Html.Raw(T["Landing.How.Step2.Title"].Value)</h3>
+                    <p class="pz-step__desc">@T["Landing.How.Step2.Desc"]</p>
+                </div>
+                <div class="pz-step__visual">
+                    <span class="pz-ai-pill"><span class="pz-ai-dot"></span> @T["Landing.How.Step2.Replying"]</span>
+                    <div class="pz-window">
+                        <div class="pz-window__bar">
+                            <span class="pz-window__dots"><span></span><span></span><span></span></span>
+                            <span class="pz-window__addr">app.chatcrm.io / inbox / emma-muller</span>
+                        </div>
+                        <div class="pz-window__body">
+                            <div class="pz-window__row is-active">
+                                <span class="pz-avatar-xs is-ai">AI</span>
+                                <div class="pz-window-meta">
+                                    <span class="pz-window-name">@T["Landing.How.Step2.AIReply"]</span>
+                                    <span class="pz-window-sub">@T["Landing.How.Step2.AISub"]</span>
+                                </div>
+                            </div>
+                            <div class="pz-window__row">
+                                <span class="pz-avatar-xs">EM</span>
+                                <div class="pz-window-meta">
+                                    <span class="pz-window-name">Emma Müller</span>
+                                    <span class="pz-window-sub">@T["Landing.How.Step2.UserReply"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="pz-step pz-reveal">
+                <div class="pz-step__text">
+                    <span class="pz-step__num">3</span>
+                    <h3 class="pz-step__title">@Html.Raw(T["Landing.How.Step3.Title"].Value)</h3>
+                    <p class="pz-step__desc">@T["Landing.How.Step3.Desc"]</p>
+                </div>
+                <div class="pz-step__visual">
+                    <div class="pz-window">
+                        <div class="pz-window__bar">
+                            <span class="pz-window__dots"><span></span><span></span><span></span></span>
+                            <span class="pz-window__addr">app.chatcrm.io / pipeline / qualified</span>
+                        </div>
+                        <div class="pz-window__body">
+                            <div class="pz-window__row">
+                                <span class="pz-avatar-xs">EM</span>
+                                <div class="pz-window-meta">
+                                    <span class="pz-window-name">Emma Müller</span>
+                                    <span class="pz-window-sub">2 BR · Lisbon · ~€1,800</span>
+                                </div>
+                                <span class="pz-window-tag">@T["Landing.How.Step3.Tag.Qualified"]</span>
+                            </div>
+                            <div class="pz-window__row">
+                                <span class="pz-avatar-xs is-blue">JD</span>
+                                <div class="pz-window-meta">
+                                    <span class="pz-window-name">Jonas Diaz</span>
+                                    <span class="pz-window-sub">@T["Landing.How.Step3.JDSub"]</span>
+                                </div>
+                                <span class="pz-window-tag is-new">@T["Landing.How.Step3.Tag.New"]</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="pz-step pz-reveal">
+                <div class="pz-step__text">
+                    <span class="pz-step__num">4</span>
+                    <h3 class="pz-step__title">@Html.Raw(T["Landing.How.Step4.Title"].Value)</h3>
+                    <p class="pz-step__desc">@T["Landing.How.Step4.Desc"]</p>
+                </div>
+                <div class="pz-step__visual">
+                    <div class="pz-window">
+                        <div class="pz-window__bar">
+                            <span class="pz-window__dots"><span></span><span></span><span></span></span>
+                            <span class="pz-window__addr">app.chatcrm.io / handoff / emma-muller</span>
+                        </div>
+                        <div class="pz-window__body">
+                            <div class="pz-window__row is-active">
+                                <span class="pz-avatar-xs is-gold">SA</span>
+                                <div class="pz-window-meta">
+                                    <span class="pz-window-name">@T["Landing.How.Step4.SaraName"]</span>
+                                    <span class="pz-window-sub">@T["Landing.How.Step4.SaraSub"]</span>
+                                </div>
+                            </div>
+                            <div class="pz-window__row">
+                                <span class="pz-avatar-xs is-ai">AI</span>
+                                <div class="pz-window-meta">
+                                    <span class="pz-window-name">@T["Landing.How.Step4.SummaryName"]</span>
+                                    <span class="pz-window-sub">@T["Landing.How.Step4.SummarySub"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+@* ──────────────────── CHANNELS ──────────────────── *@
+<section class="pz-section pz-section--tinted" id="channels">
+    <div class="pz-container">
+        <div class="pz-section__head pz-reveal">
+            <h2>@T["Landing.Channels.H2.Part1"] <em>@T["Landing.Channels.H2.Em"]</em></h2>
+        </div>
+
+        <div class="pz-channels__grid">
+            @{
+                var channels = new (string Title, string DescKey, string Bg, string SvgFill)[] {
+                    ("WhatsApp Business",  "Landing.Channels.WhatsAppBusiness.Desc", "#25d366", "wa"),
+                    ("WhatsApp Cloud API", "Landing.Channels.WhatsAppCloud.Desc",    "#1eb455", "wa"),
+                    ("Instagram DM",       "Landing.Channels.InstagramDM.Desc",      "#d6249f", "ig"),
+                    ("Instagram Comments", "Landing.Channels.InstagramComments.Desc","#bf2080", "ig"),
+                    ("Facebook Messenger", "Landing.Channels.FacebookMessenger.Desc","#0084ff", "fb"),
+                    ("Telegram",           "Landing.Channels.Telegram.Desc",         "#229ed9", "tg"),
+                    ("TikTok Business",    "Landing.Channels.TikTokBusiness.Desc",   "#010101", "tt"),
+                    ("Email (SMTP/IMAP)",  "Landing.Channels.Email.Desc",            "#ea4335", "em"),
+                    ("SMS",                "Landing.Channels.SMS.Desc",              "#2c8eff", "sms"),
+                    ("Webchat widget",     "Landing.Channels.Webchat.Desc",          "#6f8a64", "wc"),
+                    ("Line",               "Landing.Channels.Line.Desc",             "#06c755", "line"),
+                    ("Viber",              "Landing.Channels.Viber.Desc",            "#7360f2", "viber")
+                };
+            }
+            @foreach (var c in channels)
+            {
+                <article class="pz-channel-card pz-reveal">
+                    <div class="pz-channel-card__head">
+                        <span class="pz-channel-card__icon" style="background:@c.Bg">
+                            @switch (c.SvgFill)
+                            {
+                                case "wa":
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.6.1-.2.3-.7.9-.9 1-.1.2-.3.2-.6 0-.3-.1-1.2-.4-2.4-1.5-.9-.8-1.5-1.8-1.6-2.1-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5l.3-.5c.1-.2 0-.4 0-.5l-.9-2c-.2-.5-.5-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.5s1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5 1.8.8 2.4.8 3.3.7.5 0 1.7-.7 1.9-1.4.2-.6.2-1.2.2-1.3-.1-.2-.3-.3-.6-.4zM12 2C6.5 2 2 6.5 2 12c0 1.7.5 3.4 1.3 4.8L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>
+                                    break;
+                                case "ig":
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+                                    break;
+                                case "fb":
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.2 2 11.3c0 2.9 1.4 5.5 3.6 7.2v3.5l3.3-1.8c.9.3 1.9.4 3.1.4 5.5 0 10-4.2 10-9.3S17.5 2 12 2zm1 12.4-2.5-2.6-4.9 2.6 5.4-5.7 2.5 2.6 4.9-2.6L13 14.4z"/></svg>
+                                    break;
+                                case "tg":
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 4.2 18.7 19c-.2 1-.8 1.2-1.6.8l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.5 8.2-7.4c.4-.3-.1-.5-.5-.2L7.3 13.4l-4.4-1.4c-.9-.3-.9-.9.2-1.4l17.2-6.6c.8-.3 1.5.2 1.2 1.6z"/></svg>
+                                    break;
+                                case "tt":
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.6 6.7a4.9 4.9 0 0 1-3-1.4 4.9 4.9 0 0 1-1.4-3h-3.4v12.1a2.7 2.7 0 0 1-2.7 2.7 2.7 2.7 0 0 1-2.7-2.7 2.7 2.7 0 0 1 2.7-2.7c.3 0 .6 0 .8.1V8.4a6.4 6.4 0 0 0-.8 0 6 6 0 0 0-6 6 6 6 0 0 0 6 6 6 6 0 0 0 6-6V9.6a8.3 8.3 0 0 0 4.5 1.4V7.6a4.9 4.9 0 0 1-1-.9z"/></svg>
+                                    break;
+                                case "em":
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                                    break;
+                                case "sms":
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12c0 4.4-4 8-9 8-1.4 0-2.6-.3-3.8-.7L3 21l1.7-4C3.6 15.6 3 13.9 3 12c0-4.4 4-8 9-8s9 3.6 9 8zM8 10.5h.01M12 10.5h.01M16 10.5h.01" /><circle cx="8" cy="11" r="1" fill="#fff"/><circle cx="12" cy="11" r="1" fill="#fff"/><circle cx="16" cy="11" r="1" fill="#fff"/></svg>
+                                    break;
+                                case "wc":
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H8l-4 4V5a1 1 0 0 1 1-1zm3 6h10v-1H7v1zm0 3h7v-1H7v1z"/></svg>
+                                    break;
+                                case "line":
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 10.5c0-3.4-3.4-6.2-7.5-6.2s-7.5 2.8-7.5 6.2c0 3.1 2.7 5.7 6.3 6.1.3 0 .6.2.7.4 0 .2 0 .4 0 .6 0 .1-.1.5.1.6.2.2.6 0 .8-.1 1.4-.6 2.7-1.5 3.7-2.5 1.5-1.5 2.4-3.2 2.4-5.1zM8.3 12.4c0 .1-.1.2-.2.2H6.4c-.1 0-.2 0-.2-.1V9.2c0-.1.1-.2.2-.2h.5c.1 0 .2.1.2.2v2.5h1.2c.1 0 .2.1.2.2v.5zm1.2 0c0 .1-.1.2-.2.2h-.5c-.1 0-.2-.1-.2-.2V9.2c0-.1.1-.2.2-.2h.5c.1 0 .2.1.2.2v3.2zm3.5 0c0 .1-.1.2-.2.2h-.5c-.1 0-.1 0-.2-.1L11 10.4v2c0 .1-.1.2-.2.2h-.5c-.1 0-.2-.1-.2-.2V9.2c0-.1.1-.2.2-.2h.5c.1 0 .2 0 .2.1l1.5 2.1v-2c0-.1.1-.2.2-.2h.5c.1 0 .2.1.2.2v3.2zm2.5-2.5c0 .1-.1.2-.2.2h-1.2v.5h1.2c.1 0 .2.1.2.2v.5c0 .1-.1.2-.2.2h-1.2v.5h1.2c.1 0 .2.1.2.2v.5c0 .1-.1.2-.2.2h-2c-.1 0-.2 0-.2-.1V9.2c0-.1.1-.2.2-.2h2c.1 0 .2.1.2.2v.5z"/></svg>
+                                    break;
+                                case "viber":
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.4 1.9c-1.4 0-5 .1-7 1.9C2.9 5.3 2.4 7.5 2.3 10.2c0 2.7 0 6.1 1.3 8.9.7 1.6 1.8 2.1 3.1 2.5 0 0 .1 1 .2 1.5.1.4.5.5.7.4.1-.1 2.3-1.7 3.6-2.8h.5c1.4 0 5-.1 7-1.9 1.5-1.4 2-3.7 2-6.4.1-2.7.1-6.1-1.2-8.9-.7-1.6-1.9-2.1-3.1-2.5C16.4 1 14 1 11.4 1.9zm-1.5 4.8c.1-.1.4 0 .5.2.1.1.3.6.3 1 0 .1-.1.2-.3.3-.1 0-.4.1-.4.3 0 .3.2.6.5 1 .3.3.6.5.9.5.1 0 .3-.3.3-.4.1-.2.2-.3.4-.3.3 0 .8.3.9.3.2.1.2.4.2.5-.1.3-.4.7-.7.9-.3.2-.6.3-1 .2-1.3-.3-2.5-1.5-2.8-2.8-.1-.4 0-.7.2-1 .2-.3.6-.6.9-.7zm2.6-1.8c2.4.5 4.4 2.4 5 5 .1.3-.1.5-.4.6-.2 0-.5-.1-.5-.4-.4-2.1-2-3.7-4.1-4.2-.3-.1-.4-.3-.4-.6 0-.2.2-.4.4-.4zm.1 1.5c1.6.4 2.8 1.6 3.2 3.2 0 .2-.1.5-.4.5h-.1c-.2 0-.4-.2-.4-.4-.3-1.2-1.2-2.1-2.4-2.4-.2 0-.3-.2-.3-.4.1-.3.2-.5.4-.5zm.4 1.4c.8.2 1.4.8 1.6 1.6 0 .2-.1.5-.4.5h-.1c-.2 0-.3-.1-.4-.4-.1-.5-.4-.8-.9-.9-.2 0-.4-.2-.3-.4 0-.3.2-.4.5-.4z"/></svg>
+                                    break;
+                            }
+                        </span>
+                        <div class="pz-channel-card__title">@c.Title</div>
+                    </div>
+                    <div class="pz-channel-card__desc">@T[c.DescKey]</div>
+                </article>
+            }
+        </div>
+
+        <div class="pz-channels__feature pz-reveal">
+            <span class="pz-channels__feature-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.1 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"/></svg>
+            </span>
+            <div>
+                <h3>@T["Landing.Channels.Feature.Title"]</h3>
+                <p>@T["Landing.Channels.Feature.Desc"]</p>
+            </div>
+            <span class="pz-channels__call">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            </span>
+        </div>
+
+        <div class="pz-channels__cta pz-reveal">
+            <span>@T["Landing.Channels.CTA.Question"]</span>
+            <a class="pz-btn pz-btn--primary" href="/Account/Register">@T["Landing.Channels.CTA.Button"]</a>
+        </div>
+    </div>
+</section>
+
+@* ──────────────────── PIPELINE / WORKFLOW ──────────────────── *@
+<section class="pz-section" id="pipeline">
+    <div class="pz-container">
+        <div class="pz-section__head pz-section__head--left pz-reveal">
+            <h2>@T["Landing.Pipeline.H2.Part1"] <em>@T["Landing.Pipeline.H2.Em"]</em></h2>
+        </div>
+
+        <div class="pz-pipeline">
+            @* Decorative marble orb floating between kanban and workflow *@
+            <div class="pz-pipeline__orb" aria-hidden="true">
+                <svg viewBox="0 0 100 100" width="100%" height="100%">
+                    <defs>
+                        <radialGradient id="pzOrbBase2" cx="35%" cy="28%" r="80%">
+                            <stop offset="0%"  stop-color="#ffffff"/>
+                            <stop offset="18%" stop-color="#f6efd9"/>
+                            <stop offset="50%" stop-color="#d6dec4"/>
+                            <stop offset="80%" stop-color="#7e9576"/>
+                            <stop offset="100%" stop-color="#3a4f36"/>
+                        </radialGradient>
+                        <radialGradient id="pzOrbHighlight2" cx="32%" cy="22%" r="22%">
+                            <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.95"/>
+                            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="46" fill="url(#pzOrbBase2)"/>
+                    <ellipse cx="38" cy="28" rx="16" ry="9" fill="url(#pzOrbHighlight2)"/>
+                </svg>
+            </div>
+
+            <div class="pz-kanban pz-reveal">
+                @{
+                    var stages = new (string NameKey, string Stage, int Count, (string Initials, string Name, string Amt)[] Cards)[] {
+                        ("Landing.Pipeline.Stage.NewLead",     "new",       2, new[] { ("AJ", "Alex Johnson", "$2,400"), ("MR", "Maria Rodriguez", "$1,800") }),
+                        ("Landing.Pipeline.Stage.Contacted",   "contact",   2, new[] { ("LC", "Liam Chen", "$3,200"), ("SP", "Sara Patel", "$2,750") }),
+                        ("Landing.Pipeline.Stage.Qualified",   "qualify",   1, new[] { ("EM", "Emma Müller", "$4,100") }),
+                        ("Landing.Pipeline.Stage.Negotiation", "negotiate", 1, new[] { ("DK", "David Kim", "$6,800") }),
+                        ("Landing.Pipeline.Stage.Won",         "won",       2, new[] { ("SL", "Sarah Lee", "$5,200"), ("TN", "Tom Nguyen", "$3,900") })
+                    };
+                }
+                @foreach (var s in stages)
+                {
+                    <div class="pz-kanban__col" data-stage="@s.Stage">
+                        <div class="pz-kanban__head">
+                            <span>@T[s.NameKey]</span>
+                            <span class="pz-kanban__count">@s.Count</span>
+                        </div>
+                        @foreach (var c in s.Cards)
+                        {
+                            <div class="pz-kanban__card">
+                                <span class="pz-avatar-sm">@c.Initials</span>
+                                <div class="pz-kanban__info">
+                                    <span class="pz-kanban__name">@c.Name</span>
+                                    <span class="pz-kanban__amt">@c.Amt</span>
+                                </div>
+                                <span class="pz-kanban__dot"></span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <aside class="pz-workflow pz-reveal" aria-label="@T["Landing.Pipeline.Workflow.Aria"]">
+                <div class="pz-workflow__title">@T["Landing.Pipeline.Workflow.Title"]</div>
+                <div class="pz-flow-node">
+                    <span class="pz-flow-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7v8l10-12h-7V2z"/></svg>
+                    </span>
+                    <span><strong>@T["Landing.Pipeline.Flow.TriggerLabel"]</strong> @T["Landing.Pipeline.Flow.TriggerBody"]</span>
+                </div>
+                <span class="pz-flow-arrow" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="6 13 12 19 18 13"/></svg>
+                </span>
+                <div class="pz-flow-node">
+                    <span class="pz-flow-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M5 12a7 7 0 0 1 14 0"/></svg>
+                    </span>
+                    <span><strong>@T["Landing.Pipeline.Flow.AILabel"]</strong> @T["Landing.Pipeline.Flow.AIBody"]</span>
+                </div>
+                <span class="pz-flow-arrow" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="6 13 12 19 18 13"/></svg>
+                </span>
+                <div class="pz-flow-node">
+                    <span class="pz-flow-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3h18v18H3z"/><path d="M8 8h8M8 12h6M8 16h4"/></svg>
+                    </span>
+                    <span><strong>@T["Landing.Pipeline.Flow.ActionLabel"]</strong> @T["Landing.Pipeline.Flow.Action1Body"]</span>
+                </div>
+                <span class="pz-flow-arrow" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="6 13 12 19 18 13"/></svg>
+                </span>
+                <div class="pz-flow-node">
+                    <span class="pz-flow-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                    <span><strong>@T["Landing.Pipeline.Flow.ActionLabel"]</strong> @T["Landing.Pipeline.Flow.Action2Body"]</span>
+                </div>
+            </aside>
+        </div>
+    </div>
+</section>
+
+@* ──────────────────── USE CASES ──────────────────── *@
+<section class="pz-section pz-section--tinted" id="use-cases">
+    <div class="pz-container">
+        <div class="pz-section__head pz-reveal">
+            <h2>@T["Landing.UseCases.H2.Part1"] <em>@T["Landing.UseCases.H2.Em"]</em> @T["Landing.UseCases.H2.Part2"]</h2>
+            <p>@T["Landing.UseCases.Sub"]</p>
+        </div>
+
+        <div class="pz-use__grid">
+            @{
+                var useCases = new (string TitleKey, string DescKey, string Svg)[] {
+                    ("Landing.UseCases.Ecommerce.Title",   "Landing.UseCases.Ecommerce.Desc",
+                     "<path d='M3 6h2l2.4 11.4a1.5 1.5 0 0 0 1.5 1.1h8.4a1.5 1.5 0 0 0 1.5-1.1L21 9H6'/><circle cx='9' cy='21' r='1.4'/><circle cx='17' cy='21' r='1.4'/>"),
+                    ("Landing.UseCases.RealEstate.Title",  "Landing.UseCases.RealEstate.Desc",
+                     "<path d='M3 11 12 3l9 8v9a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 20v-9z'/><path d='M9 21V13h6v8'/>"),
+                    ("Landing.UseCases.Healthcare.Title",  "Landing.UseCases.Healthcare.Desc",
+                     "<path d='M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z'/><path d='M9 11h2v-2h2v2h2v2h-2v2h-2v-2H9z' fill='currentColor' stroke='none'/>"),
+                    ("Landing.UseCases.Education.Title",   "Landing.UseCases.Education.Desc",
+                     "<path d='M2 9l10-5 10 5-10 5L2 9z'/><path d='M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5'/><path d='M22 9v6'/>"),
+                    ("Landing.UseCases.Marketing.Title",   "Landing.UseCases.Marketing.Desc",
+                     "<path d='M3 11l18-7-3 18-6-9-9-2z'/><path d='M9 12l3 5'/>"),
+                    ("Landing.UseCases.Hospitality.Title", "Landing.UseCases.Hospitality.Desc",
+                     "<path d='M3 21V8l9-5 9 5v13'/><path d='M9 21V13h6v8'/><path d='M12 8v.01'/>")
+                };
+            }
+            @foreach (var u in useCases)
+            {
+                <article class="pz-use-card pz-reveal">
+                    <span class="pz-use-card__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            @Html.Raw(u.Svg)
+                        </svg>
+                    </span>
+                    <h3>@T[u.TitleKey]</h3>
+                    <p>@T[u.DescKey]</p>
+                </article>
+            }
+        </div>
+
+        <div class="pz-testimonial pz-reveal">
+            <div class="pz-testimonial__media" role="img" aria-label="Customer success portrait">
+                @* Illustrated portrait scene: warm-lit workspace with a person at a laptop *@
+                <svg viewBox="0 0 400 320" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="pzPortraitBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%"  stop-color="#e9ddc5"/>
+                            <stop offset="60%" stop-color="#cdbf95"/>
+                            <stop offset="100%" stop-color="#967f50"/>
+                        </linearGradient>
+                        <radialGradient id="pzPortraitGlow" cx="30%" cy="25%" r="50%">
+                            <stop offset="0%" stop-color="#fff5d6" stop-opacity="0.55"/>
+                            <stop offset="100%" stop-color="#fff5d6" stop-opacity="0"/>
+                        </radialGradient>
+                        <linearGradient id="pzSkin" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%"  stop-color="#f0d4b8"/>
+                            <stop offset="100%" stop-color="#c8a07a"/>
+                        </linearGradient>
+                        <linearGradient id="pzHair" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%"  stop-color="#3b2a1d"/>
+                            <stop offset="100%" stop-color="#1d1410"/>
+                        </linearGradient>
+                        <linearGradient id="pzShirt" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%"  stop-color="#3a4f36"/>
+                            <stop offset="100%" stop-color="#1d2a1c"/>
+                        </linearGradient>
+                        <linearGradient id="pzLaptop" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%"  stop-color="#3a3a3a"/>
+                            <stop offset="100%" stop-color="#1a1a1a"/>
+                        </linearGradient>
+                    </defs>
+                    @* warm background *@
+                    <rect width="400" height="320" fill="url(#pzPortraitBg)"/>
+                    <rect width="400" height="320" fill="url(#pzPortraitGlow)"/>
+                    @* window/light bokeh *@
+                    <circle cx="60"  cy="60"  r="38" fill="#fff5d6" opacity="0.30"/>
+                    <circle cx="120" cy="40"  r="14" fill="#fff5d6" opacity="0.35"/>
+                    <circle cx="340" cy="90"  r="22" fill="#fff5d6" opacity="0.20"/>
+                    <circle cx="370" cy="180" r="40" fill="#fff5d6" opacity="0.18"/>
+                    @* shoulders/torso *@
+                    <path d="M70 320 C 80 230, 150 200, 200 200 C 250 200, 320 230, 330 320 Z" fill="url(#pzShirt)"/>
+                    @* neck *@
+                    <rect x="180" y="170" width="40" height="40" rx="14" fill="url(#pzSkin)"/>
+                    @* head *@
+                    <ellipse cx="200" cy="140" rx="52" ry="58" fill="url(#pzSkin)"/>
+                    @* hair *@
+                    <path d="M150 130 C 145 90, 175 70, 200 70 C 230 70, 258 90, 256 130 C 246 110, 224 102, 200 102 C 178 102, 158 110, 150 130 Z" fill="url(#pzHair)"/>
+                    <path d="M148 130 C 142 165, 152 200, 175 215 C 172 200, 168 165, 175 145 Z" fill="url(#pzHair)"/>
+                    <path d="M252 130 C 258 165, 248 200, 225 215 C 228 200, 232 165, 225 145 Z" fill="url(#pzHair)"/>
+                    @* subtle smile/cheeks *@
+                    <ellipse cx="180" cy="155" rx="5" ry="2.5" fill="#a87a5b" opacity="0.55"/>
+                    <ellipse cx="220" cy="155" rx="5" ry="2.5" fill="#a87a5b" opacity="0.55"/>
+                    <path d="M188 167 q 12 8 24 0" stroke="#7a4f33" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+                    @* eyes *@
+                    <ellipse cx="178" cy="140" rx="3" ry="3.5" fill="#2a1a10"/>
+                    <ellipse cx="222" cy="140" rx="3" ry="3.5" fill="#2a1a10"/>
+                    <circle cx="179" cy="139" r="1" fill="#fff"/>
+                    <circle cx="223" cy="139" r="1" fill="#fff"/>
+                    @* eyebrows *@
+                    <path d="M170 128 q 8 -4 18 0" stroke="#2a1a10" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+                    <path d="M212 128 q 8 -4 18 0" stroke="#2a1a10" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+                    @* laptop in front *@
+                    <path d="M90 320 L 110 270 H 290 L 310 320 Z" fill="url(#pzLaptop)"/>
+                    <rect x="120" y="275" width="160" height="42" rx="4" fill="#2c3a26"/>
+                    <rect x="128" y="282" width="60" height="6" rx="2" fill="#aabba4" opacity="0.7"/>
+                    <rect x="128" y="294" width="100" height="4" rx="2" fill="#aabba4" opacity="0.45"/>
+                    <rect x="128" y="302" width="80" height="4" rx="2" fill="#aabba4" opacity="0.4"/>
+                </svg>
+            </div>
+            <div class="pz-testimonial__body">
+                <p class="pz-testimonial__quote">@T["Landing.Testimonial.Quote"]</p>
+                <div class="pz-testimonial__meta">
+                    <span class="pz-testimonial__stat">@T["Landing.Testimonial.Stat1"]</span>
+                    <span>· @T["Landing.Testimonial.Stat2"]</span>
+                </div>
+                <div class="pz-testimonial__meta">
+                    <span class="pz-testimonial__attr">Bloom &amp; Co.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ──────────────────── PRICING ──────────────────── *@
+<section class="pz-section" id="pricing">
+    <div class="pz-container">
+        <div class="pz-section__head pz-reveal">
+            <h2>@T["Landing.Pricing.H2.Part1"] <em>@T["Landing.Pricing.H2.Em"]</em></h2>
+            <p>@T["Landing.Pricing.Sub"]</p>
+        </div>
+
+        <div class="pz-price__grid">
+            <article class="pz-price-card pz-reveal">
+                <div class="pz-price-card__name">@T["Landing.Pricing.Starter.Name"]</div>
+                <div class="pz-price-card__price">$19<small>@T["Landing.Pricing.Period"]</small></div>
+                <ul>
+                    <li>@T["Landing.Pricing.Starter.F1"]</li>
+                    <li>@T["Landing.Pricing.Starter.F2"]</li>
+                    <li>@T["Landing.Pricing.Starter.F3"]</li>
+                    <li>@T["Landing.Pricing.Starter.F4"]</li>
+                    <li>@T["Landing.Pricing.Starter.F5"]</li>
+                </ul>
+                <a class="pz-btn pz-btn--outline pz-btn--xl pz-price-card__cta" href="/Account/Register">@T["Landing.Pricing.Starter.CTA"]</a>
+            </article>
+
+            <article class="pz-price-card pz-price-card--feature pz-reveal">
+                <span class="pz-price-card__badge">@T["Landing.Pricing.Growth.Badge"]</span>
+                <div class="pz-price-card__name">@T["Landing.Pricing.Growth.Name"]</div>
+                <div class="pz-price-card__price">$49<small>@T["Landing.Pricing.Period"]</small></div>
+                <ul>
+                    <li>@T["Landing.Pricing.Growth.F1"]</li>
+                    <li>@T["Landing.Pricing.Growth.F2"]</li>
+                    <li>@T["Landing.Pricing.Growth.F3"]</li>
+                    <li>@T["Landing.Pricing.Growth.F4"]</li>
+                    <li>@T["Landing.Pricing.Growth.F5"]</li>
+                    <li>@T["Landing.Pricing.Growth.F6"]</li>
+                    <li>@T["Landing.Pricing.Growth.F7"]</li>
+                    <li>@T["Landing.Pricing.Growth.F8"]</li>
+                </ul>
+                <a class="pz-btn pz-btn--primary pz-btn--xl pz-price-card__cta" href="/Account/Register">@T["Landing.Pricing.Growth.CTA"]</a>
+            </article>
+
+            <article class="pz-price-card pz-reveal">
+                <div class="pz-price-card__name">@T["Landing.Pricing.Enterprise.Name"]</div>
+                <div class="pz-price-card__enterprise">@T["Landing.Pricing.Enterprise.Price"]<small>@T["Landing.Pricing.Enterprise.Sub"]</small></div>
+                <ul>
+                    <li>@T["Landing.Pricing.Enterprise.F1"]</li>
+                    <li>@T["Landing.Pricing.Enterprise.F2"]</li>
+                    <li>@T["Landing.Pricing.Enterprise.F3"]</li>
+                    <li>@T["Landing.Pricing.Enterprise.F4"]</li>
+                    <li>@T["Landing.Pricing.Enterprise.F5"]</li>
+                    <li>@T["Landing.Pricing.Enterprise.F6"]</li>
+                    <li>@T["Landing.Pricing.Enterprise.F7"]</li>
+                </ul>
+                <a class="pz-btn pz-btn--outline pz-btn--xl pz-price-card__cta" href="/Account/Register">@T["Landing.Pricing.Enterprise.CTA"]</a>
+            </article>
+        </div>
+    </div>
+</section>
+
+@* ──────────────────── FOOTER ──────────────────── *@
+<footer class="pz-footer">
+    <div class="pz-container">
+        <div class="pz-footer__top">
+            <div class="pz-footer__brand">
+                <a href="/" class="pz-brand">
+                    <svg class="pz-brand__leaf" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M12 2C7 6 4 10 4 14a8 8 0 0 0 16 0c0-4-3-8-8-12zm0 18c-2.6 0-4.5-1.6-5.4-3.8 1.2.5 2.6.8 4 .8 3.1 0 5.4-1.6 6.4-3.5C16.5 17 14.5 20 12 20z"/>
+                    </svg>
+                    ChatCRM
+                </a>
+                <p class="pz-footer__tag">@T["Landing.Footer.Tag"]</p>
+            </div>
+
+            <div>
+                <h4>@T["Landing.Footer.Product"]</h4>
+                <ul>
+                    <li><a href="#ai">@T["Landing.Footer.Features"]</a></li>
+                    <li><a href="#pricing">@T["Landing.Nav.Pricing"]</a></li>
+                    <li><a href="#channels">@T["Landing.Nav.Channels"]</a></li>
+                    <li><a href="#how-it-works">@T["Landing.Footer.HowItWorks"]</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>@T["Landing.Nav.Resources"]</h4>
+                <ul>
+                    <li><a href="#use-cases">@T["Landing.Footer.UseCases"]</a></li>
+                    <li><a href="#how-it-works">@T["Landing.Footer.Guides"]</a></li>
+                    <li><a href="#omnichannel">@T["Landing.Footer.HelpCenter"]</a></li>
+                    <li><a href="#ai">@T["Landing.Footer.Community"]</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>@T["Landing.Footer.Company"]</h4>
+                <ul>
+                    <li><a href="/Home/Privacy">@T["Landing.Footer.About"]</a></li>
+                    <li><a href="/Account/Register">@T["Landing.Footer.Careers"]</a></li>
+                    <li><a href="/Home/Privacy">@T["Landing.Footer.Press"]</a></li>
+                    <li><a href="/Account/Register">@T["Landing.Footer.Contact"]</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>@T["Landing.Footer.Legal"]</h4>
+                <ul>
+                    <li><a href="/Home/Privacy">@T["Landing.Footer.Terms"]</a></li>
+                    <li><a href="/Home/Privacy">@T["Landing.Footer.Privacy"]</a></li>
+                    <li><a href="/Home/Privacy">@T["Landing.Footer.Cookies"]</a></li>
+                    <li><a href="/Home/Privacy">@T["Landing.Footer.Security"]</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="pz-footer__bottom">
+            <span>© @DateTime.UtcNow.Year ChatCRM. @T["Landing.Footer.Rights"]</span>
+            <div class="pz-footer__bottom-right">
+                <div class="pz-footer__social" aria-label="Social links">
+                    <a href="#" aria-label="Twitter">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22 5.8c-.7.3-1.5.5-2.4.6.9-.5 1.5-1.3 1.8-2.3-.8.5-1.7.8-2.6 1A4.1 4.1 0 0 0 12 9c0 .3 0 .6.1.9C8.7 9.7 5.7 8.1 3.8 5.7c-.4.6-.6 1.3-.6 2.1 0 1.4.7 2.7 1.8 3.4-.7 0-1.3-.2-1.8-.5v.1c0 2 1.4 3.6 3.3 4-.4.1-.7.2-1.1.2-.3 0-.5 0-.8-.1.5 1.6 2 2.8 3.8 2.8a8.3 8.3 0 0 1-6.1 1.7A11.7 11.7 0 0 0 8.3 21c7.5 0 11.7-6.2 11.7-11.7v-.5c.8-.6 1.5-1.3 2-2z"/></svg>
+                    </a>
+                    <a href="#" aria-label="LinkedIn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3V9zm6 0h3.8v1.7h.1c.5-1 1.8-2 3.8-2 4 0 4.7 2.6 4.7 6V21h-4v-5.7c0-1.4 0-3.1-1.9-3.1s-2.2 1.5-2.2 3v5.8H9V9z"/></svg>
+                    </a>
+                    <a href="#" aria-label="GitHub">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 3 .8.1-.7.4-1.1.7-1.4-2.2-.3-4.5-1.1-4.5-5 0-1.1.4-2 1-2.7-.1-.3-.5-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .6 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.5 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2z"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>

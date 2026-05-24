@@ -19,6 +19,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@T["Channels.Title"] — ChatCRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
@@ -41,10 +44,16 @@
     @* ─── Main content ─── *@
     <main class="settings-main">
 
-        <div class="settings-header">
-            <h1 class="settings-title">@T["Channels.Title"]</h1>
-            <p class="settings-sub">@T["Channels.Subtitle"]</p>
-        </div>
+        <header class="ch-page-head">
+            <div class="ch-page-title-wrap">
+                <h1 class="settings-title">@T["Channels.Title"]</h1>
+                <p class="settings-sub">@T["Channels.Subtitle"]</p>
+            </div>
+            <a href="/dashboard/whatsapp" class="btn-primary-round ch-page-cta">
+                @await Html.PartialAsync("_Icon", new IconModel("plus", size: 14))
+                <span>@T["Channels.Manage"]</span>
+            </a>
+        </header>
 
         <div class="channel-grid">
 

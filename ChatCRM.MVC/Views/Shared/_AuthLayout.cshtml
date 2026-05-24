@@ -1,6 +1,7 @@
 @*
-    Auth / static-page layout. Adopts the dashboard's tokens (tokens.css) — indigo accent,
-    soft neutrals, white card on light gray, no Bootstrap navbar, no marketing copy.
+    Auth / static-page layout. Restyled to the warm parchment / sage-forest aesthetic
+    of the landing page (palette + Fraunces serif headings, Inter body). All view names,
+    classes referenced by JS and layout slots are unchanged.
 
     Used by Login, Register, ForgotPassword, ResetPassword, VerifyEmail, AccessDenied,
     Privacy, and Error.
@@ -26,6 +27,11 @@
         "error"   => "auth-alert-danger",
         _          => "auth-alert-info"
     };
+
+    var mainClass = ViewData["AuthMainClass"] as string ?? string.Empty;
+    var asideContent = ViewData["AuthAside"] as Func<object, Microsoft.AspNetCore.Html.IHtmlContent>;
+    var topRightContent = ViewData["AuthTopRight"] as Func<object, Microsoft.AspNetCore.Html.IHtmlContent>;
+    var isSplit = mainClass.Contains("auth-main-split");
 }
 <!DOCTYPE html>
 <html lang="@htmlLang" dir="@htmlDir">
@@ -33,6 +39,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — ChatCRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/auth.css"  asp-append-version="true" />
@@ -42,28 +51,64 @@
     </script>
     <script src="~/js/i18n.js" asp-append-version="true"></script>
 </head>
-<body class="auth-shell">
+<body class="auth-shell @(isSplit ? "auth-shell-split" : "")">
 
-    <header class="auth-topbar">
-        <a class="auth-brand" href="/" title="ChatCRM">
-            <span class="auth-brand-mark">
-                <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M9 11.5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-6.5l-3 3v-3H11a2 2 0 0 1-2-2v-6z" fill="white"/>
-                </svg>
-            </span>
-            <span>ChatCRM</span>
-        </a>
-    </header>
+    @if (!isSplit)
+    {
+        <header class="auth-topbar">
+            <a class="auth-brand" href="/" title="ChatCRM">
+                <span class="auth-brand-mark">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M12 2C7 6 4 10 4 14a8 8 0 0 0 16 0c0-4-3-8-8-12zm0 18c-2.6 0-4.5-1.6-5.4-3.8 1.2.5 2.6.8 4 .8 3.1 0 5.4-1.6 6.4-3.5C16.5 17 14.5 20 12 20z"/>
+                    </svg>
+                </span>
+                <span>ChatCRM</span>
+            </a>
+        </header>
+    }
 
-    <main class="auth-main">
-        <div class="auth-card @ViewData["AuthCardClass"]">
-            @if (!string.IsNullOrWhiteSpace(statusMessage))
-            {
-                <div class="auth-alert @alertClass" role="alert">@statusMessage</div>
-            }
+    <main class="auth-main @mainClass">
+        @if (asideContent != null)
+        {
+            <div class="auth-form-col">
+                <div class="auth-form-topbar">
+                    <a class="auth-brand auth-brand-inline" href="/" title="ChatCRM">
+                        <span class="auth-brand-mark">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M12 2C7 6 4 10 4 14a8 8 0 0 0 16 0c0-4-3-8-8-12zm0 18c-2.6 0-4.5-1.6-5.4-3.8 1.2.5 2.6.8 4 .8 3.1 0 5.4-1.6 6.4-3.5C16.5 17 14.5 20 12 20z"/>
+                            </svg>
+                        </span>
+                        <span>ChatCRM</span>
+                    </a>
+                    @if (topRightContent != null)
+                    {
+                        <div class="auth-form-topright">@topRightContent(null)</div>
+                    }
+                </div>
+                <div class="auth-card @ViewData["AuthCardClass"]">
+                    @if (!string.IsNullOrWhiteSpace(statusMessage))
+                    {
+                        <div class="auth-alert @alertClass" role="alert">@statusMessage</div>
+                    }
 
-            @RenderBody()
-        </div>
+                    @RenderBody()
+                </div>
+            </div>
+            <aside class="auth-aside">
+                @asideContent(null)
+            </aside>
+        }
+        else
+        {
+            <div class="auth-card @ViewData["AuthCardClass"]">
+                @if (!string.IsNullOrWhiteSpace(statusMessage))
+                {
+                    <div class="auth-alert @alertClass" role="alert">@statusMessage</div>
+                }
+
+                @RenderBody()
+            </div>
+        }
     </main>
 
     <footer class="auth-footer-bar">
