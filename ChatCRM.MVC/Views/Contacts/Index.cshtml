@@ -1,6 +1,7 @@
 @using System.Globalization
 @inject Microsoft.Extensions.Localization.IStringLocalizer T
 @inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthZ
 @{
     ViewData["Title"] = T["Contacts.Title"].Value;
     Layout = null;
@@ -31,6 +32,9 @@
     <script>
         window.__i18n__ = @Html.Raw(translationsJson);
         window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+        // Gates the contact-file upload/rename/delete controls. The server still enforces the
+        // permission on every endpoint — this only hides controls the user can't use.
+        window.__canEditContacts__ = @((await AuthZ.AuthorizeAsync(User, null, new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(ChatCRM.Domain.Entities.Permissions.ContactsEdit) })).Succeeded ? "true" : "false");
     </script>
     <script src="~/js/i18n.js" asp-append-version="true"></script>
 </head>
@@ -329,6 +333,34 @@
                     </section>
 
                 </div>
+
+                @* ── INTERNAL FILES — private, team-only attachments. Never shown to or sent
+                   to the contact; managed through authorized endpoints only. *@
+                <section class="cd-card cd-card-files" id="cdFilesCard">
+                    <header class="cd-card-head cd-files-head">
+                        <h3>
+                            @T["ContactFiles.Title"]
+                            <span class="cd-files-private" title="@T["ContactFiles.PrivateHint"]">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            @T["ContactFiles.PrivateBadge"]
+                            </span>
+                        </h3>
+                        @* Upload control — hidden on read-only roles via data-can-edit gate in JS. *@
+                        <div class="cd-files-upload" id="cdFilesUpload">
+                            <input type="file" id="cdFilesInput" multiple class="d-none" />
+                            <button type="button" class="btn-primary-soft has-icon" id="cdFilesUploadBtn">
+                                @await Html.PartialAsync("_Icon", new IconModel("upload", size: 14))
+                                <span>@T["ContactFiles.Upload"]</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    <p class="cd-files-note">@T["ContactFiles.Note"]</p>
+
+                    <div class="cd-files-list" id="cdFilesList" aria-live="polite"></div>
+                    <div class="cd-files-empty d-none" id="cdFilesEmpty">@T["ContactFiles.Empty"]</div>
+                </section>
+
             </div>
         </div>
     </div>

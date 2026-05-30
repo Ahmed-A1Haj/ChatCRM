@@ -122,6 +122,7 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IWhatsAppInstanceService, WhatsAppInstanceService>();
 builder.Services.AddScoped<IContactsService, ContactsService>();
 builder.Services.AddScoped<IContactImportService, ContactImportService>();
+builder.Services.AddScoped<IContactFileService, ContactFileService>();
 
 // Billing — pricing engine (phase 1) + wallet read/admin surface (phase 2) + Stripe top-up
 // flow (phase 3) + per-message billing gate (phase 4: reserve → send → commit/release).
