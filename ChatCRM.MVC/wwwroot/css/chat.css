@@ -1038,3 +1038,117 @@ body.chat-shell {
     display: flex; justify-content: flex-end; gap: 8px;
     padding-top: 8px; border-top: 1px solid var(--border);
 }
+
+/* ─── Internal (private) files in the contact panel ─────────────────── */
+.cp-files {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+.cp-files-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.cp-files-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text-muted, #6b7280);
+}
+.cp-files-private {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--warn-bg, #fef3c7);
+    color: var(--warn-text, #92400e);
+    font-size: 9px;
+    font-weight: 700;
+}
+.cp-files-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    background: var(--bg-panel, #fff);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+}
+.cp-files-upload-btn:hover { background: var(--bg-soft, #f4f5f2); border-color: var(--brand-ring, #cdd9cf); }
+
+.cp-files-list { display: flex; flex-direction: column; gap: 7px; }
+.cp-files-loading { padding: 8px 2px; font-size: 12.5px; color: var(--text-muted, #6b7280); }
+.cp-files-empty {
+    padding: 14px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--text-dim, #9ca3af);
+    border: 1px dashed var(--border, #e5e7eb);
+    border-radius: 9px;
+}
+
+.cp-file-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 9px;
+    border: 1px solid var(--border-soft, #eef0ec);
+    border-radius: 9px;
+    background: var(--bg-panel, #fff);
+}
+.cp-file-row:hover { border-color: var(--border, #e5e7eb); background: var(--bg-soft, #fafafa); }
+.cp-file-ext {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 7px;
+    background: var(--brand-100, #e9efe7);
+    color: var(--brand-text, #3f6b4a);
+    font-size: 8.5px;
+    font-weight: 700;
+}
+.cp-file-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cp-file-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cp-file-name:hover { text-decoration: underline; }
+.cp-file-sub { font-size: 11px; color: var(--text-muted, #6b7280); }
+.cp-file-actions { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.cp-file-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 7px;
+    background: none;
+    color: var(--text-muted, #6b7280);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .12s, color .12s;
+}
+.cp-file-btn:hover { background: var(--brand-100, #e9efe7); color: var(--brand-text, #3f6b4a); }
+.cp-file-btn-danger:hover { background: var(--danger-bg, #fee2e2); color: var(--danger-text, #b91c1c); }

@@ -3,6 +3,7 @@
 @using System.Globalization
 @inject Microsoft.Extensions.Localization.IStringLocalizer T
 @inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthZ
 @{
     ViewData["Title"] = T["Inbox.Title"].Value;
     Layout = null;
@@ -33,6 +34,8 @@
     <script>
         window.__i18n__ = @Html.Raw(translationsJson);
         window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+        // Gates the internal-files upload/rename/delete controls (server enforces it too).
+        window.__canEditContacts__ = @((await AuthZ.AuthorizeAsync(User, null, new[] { new ChatCRM.Infrastructure.Authorization.PermissionRequirement(ChatCRM.Domain.Entities.Permissions.ContactsEdit) })).Succeeded ? "true" : "false");
     </script>
     <script src="~/js/i18n.js" asp-append-version="true"></script>
 </head>
@@ -515,6 +518,28 @@
                         <span class="cp-row-key">Total messages</span>
                         <span class="cp-row-val" id="cpMsgCount">0</span>
                     </div>
+                </div>
+
+                @* ── Internal (private) files — team-only; never shown to/sent to the contact. *@
+                <div class="cp-files" id="cpFilesCard">
+                    <div class="cp-files-head">
+                        <span class="cp-files-title">
+                            @T["ContactFiles.Title"]
+                            <span class="cp-files-private" title="@T["ContactFiles.PrivateHint"]">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                @T["ContactFiles.PrivateBadge"]
+                            </span>
+                        </span>
+                        <div class="cp-files-upload" id="cpFilesUpload">
+                            <input type="file" id="cpFilesInput" multiple class="d-none" />
+                            <button type="button" class="cp-files-upload-btn" id="cpFilesUploadBtn" title="@T["ContactFiles.Upload"]">
+                                @await Html.PartialAsync("_Icon", new IconModel("upload", size: 13))
+                                <span>@T["ContactFiles.Upload"]</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="cp-files-list" id="cpFilesList" aria-live="polite"></div>
+                    <div class="cp-files-empty d-none" id="cpFilesEmpty">@T["ContactFiles.Empty"]</div>
                 </div>
             </div>
 
