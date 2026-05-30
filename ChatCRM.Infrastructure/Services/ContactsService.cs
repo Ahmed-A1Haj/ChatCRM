@@ -106,6 +106,93 @@ namespace ChatCRM.Infrastructure.Services
             return dto;
         }
 
+        public async Task<PipelineBoardDto> GetBoardAsync(PipelineBoardQuery query, CancellationToken cancellationToken = default)
+        {
+            var limit = Math.Clamp(query.PerColumnLimit, 1, 500);
+            var recentCutoff = DateTime.UtcNow.AddDays(-7);
+
+            // Project each contact to a lean card. The "primary" conversation (most recent) supplies
+            // assignee + tags + channel, mirroring BuildBaseQuery's aggregation.
+            var cardsQuery =
+                from contact in _db.WhatsAppContacts
+                let primary = _db.Conversations
+                    .Where(c => c.ContactId == contact.Id)
+                    .OrderByDescending(c => c.LastMessageAt)
+                    .FirstOrDefault()
+                let lastAt = _db.Conversations
+                    .Where(c => c.ContactId == contact.Id)
+                    .Max(c => (DateTime?)c.LastMessageAt)
+                select new PipelineCardDto
+                {
+                    Id = contact.Id,
+                    DisplayName = contact.DisplayName,
+                    PhoneNumber = contact.PhoneNumber,
+                    Company = contact.Company,
+                    Email = contact.Email,
+                    AvatarUrl = contact.AvatarUrl,
+                    LifecycleStage = (byte)contact.LifecycleStage,
+                    ChannelType = primary != null ? (byte)primary.Instance.ChannelType : (byte)0,
+                    HasEmail = contact.Email != null && contact.Email != "",
+                    HasPhone = contact.PhoneNumber != "",
+                    LastMessageAt = lastAt,
+                    AssignedUserId = primary != null ? primary.AssignedUserId : null,
+                    AssignedUserName = primary != null && primary.AssignedUser != null
+                        ? (string.IsNullOrEmpty(primary.AssignedUser.FirstName)
+                            ? primary.AssignedUser.Email
+                            : primary.AssignedUser.FirstName + " " + primary.AssignedUser.LastName)
+                        : null,
+                    PrimaryConversationId = primary != null ? primary.Id : null,
+                    PrimaryInstanceId = primary != null ? primary.WhatsAppInstanceId : null,
+                    Tags = primary == null
+                        ? new List<TagDto>()
+                        : primary.Tags.Select(t => new TagDto { Id = t.TagId, Name = t.Tag.Name, Color = t.Tag.Color }).ToList()
+                };
+
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var s = query.Search.Trim().ToLower();
+                cardsQuery = cardsQuery.Where(r =>
+                    (r.DisplayName != null && r.DisplayName.ToLower().Contains(s)) ||
+                    r.PhoneNumber.Contains(s) ||
+                    (r.Company != null && r.Company.ToLower().Contains(s)) ||
+                    (r.Email != null && r.Email.ToLower().Contains(s)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.AssignedUserId))
+                cardsQuery = cardsQuery.Where(r => r.AssignedUserId == query.AssignedUserId);
+
+            if (query.Recent)
+                cardsQuery = cardsQuery.Where(r => r.LastMessageAt != null && r.LastMessageAt >= recentCutoff);
+
+            // Pull the matching set ordered by recency, then group by stage in memory. Bounded by a
+            // hard ceiling so a huge workspace can't load unboundedly; per-column cap applies after.
+            var all = await cardsQuery
+                .OrderByDescending(r => r.LastMessageAt ?? DateTime.MinValue)
+                .Take(5000)
+                .ToListAsync(cancellationToken);
+
+            var byStage = all.GroupBy(c => c.LifecycleStage).ToDictionary(g => g.Key, g => g.ToList());
+
+            // One column per defined lifecycle stage, in enum order (0..10), even when empty.
+            var stages = Enum.GetValues<LifecycleStage>().Cast<byte>().OrderBy(v => v);
+            var board = new PipelineBoardDto
+            {
+                Columns = stages.Select(stage =>
+                {
+                    byStage.TryGetValue(stage, out var cards);
+                    cards ??= new List<PipelineCardDto>();
+                    return new PipelineColumnDto
+                    {
+                        Stage = stage,
+                        Total = cards.Count,
+                        Cards = cards.Take(limit).ToList()
+                    };
+                }).ToList()
+            };
+
+            return board;
+        }
+
         public async Task<byte[]> ExportCsvAsync(ContactsListQuery query, CancellationToken cancellationToken = default)
         {
             // Same filters as ListAsync but no paging — export everything matching.

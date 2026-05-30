@@ -55,6 +55,24 @@ namespace ChatCRM.MVC.Controllers
             return View();
         }
 
+        // ── Kanban pipeline board ───────────────────────────────────────
+
+        [HttpGet("/dashboard/pipeline")]
+        public async Task<IActionResult> Pipeline(CancellationToken cancellationToken)
+        {
+            var team = await _chatService.GetTeamMembersAsync(cancellationToken);
+            ViewBag.TeamMembers = team;
+            ViewBag.CurrentUserId = _userManager.GetUserId(User);
+            return View();
+        }
+
+        [HttpGet("/api/contacts/board")]
+        public async Task<IActionResult> Board([FromQuery] PipelineBoardQuery q, CancellationToken cancellationToken)
+        {
+            var board = await _service.GetBoardAsync(q, cancellationToken);
+            return Json(board);
+        }
+
         // ── REST ────────────────────────────────────────────────────────
 
         [HttpGet("/api/contacts")]

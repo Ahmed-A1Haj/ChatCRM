@@ -51,6 +51,10 @@
             @await Html.PartialAsync("_Icon", new IconModel("users", size: 20, ariaLabel: T["Rail.Contacts"].Value))
             <span class="rail-label">@T["Rail.Contacts"]</span>
         </a>
+        <a class="@Cls("pipeline")" href="/dashboard/pipeline" title="@T["Rail.Pipeline"]">
+            @await Html.PartialAsync("_Icon", new IconModel("kanban", size: 20, ariaLabel: T["Rail.Pipeline"].Value))
+            <span class="rail-label">@T["Rail.Pipeline"]</span>
+        </a>
         @if (canSeeBilling)
         {
             <a class="@Cls("billing")" href="/dashboard/billing" title="@T["Rail.Billing"]">
