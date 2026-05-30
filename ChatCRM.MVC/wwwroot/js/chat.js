@@ -193,6 +193,26 @@ function toggleStatus() {
 document.addEventListener('click', (e) => {
     if (!e.target.closest('#assignWrap')) document.getElementById('assignMenu')?.classList.add('d-none');
     if (!e.target.closest('#statusWrap')) document.getElementById('statusMenu')?.classList.add('d-none');
+
+    // Close the contact details panel when clicking outside it. Ignore clicks on the panel
+    // itself, its open-triggers, the agent-picker popover it anchors (rendered outside it),
+    // and the conversation list — selecting a conversation auto-opens the panel, so a sidebar
+    // click must not immediately close it.
+    const panel = document.getElementById('contactPanel');
+    if (panel &&
+        !e.target.closest('#contactPanel') &&
+        !e.target.closest('#contactToggle') &&
+        !e.target.closest('#chatHeaderTarget') &&
+        !e.target.closest('#agentPickerPopover') &&
+        !e.target.closest('#chatSidebar')) {
+        const mobile = window.innerWidth <= 1100;
+        const isOpen = mobile ? panel.classList.contains('show') : !panel.classList.contains('d-none');
+        if (isOpen) {
+            // Mirror toggleContactPanel(): 'show' drives the mobile overlay, 'd-none' the desktop column.
+            panel.classList.remove('show');
+            panel.classList.add('d-none');
+        }
+    }
 });
 
 async function assignTo(userId) {
