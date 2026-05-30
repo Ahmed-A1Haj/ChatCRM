@@ -502,6 +502,8 @@
   "Auth.Login.PasswordPlaceholder": "Enter your password",
   "Auth.Login.ShowPassword": "Show password",
   "Auth.Login.Show": "Show",
+  "Auth.Login.HidePassword": "Hide password",
+  "Auth.Login.Hide": "Hide",
   "Auth.Login.RememberMe": "Keep me signed in on this device",
   "Auth.Login.Forgot": "Forgot password?",
   "Auth.Login.Submit": "Sign in",

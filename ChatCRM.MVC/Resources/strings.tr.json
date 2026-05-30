@@ -502,6 +502,8 @@
   "Auth.Login.PasswordPlaceholder": "Parolanızı girin",
   "Auth.Login.ShowPassword": "Parolayı göster",
   "Auth.Login.Show": "Göster",
+  "Auth.Login.HidePassword": "Parolayı gizle",
+  "Auth.Login.Hide": "Gizle",
   "Auth.Login.RememberMe": "Bu cihazda oturumumu açık tut",
   "Auth.Login.Forgot": "Parolanızı mı unuttunuz?",
   "Auth.Login.Submit": "Giriş yap",

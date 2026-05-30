@@ -50,7 +50,7 @@
         <label asp-for="Password"></label>
         <div class="auth-password">
             <input asp-for="Password" class="auth-input" autocomplete="new-password" placeholder="@T["Auth.Register.PasswordPlaceholder"]" />
-            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" data-hide-label="@T["Auth.Login.HidePassword"]" data-hide-text="@T["Auth.Login.Hide"]" aria-pressed="false">
                 <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
             </button>
         </div>
@@ -62,7 +62,7 @@
         <label asp-for="ConfirmPassword"></label>
         <div class="auth-password">
             <input asp-for="ConfirmPassword" class="auth-input" autocomplete="new-password" placeholder="@T["Auth.Register.ConfirmPlaceholder"]" />
-            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" data-hide-label="@T["Auth.Login.HidePassword"]" data-hide-text="@T["Auth.Login.Hide"]" aria-pressed="false">
                 <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
             </button>
         </div>

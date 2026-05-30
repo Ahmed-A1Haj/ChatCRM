@@ -502,6 +502,8 @@
   "Auth.Login.PasswordPlaceholder": "Introdu parola",
   "Auth.Login.ShowPassword": "Afișează parola",
   "Auth.Login.Show": "Afișează",
+  "Auth.Login.HidePassword": "Ascunde parola",
+  "Auth.Login.Hide": "Ascunde",
   "Auth.Login.RememberMe": "Ține-mă conectat pe acest dispozitiv",
   "Auth.Login.Forgot": "Ai uitat parola?",
   "Auth.Login.Submit": "Conectare",

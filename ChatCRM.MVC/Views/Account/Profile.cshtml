@@ -204,7 +204,7 @@
                             <label for="CurrentPassword">@T["Profile.Password.Current"]</label>
                             <div class="auth-password">
                                 <input id="CurrentPassword" name="CurrentPassword" type="password" class="auth-input @(string.IsNullOrEmpty(cpCurrentErr) ? "" : "is-invalid")" autocomplete="current-password" placeholder="@T["Profile.Password.CurrentPlaceholder"]" />
-                                <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+                                <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" data-hide-label="@T["Auth.Login.HidePassword"]" data-hide-text="@T["Auth.Login.Hide"]" aria-pressed="false">
                                     <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
                                 </button>
                             </div>
@@ -214,7 +214,7 @@
                             <label for="NewPassword">@T["Profile.Password.New"]</label>
                             <div class="auth-password">
                                 <input id="NewPassword" name="NewPassword" type="password" class="auth-input @(string.IsNullOrEmpty(cpNewErr) ? "" : "is-invalid")" autocomplete="new-password" placeholder="@T["Profile.Password.NewPlaceholder"]" />
-                                <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+                                <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" data-hide-label="@T["Auth.Login.HidePassword"]" data-hide-text="@T["Auth.Login.Hide"]" aria-pressed="false">
                                     <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
                                 </button>
                             </div>
@@ -225,7 +225,7 @@
                             <label for="ConfirmNewPassword">@T["Profile.Password.Confirm"]</label>
                             <div class="auth-password">
                                 <input id="ConfirmNewPassword" name="ConfirmNewPassword" type="password" class="auth-input @(string.IsNullOrEmpty(cpConfirmErr) ? "" : "is-invalid")" autocomplete="new-password" placeholder="@T["Profile.Password.ConfirmPlaceholder"]" />
-                                <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+                                <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" data-hide-label="@T["Auth.Login.HidePassword"]" data-hide-text="@T["Auth.Login.Hide"]" aria-pressed="false">
                                     <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
                                 </button>
                             </div>
