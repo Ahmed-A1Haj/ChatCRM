@@ -255,6 +255,15 @@ function applyStatusToHeader(status) {
 }
 
 /* ─── Contact panel ─────────────────────────────────────────────────── */
+// Navigate to the Shared Media & Files gallery for the open conversation.
+function openMediaGallery() {
+    if (!activeConversationId) {
+        showToast(t('Toast.SelectConversation'), 'error');
+        return;
+    }
+    window.location.href = `/dashboard/chats/${activeConversationId}/media`;
+}
+
 function toggleContactPanel() {
     const p = document.getElementById('contactPanel');
     if (!p) return;

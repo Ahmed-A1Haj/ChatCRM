@@ -339,6 +339,11 @@
                         </div>
                     </div>
 
+                    @* Shared Media & Files gallery for this conversation *@
+                    <button class="header-btn header-btn-icon" id="mediaBtn" onclick="openMediaGallery()" title="@T["Media.Title"]" aria-label="@T["Media.Title"]">
+                        @await Html.PartialAsync("_Icon", new IconModel("image", size: 18))
+                    </button>
+
                     @* Toggle right contact panel *@
                     <button class="header-btn header-btn-icon" id="contactToggle" onclick="toggleContactPanel()" title="Contact details">
                         @await Html.PartialAsync("_Icon", new IconModel("user", size: 18))

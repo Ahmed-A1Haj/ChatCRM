@@ -488,5 +488,24 @@ namespace ChatCRM.MVC.Controllers
             var details = await _chatService.GetContactDetailsAsync(id, cancellationToken);
             return details is null ? NotFound() : Json(details);
         }
+
+        /// <summary>
+        /// Shared Media &amp; Files gallery for one conversation — aggregates every image, file and
+        /// link exchanged in the thread. Renders the page shell; the grid/list is filled by
+        /// <see cref="Attachments"/> over JSON.
+        /// </summary>
+        [HttpGet("/dashboard/chats/{id:int}/media")]
+        public async Task<IActionResult> Media(int id, CancellationToken cancellationToken)
+        {
+            var vm = await _chatService.GetMediaGalleryAsync(id, cancellationToken);
+            return vm is null ? NotFound() : View(vm);
+        }
+
+        [HttpGet("/dashboard/chats/{id:int}/attachments")]
+        public async Task<IActionResult> Attachments(int id, [FromQuery] AttachmentsQuery query, CancellationToken cancellationToken)
+        {
+            var result = await _chatService.GetAttachmentsAsync(id, query, cancellationToken);
+            return Json(result);
+        }
     }
 }

@@ -170,7 +170,12 @@ builder.Services.Configure<AiOptions>(builder.Configuration.GetSection("Ai"));
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
     var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiOptions>>().Value;
-    return ConnectionMultiplexer.Connect(opts.RedisUrl);
+    // AI/Redis is optional (see README). Disable abort-on-connect-fail so a missing Redis
+    // doesn't crash startup — the multiplexer connects in the background and the AI workers
+    // retry once Redis becomes reachable.
+    var redisConfig = ConfigurationOptions.Parse(opts.RedisUrl);
+    redisConfig.AbortOnConnectFail = false;
+    return ConnectionMultiplexer.Connect(redisConfig);
 });
 builder.Services.AddScoped<IAiAgentClient, AiAgentClient>();
 builder.Services.AddScoped<IAiReplyDispatcher, AiReplyDispatcher>();
