@@ -13,6 +13,7 @@ namespace ChatCRM.Persistence
         }
 
         public DbSet<WhatsAppContact> WhatsAppContacts => Set<WhatsAppContact>();
+        public DbSet<ContactFile> ContactFiles => Set<ContactFile>();
         public DbSet<WhatsAppInstance> WhatsAppInstances => Set<WhatsAppInstance>();
         public DbSet<Conversation> Conversations => Set<Conversation>();
         public DbSet<Message> Messages => Set<Message>();
@@ -61,6 +62,32 @@ namespace ChatCRM.Persistence
                     .OnDelete(DeleteBehavior.SetNull);
 
                 builder.HasIndex(x => x.AssignedAgentId);
+            });
+
+            modelBuilder.Entity<ContactFile>(builder =>
+            {
+                builder.Property(x => x.FileName).HasMaxLength(260).IsRequired();
+                builder.Property(x => x.StoredFileName).HasMaxLength(100).IsRequired();
+                builder.Property(x => x.ContentType).HasMaxLength(150).IsRequired();
+                builder.Property(x => x.IsInternal).HasDefaultValue(true);
+
+                // Files belong to a contact; deleting the contact removes its private files too.
+                builder.HasOne(x => x.Contact)
+                    .WithMany(x => x.Files)
+                    .HasForeignKey(x => x.ContactId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                builder.HasOne(x => x.UploadedByUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.UploadedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                builder.HasIndex(x => x.ContactId);
+
+                // Defense-in-depth: these rows are internal by definition. A global query filter
+                // means any accidental IsInternal=false row is invisible to ordinary queries —
+                // nothing in the app can surface a non-internal contact file by mistake.
+                builder.HasQueryFilter(x => x.IsInternal);
             });
 
             modelBuilder.Entity<WhatsAppInstance>(builder =>
@@ -126,6 +153,13 @@ namespace ChatCRM.Persistence
                 builder.HasIndex(x => x.ConversationId);
                 builder.HasIndex(x => x.SentAt);
                 builder.HasIndex(x => x.AuthorAgentId);
+
+                // Transcription columns. TranscriptionText can be long → nvarchar(max) (default).
+                builder.Property(x => x.TranscriptionLanguage).HasMaxLength(20);
+                builder.Property(x => x.TranscriptionProvider).HasMaxLength(40);
+                builder.Property(x => x.TranscriptionError).HasMaxLength(1000);
+                // The worker scans by status; index it so the poll query stays cheap.
+                builder.HasIndex(x => x.TranscriptionStatus);
             });
 
             modelBuilder.Entity<Tag>(builder =>

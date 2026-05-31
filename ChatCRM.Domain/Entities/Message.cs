@@ -25,6 +25,21 @@ namespace ChatCRM.Domain.Entities
         Sticker = 5
     }
 
+    /// <summary>Speech-to-text lifecycle for an audio/voice message.</summary>
+    public enum TranscriptionStatus : byte
+    {
+        /// <summary>Not an audio message, or transcription was never requested.</summary>
+        None = 0,
+        /// <summary>Queued — waiting for the background worker to pick it up.</summary>
+        Pending = 1,
+        /// <summary>A worker is currently calling the speech-to-text provider.</summary>
+        Processing = 2,
+        /// <summary>Transcribed successfully — text is in <see cref="Message.TranscriptionText"/>.</summary>
+        Done = 3,
+        /// <summary>Permanently failed after exhausting retries.</summary>
+        Failed = 4
+    }
+
     public class Message
     {
         public int Id { get; set; }
@@ -75,5 +90,29 @@ namespace ChatCRM.Domain.Entities
         /// </summary>
         public int? AuthorAgentId { get; set; }
         public Agent? AuthorAgent { get; set; }
+
+        // ── Speech-to-text (audio messages) ───────────────────────────────
+        // Populated by the background TranscriptionWorker for Kind == Audio messages. The text
+        // is read-only inspection data and the input the AI pipeline can consume.
+
+        public TranscriptionStatus TranscriptionStatus { get; set; } = TranscriptionStatus.None;
+
+        /// <summary>The transcribed text once <see cref="TranscriptionStatus"/> is Done.</summary>
+        public string? TranscriptionText { get; set; }
+
+        /// <summary>Detected (or requested) language code, e.g. "en", "ar".</summary>
+        public string? TranscriptionLanguage { get; set; }
+
+        /// <summary>Which provider produced the text, e.g. "groq", "whisper-api", "local", "mock".</summary>
+        public string? TranscriptionProvider { get; set; }
+
+        /// <summary>How many transcription attempts have been made (drives retry/backoff).</summary>
+        public int TranscriptionAttemptCount { get; set; }
+
+        /// <summary>Last provider error message, kept for inspection when status is Failed.</summary>
+        public string? TranscriptionError { get; set; }
+
+        /// <summary>Earliest UTC time the worker may retry after a transient failure (backoff).</summary>
+        public DateTime? TranscriptionNextAttemptUtc { get; set; }
     }
 }

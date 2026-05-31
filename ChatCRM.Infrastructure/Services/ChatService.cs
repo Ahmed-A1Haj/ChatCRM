@@ -1,16 +1,23 @@
 using ChatCRM.Application.Chats.DTOs;
 using ChatCRM.Application.Interfaces;
+using ChatCRM.Application.Transcription;
 using ChatCRM.Domain.Entities;
 using ChatCRM.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace ChatCRM.Infrastructure.Services
 {
     public class ChatService : IChatService
     {
+        // Matches http/https URLs in message bodies for the "Links" tab.
+        private static readonly Regex UrlRegex = new(
+            @"https?://[^\s<>""']+",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
         private readonly AppDbContext _db;
         private readonly IEvolutionService _evolutionService;
         private readonly IHubContext<ChatHub> _hub;
@@ -123,7 +130,11 @@ namespace ChatCRM.Infrastructure.Services
                     IsDeleted = m.IsDeleted,
                     AuthorName = m.AuthorUser != null
                         ? (string.IsNullOrWhiteSpace(m.AuthorUser.FirstName) ? m.AuthorUser.Email : m.AuthorUser.FirstName + " " + m.AuthorUser.LastName)
-                        : null
+                        : null,
+                    TranscriptionStatus = (byte)m.TranscriptionStatus,
+                    TranscriptionText = m.TranscriptionText,
+                    TranscriptionLanguage = m.TranscriptionLanguage,
+                    TranscriptionProvider = m.TranscriptionProvider
                 })
                 .ToListAsync(cancellationToken);
         }
@@ -428,6 +439,209 @@ namespace ChatCRM.Infrastructure.Services
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<MediaGalleryViewModel?> GetMediaGalleryAsync(int conversationId, CancellationToken cancellationToken = default)
+        {
+            var conversation = await _db.Conversations
+                .Include(c => c.Contact)
+                .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
+
+            if (conversation is null) return null;
+
+            // Attachments live on existing messages — exclude internal notes and revoked messages.
+            var media = _db.Messages.Where(m =>
+                m.ConversationId == conversationId &&
+                !m.IsDeleted &&
+                m.Direction != MessageDirection.Note &&
+                m.MediaUrl != null);
+
+            var imageCount = await media.CountAsync(m => m.Kind == MessageKind.Image || m.Kind == MessageKind.Sticker, cancellationToken);
+            var fileCount = await media.CountAsync(m => m.Kind == MessageKind.Document || m.Kind == MessageKind.Video || m.Kind == MessageKind.Audio, cancellationToken);
+
+            // Links are parsed out of text bodies — pull the small candidate set and count matches.
+            var linkBodies = await _db.Messages
+                .Where(m => m.ConversationId == conversationId && !m.IsDeleted && m.Direction != MessageDirection.Note
+                            && m.Kind == MessageKind.Text && m.Body.Contains("http"))
+                .Select(m => m.Body)
+                .ToListAsync(cancellationToken);
+            var linkCount = linkBodies.Sum(b => UrlRegex.Matches(b ?? string.Empty).Count);
+
+            return new MediaGalleryViewModel
+            {
+                ConversationId = conversation.Id,
+                InstanceId = conversation.WhatsAppInstanceId,
+                ContactName = conversation.Contact.DisplayName,
+                ContactPhone = conversation.Contact.PhoneNumber,
+                AvatarUrl = conversation.Contact.AvatarUrl,
+                ImageCount = imageCount,
+                FileCount = fileCount,
+                LinkCount = linkCount
+            };
+        }
+
+        public async Task<AttachmentsResultDto> GetAttachmentsAsync(int conversationId, AttachmentsQuery query, CancellationToken cancellationToken = default)
+        {
+            var type = (query.Type ?? "images").Trim().ToLowerInvariant();
+            var page = Math.Max(1, query.Page);
+            var pageSize = Math.Clamp(query.PageSize, 1, 100);
+            var search = string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim();
+            var senderFilter = (query.Sender ?? "").Trim().ToLowerInvariant();
+
+            // Links tab — extracted from text bodies, paged in memory (conversation-scale data).
+            if (type == "links")
+            {
+                var links = await BuildLinksAsync(conversationId, query, search, senderFilter, cancellationToken);
+                var total = links.Count;
+                var pageLinks = links.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+                return new AttachmentsResultDto { Links = pageLinks, Total = total, Page = page, PageSize = pageSize };
+            }
+
+            var q = _db.Messages.Where(m =>
+                m.ConversationId == conversationId &&
+                !m.IsDeleted &&
+                m.Direction != MessageDirection.Note &&
+                m.MediaUrl != null);
+
+            q = type switch
+            {
+                "files" => q.Where(m => m.Kind == MessageKind.Document || m.Kind == MessageKind.Video || m.Kind == MessageKind.Audio),
+                "all" => q,
+                _ /* images */ => q.Where(m => m.Kind == MessageKind.Image || m.Kind == MessageKind.Sticker)
+            };
+
+            if (senderFilter == "incoming")
+                q = q.Where(m => m.Direction == MessageDirection.Incoming);
+            else if (senderFilter == "outgoing")
+                q = q.Where(m => m.Direction == MessageDirection.Outgoing);
+
+            if (query.FromUtc.HasValue)
+                q = q.Where(m => m.SentAt >= query.FromUtc.Value);
+            if (query.ToUtc.HasValue)
+                q = q.Where(m => m.SentAt <= query.ToUtc.Value);
+
+            if (search is not null)
+                q = q.Where(m => (m.MediaFileName != null && m.MediaFileName.Contains(search)) || m.Body.Contains(search));
+
+            var totalCount = await q.CountAsync(cancellationToken);
+
+            var items = await q
+                .OrderByDescending(m => m.SentAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(m => new AttachmentDto
+                {
+                    Id = m.Id,
+                    ConversationId = m.ConversationId,
+                    Kind = m.Kind,
+                    MediaUrl = m.MediaUrl,
+                    MediaMimeType = m.MediaMimeType,
+                    MediaFileName = m.MediaFileName,
+                    Caption = m.Body,
+                    SentAt = m.SentAt,
+                    Direction = m.Direction,
+                    SenderName = m.Direction == MessageDirection.Incoming
+                        ? (m.Conversation.Contact.DisplayName ?? m.Conversation.Contact.PhoneNumber)
+                        : m.AuthorUser != null
+                            ? (string.IsNullOrWhiteSpace(m.AuthorUser.FirstName) ? m.AuthorUser.Email : m.AuthorUser.FirstName + " " + m.AuthorUser.LastName)
+                            : m.AuthorAgent != null ? m.AuthorAgent.Name : "Team"
+                })
+                .ToListAsync(cancellationToken);
+
+            // File size isn't a DB column — read it from disk for the current page only.
+            var mediaRoot = ResolveMediaRoot();
+            foreach (var item in items)
+                item.SizeBytes = ResolveFileSize(mediaRoot, item.MediaUrl);
+
+            return new AttachmentsResultDto { Items = items, Total = totalCount, Page = page, PageSize = pageSize };
+        }
+
+        private async Task<List<ConversationLinkDto>> BuildLinksAsync(
+            int conversationId, AttachmentsQuery query, string? search, string senderFilter, CancellationToken cancellationToken)
+        {
+            var msgQuery = _db.Messages.Where(m =>
+                m.ConversationId == conversationId &&
+                !m.IsDeleted &&
+                m.Direction != MessageDirection.Note &&
+                m.Kind == MessageKind.Text &&
+                m.Body.Contains("http"));
+
+            if (senderFilter == "incoming")
+                msgQuery = msgQuery.Where(m => m.Direction == MessageDirection.Incoming);
+            else if (senderFilter == "outgoing")
+                msgQuery = msgQuery.Where(m => m.Direction == MessageDirection.Outgoing);
+
+            if (query.FromUtc.HasValue)
+                msgQuery = msgQuery.Where(m => m.SentAt >= query.FromUtc.Value);
+            if (query.ToUtc.HasValue)
+                msgQuery = msgQuery.Where(m => m.SentAt <= query.ToUtc.Value);
+
+            var rows = await msgQuery
+                .OrderByDescending(m => m.SentAt)
+                .Select(m => new
+                {
+                    m.Id,
+                    m.Body,
+                    m.SentAt,
+                    m.Direction,
+                    ContactName = m.Conversation.Contact.DisplayName ?? m.Conversation.Contact.PhoneNumber,
+                    AuthorFirst = m.AuthorUser != null ? m.AuthorUser.FirstName : null,
+                    AuthorLast = m.AuthorUser != null ? m.AuthorUser.LastName : null,
+                    AuthorEmail = m.AuthorUser != null ? m.AuthorUser.Email : null,
+                    AgentName = m.AuthorAgent != null ? m.AuthorAgent.Name : null
+                })
+                .ToListAsync(cancellationToken);
+
+            var links = new List<ConversationLinkDto>();
+            foreach (var r in rows)
+            {
+                var sender = r.Direction == MessageDirection.Incoming
+                    ? r.ContactName
+                    : r.AuthorEmail != null
+                        ? (string.IsNullOrWhiteSpace(r.AuthorFirst) ? r.AuthorEmail : $"{r.AuthorFirst} {r.AuthorLast}")
+                        : r.AgentName ?? "Team";
+
+                foreach (Match match in UrlRegex.Matches(r.Body ?? string.Empty))
+                {
+                    var url = match.Value;
+                    if (search is not null && !url.Contains(search, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    links.Add(new ConversationLinkDto
+                    {
+                        MessageId = r.Id,
+                        Url = url,
+                        SentAt = r.SentAt,
+                        SenderName = sender
+                    });
+                }
+            }
+            return links;
+        }
+
+        private string ResolveMediaRoot()
+        {
+            var root = string.IsNullOrWhiteSpace(_env.WebRootPath)
+                ? Path.Combine(_env.ContentRootPath, "wwwroot")
+                : _env.WebRootPath;
+            return Path.Combine(root, "media");
+        }
+
+        private static long? ResolveFileSize(string mediaRoot, string? mediaUrl)
+        {
+            // Only local /media/* files have a size we can read; ignore anything else.
+            if (string.IsNullOrEmpty(mediaUrl) || !mediaUrl.StartsWith("/media/", StringComparison.OrdinalIgnoreCase))
+                return null;
+            try
+            {
+                var fileName = Path.GetFileName(mediaUrl);
+                var path = Path.Combine(mediaRoot, fileName);
+                var fi = new FileInfo(path);
+                return fi.Exists ? fi.Length : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public async Task<MessageDto> EditMessageAsync(int messageId, string newBody, CancellationToken cancellationToken = default)
         {
             var message = await _db.Messages
@@ -570,7 +784,9 @@ namespace ChatCRM.Infrastructure.Services
                 Kind = kind,
                 MediaUrl = $"/media/{diskName}",
                 MediaMimeType = mimeType,
-                MediaFileName = kind == MessageKind.Document ? fileName : null
+                MediaFileName = kind == MessageKind.Document ? fileName : null,
+                // Queue audio uploads for background speech-to-text.
+                TranscriptionStatus = kind == MessageKind.Audio ? TranscriptionStatus.Pending : TranscriptionStatus.None
             };
 
             _db.Messages.Add(message);
@@ -656,7 +872,9 @@ namespace ChatCRM.Infrastructure.Services
                 AuthorUserId = actingUserId,
                 Kind = MessageKind.Audio,
                 MediaUrl = $"/media/{diskName}",
-                MediaMimeType = mimeType
+                MediaMimeType = mimeType,
+                // Voice notes are audio — queue them for background speech-to-text.
+                TranscriptionStatus = TranscriptionStatus.Pending
             };
 
             _db.Messages.Add(message);
@@ -803,6 +1021,37 @@ namespace ChatCRM.Infrastructure.Services
             return rendered;
         }
 
+        public async Task<MessageTranscriptionDto?> GetTranscriptionAsync(int messageId, CancellationToken cancellationToken = default)
+        {
+            return await _db.Messages
+                .Where(m => m.Id == messageId)
+                .Select(m => new MessageTranscriptionDto
+                {
+                    MessageId = m.Id,
+                    Status = (byte)m.TranscriptionStatus,
+                    Text = m.TranscriptionText,
+                    Language = m.TranscriptionLanguage,
+                    Provider = m.TranscriptionProvider,
+                    Error = m.TranscriptionError
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<bool> RetryTranscriptionAsync(int messageId, CancellationToken cancellationToken = default)
+        {
+            var message = await _db.Messages.FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
+            if (message is null || message.Kind != MessageKind.Audio || message.MediaUrl is null)
+                return false;
+
+            // Reset the transcription lifecycle so the worker picks it up again on its next tick.
+            message.TranscriptionStatus = TranscriptionStatus.Pending;
+            message.TranscriptionAttemptCount = 0;
+            message.TranscriptionError = null;
+            message.TranscriptionNextAttemptUtc = null;
+            await _db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
         // ── Helpers ─────────────────────────────────────────────────────────
 
         private async Task BroadcastOutgoingAsync(Conversation conversation, Message message, CancellationToken ct)
@@ -833,7 +1082,8 @@ namespace ChatCRM.Infrastructure.Services
                         kind = (int)message.Kind,
                         mediaUrl = message.MediaUrl,
                         mediaMimeType = message.MediaMimeType,
-                        mediaFileName = message.MediaFileName
+                        mediaFileName = message.MediaFileName,
+                        transcriptionStatus = (byte)message.TranscriptionStatus
                     },
                     unreadCount = conversation.UnreadCount
                 }, ct);
@@ -851,7 +1101,11 @@ namespace ChatCRM.Infrastructure.Services
             Kind = m.Kind,
             MediaUrl = m.MediaUrl,
             MediaMimeType = m.MediaMimeType,
-            MediaFileName = m.MediaFileName
+            MediaFileName = m.MediaFileName,
+            TranscriptionStatus = (byte)m.TranscriptionStatus,
+            TranscriptionText = m.TranscriptionText,
+            TranscriptionLanguage = m.TranscriptionLanguage,
+            TranscriptionProvider = m.TranscriptionProvider
         };
 
         private static (MessageKind, string evolutionType) ClassifyMedia(string mime)

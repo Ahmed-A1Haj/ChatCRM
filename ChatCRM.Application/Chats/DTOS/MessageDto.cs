@@ -18,5 +18,11 @@ namespace ChatCRM.Application.Chats.DTOs
 
         public DateTime? EditedAt { get; set; }
         public bool IsDeleted { get; set; }
+
+        // Speech-to-text (audio messages). Status mirrors Domain.Entities.TranscriptionStatus.
+        public byte TranscriptionStatus { get; set; }
+        public string? TranscriptionText { get; set; }
+        public string? TranscriptionLanguage { get; set; }
+        public string? TranscriptionProvider { get; set; }
     }
 }

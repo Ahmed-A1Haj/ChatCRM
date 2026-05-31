@@ -770,6 +770,7 @@ function openContactDetails(conversationId, instanceId, channelType, contactId) 
             // — paintCdOpenConversation handles the no-conversation case below.
             populateDetails(d);
             paintCdOpenConversation(d);
+            loadContactFiles(d.contactId || _cdCtx.contactId);
         })
         .catch(err => {
             document.getElementById('cdLoading').textContent = t('Contacts.LoadFailed', err.message);
@@ -815,6 +816,176 @@ function closeContactDetailsModal() {
     if (typeof loadContacts === 'function') loadContacts();
 }
 window.closeContactDetailsModal = closeContactDetailsModal;
+
+/* ─── Internal (private) contact files ──────────────────────────────────
+   These files are team-only: stored in private server storage and reachable
+   only through the authorized /api/contacts/{id}/files endpoints. The contact
+   never sees or receives them. */
+const _canEditContacts = () => window.__canEditContacts__ === true || window.__canEditContacts__ === 'true';
+let _cdFilesContactId = null;
+
+function fmtFileSize(bytes) {
+    if (bytes == null) return '';
+    if (bytes < 1024) return bytes + ' B';
+    const units = ['KB', 'MB', 'GB'];
+    let v = bytes / 1024, i = 0;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return (v < 10 ? v.toFixed(1) : Math.round(v)) + ' ' + units[i];
+}
+
+function fileExtBadge(name) {
+    const ext = (name || '').split('.').pop();
+    return (ext && ext !== name ? ext : 'file').toUpperCase().slice(0, 4);
+}
+
+async function loadContactFiles(contactId) {
+    _cdFilesContactId = contactId || null;
+    const card = document.getElementById('cdFilesCard');
+    if (!card) return;
+
+    // Hide the upload control for users without contacts.edit (server enforces this too).
+    const upload = document.getElementById('cdFilesUpload');
+    if (upload) upload.classList.toggle('d-none', !_canEditContacts());
+
+    const list = document.getElementById('cdFilesList');
+    const empty = document.getElementById('cdFilesEmpty');
+    if (!_cdFilesContactId) { card.classList.add('d-none'); return; }
+    card.classList.remove('d-none');
+    list.innerHTML = `<div class="cd-files-loading">${escapeHtml(t('Action.Loading'))}</div>`;
+    empty.classList.add('d-none');
+
+    try {
+        const res = await fetch(`/api/contacts/${_cdFilesContactId}/files`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const files = await res.json();
+        renderContactFiles(files);
+    } catch (e) {
+        list.innerHTML = `<div class="cd-files-loading">${escapeHtml(t('ContactFiles.LoadError'))}</div>`;
+    }
+}
+
+function renderContactFiles(files) {
+    const list = document.getElementById('cdFilesList');
+    const empty = document.getElementById('cdFilesEmpty');
+    if (!list) return;
+
+    if (!files || files.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('d-none');
+        return;
+    }
+    empty.classList.add('d-none');
+
+    const canEdit = _canEditContacts();
+    const cid = _cdFilesContactId;
+    list.innerHTML = files.map(f => {
+        const dl = `/api/contacts/${cid}/files/${f.id}/download`;
+        const sub = [escapeHtml(fmtFileSize(f.sizeBytes)), escapeHtml(f.uploadedByName || ''), escapeHtml(fmtDateTime(f.uploadedAtUtc) || '')]
+            .filter(Boolean).join(' · ');
+        const editBtns = canEdit ? `
+            <button type="button" class="cd-file-btn" title="${escapeHtml(t('ContactFiles.Rename'))}" data-file-rename="${f.id}" data-file-name="${escapeHtml(f.fileName)}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button type="button" class="cd-file-btn cd-file-btn-danger" title="${escapeHtml(t('ContactFiles.Delete'))}" data-file-delete="${f.id}" data-file-name="${escapeHtml(f.fileName)}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            </button>` : '';
+        return `<div class="cd-file-row">
+            <span class="cd-file-ext" aria-hidden="true">${escapeHtml(fileExtBadge(f.fileName))}</span>
+            <div class="cd-file-main">
+                <a class="cd-file-name" href="${dl}?inline=1" target="_blank" rel="noopener" title="${escapeHtml(t('ContactFiles.View'))}">${escapeHtml(f.fileName)}</a>
+                <span class="cd-file-sub">${sub}</span>
+            </div>
+            <div class="cd-file-actions">
+                <a class="cd-file-btn" href="${dl}" title="${escapeHtml(t('ContactFiles.Download'))}" download>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </a>
+                ${editBtns}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function uploadContactFiles(fileList) {
+    if (!_cdFilesContactId || !fileList || fileList.length === 0) return;
+    const fd = new FormData();
+    for (const f of fileList) fd.append('files', f);
+
+    try {
+        const res = await fetch(`/api/contacts/${_cdFilesContactId}/files`, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': token() },
+            body: fd
+        });
+        if (res.status === 403) { showToast(t('ContactFiles.Forbidden'), 'error'); return; }
+        if (!res.ok) { showToast(t('ContactFiles.UploadError'), 'error'); return; }
+        const data = await res.json();
+        if (data.errors && data.errors.length) {
+            data.errors.forEach(er => showToast(`${er.file}: ${er.error}`, 'error'));
+        }
+        if (data.uploaded && data.uploaded.length) {
+            showToast(t('ContactFiles.Uploaded', data.uploaded.length), 'success');
+        }
+        loadContactFiles(_cdFilesContactId);
+    } catch (e) {
+        showToast(t('ContactFiles.UploadError'), 'error');
+    }
+}
+
+async function renameContactFile(fileId, currentName) {
+    const next = window.prompt(t('ContactFiles.RenamePrompt'), currentName || '');
+    if (next == null) return;
+    const name = next.trim();
+    if (!name || name === currentName) return;
+    try {
+        const res = await fetch(`/api/contacts/${_cdFilesContactId}/files/${fileId}/rename`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token() },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) { showToast(t('ContactFiles.RenameError'), 'error'); return; }
+        loadContactFiles(_cdFilesContactId);
+    } catch (e) {
+        showToast(t('ContactFiles.RenameError'), 'error');
+    }
+}
+
+async function deleteContactFile(fileId, name) {
+    if (!window.confirm(t('ContactFiles.DeleteConfirm', name || ''))) return;
+    try {
+        const res = await fetch(`/api/contacts/${_cdFilesContactId}/files/${fileId}`, {
+            method: 'DELETE',
+            headers: { 'RequestVerificationToken': token() }
+        });
+        if (!res.ok) { showToast(t('ContactFiles.DeleteError'), 'error'); return; }
+        showToast(t('ContactFiles.Deleted'), 'success');
+        loadContactFiles(_cdFilesContactId);
+    } catch (e) {
+        showToast(t('ContactFiles.DeleteError'), 'error');
+    }
+}
+
+// Wire the upload button + delegated row actions once. The modal markup is always in the DOM.
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('cdFilesUploadBtn');
+    const input = document.getElementById('cdFilesInput');
+    if (btn && input) {
+        btn.addEventListener('click', () => input.click());
+        input.addEventListener('change', () => {
+            uploadContactFiles(input.files);
+            input.value = ''; // allow re-selecting the same file
+        });
+    }
+
+    const list = document.getElementById('cdFilesList');
+    if (list) {
+        list.addEventListener('click', (e) => {
+            const ren = e.target.closest('[data-file-rename]');
+            if (ren) { renameContactFile(parseInt(ren.dataset.fileRename, 10), ren.dataset.fileName); return; }
+            const del = e.target.closest('[data-file-delete]');
+            if (del) { deleteContactFile(parseInt(del.dataset.fileDelete, 10), del.dataset.fileName); return; }
+        });
+    }
+});
 
 /* Update the cd-stages bar to highlight a given stage. */
 function paintCdStages(stage) {

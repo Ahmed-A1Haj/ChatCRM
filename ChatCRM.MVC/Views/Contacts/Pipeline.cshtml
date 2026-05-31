@@ -1,0 +1,107 @@
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+@{
+    ViewData["Title"] = T["Pipeline.Title"].Value;
+    Layout = null;
+    var currentUserId = (string?)ViewBag.CurrentUserId;
+
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@T["Pipeline.Title"] — ChatCRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/contacts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pipeline.css" asp-append-version="true" />
+    <script>
+        window.__i18n__ = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+        window.__currentUserId__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(currentUserId ?? ""));
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@Html.AntiForgeryToken()
+@await Html.PartialAsync("_DashboardRail", "pipeline")
+
+<main class="pipeline-page">
+
+    @* ── Top bar ─────────────────────────────────────────────────────── *@
+    <header class="pl-topbar">
+        <div class="pl-topbar-left">
+            <button type="button" class="pl-pipeline-select" id="plPipelineSelect" aria-haspopup="true" aria-expanded="false">
+                @await Html.PartialAsync("_Icon", new IconModel("kanban", size: 16))
+                <span>@T["Pipeline.DefaultName"]</span>
+                @await Html.PartialAsync("_Icon", new IconModel("chevron-down", size: 13))
+            </button>
+        </div>
+
+        <nav class="pl-tabs" aria-label="@T["Pipeline.Title"]">
+            <button type="button" class="pl-tab is-active" aria-current="page">
+                @await Html.PartialAsync("_Icon", new IconModel("kanban", size: 15))
+                <span>@T["Pipeline.View.Kanban"]</span>
+            </button>
+            <a class="pl-tab" href="/dashboard/contacts">
+                @await Html.PartialAsync("_Icon", new IconModel("inbox", size: 15))
+                <span>@T["Pipeline.View.List"]</span>
+            </a>
+            <button type="button" class="pl-tab is-disabled" title="@T["Pipeline.ComingSoon"]" disabled>
+                <span>@T["Pipeline.View.Calendar"]</span>
+            </button>
+            <button type="button" class="pl-tab is-disabled" title="@T["Pipeline.ComingSoon"]" disabled>
+                <span>@T["Pipeline.View.Forecast"]</span>
+            </button>
+        </nav>
+
+        <div class="pl-topbar-right">
+            <div class="filter-search pl-search">
+                @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
+                <input type="search" id="plSearch" placeholder="@T["Pipeline.SearchPlaceholder"]" autocomplete="off" />
+            </div>
+            <a class="btn-primary-soft has-icon pl-newlead" href="/dashboard/contacts" title="@T["Pipeline.NewLead"]">
+                @await Html.PartialAsync("_Icon", new IconModel("plus", size: 14))
+                <span>@T["Pipeline.NewLead"]</span>
+            </a>
+        </div>
+    </header>
+
+    @* ── Filter chips ────────────────────────────────────────────────── *@
+    <div class="pl-filters" role="group" aria-label="@T["Pipeline.Filters"]">
+        <button type="button" class="pl-chip" data-filter="mine">@T["Pipeline.Filter.MyLeads"]</button>
+        <button type="button" class="pl-chip" data-filter="week">@T["Pipeline.Filter.ThisWeek"]</button>
+        <button type="button" class="pl-chip" data-filter="unassigned">@T["Pipeline.Filter.Unassigned"]</button>
+    </div>
+
+    @* ── Board ───────────────────────────────────────────────────────── *@
+    <div class="pl-board-wrap">
+        <div class="pl-board" id="plBoard" role="list" aria-label="@T["Pipeline.Title"]"></div>
+
+        <div class="pl-board-loading" id="plLoading">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+</main>
+
+@* Confetti canvas for the "Won" celebration — fixed overlay, ignores pointer events. *@
+<canvas id="plConfetti" class="pl-confetti"></canvas>
+
+<div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
+
+<script src="~/js/pipeline.js" asp-append-version="true"></script>
+</body>
+</html>

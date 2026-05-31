@@ -488,5 +488,40 @@ namespace ChatCRM.MVC.Controllers
             var details = await _chatService.GetContactDetailsAsync(id, cancellationToken);
             return details is null ? NotFound() : Json(details);
         }
+
+        // ── Audio transcription (inspection) ────────────────────────────
+        [HttpGet("/dashboard/chats/messages/{messageId:int}/transcription")]
+        public async Task<IActionResult> Transcription(int messageId, CancellationToken cancellationToken)
+        {
+            var dto = await _chatService.GetTranscriptionAsync(messageId, cancellationToken);
+            return dto is null ? NotFound() : Json(dto);
+        }
+
+        [HttpPost("/dashboard/chats/messages/{messageId:int}/transcribe")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RetryTranscription(int messageId, CancellationToken cancellationToken)
+        {
+            var ok = await _chatService.RetryTranscriptionAsync(messageId, cancellationToken);
+            return ok ? Ok(new { queued = true }) : BadRequest(new { error = "Message is not a transcribable audio message." });
+        }
+
+        /// <summary>
+        /// Shared Media &amp; Files gallery for one conversation — aggregates every image, file and
+        /// link exchanged in the thread. Renders the page shell; the grid/list is filled by
+        /// <see cref="Attachments"/> over JSON.
+        /// </summary>
+        [HttpGet("/dashboard/chats/{id:int}/media")]
+        public async Task<IActionResult> Media(int id, CancellationToken cancellationToken)
+        {
+            var vm = await _chatService.GetMediaGalleryAsync(id, cancellationToken);
+            return vm is null ? NotFound() : View(vm);
+        }
+
+        [HttpGet("/dashboard/chats/{id:int}/attachments")]
+        public async Task<IActionResult> Attachments(int id, [FromQuery] AttachmentsQuery query, CancellationToken cancellationToken)
+        {
+            var result = await _chatService.GetAttachmentsAsync(id, query, cancellationToken);
+            return Json(result);
+        }
     }
 }

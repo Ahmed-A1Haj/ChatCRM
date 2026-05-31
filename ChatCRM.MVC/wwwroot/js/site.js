@@ -1,20 +1,30 @@
 document.querySelectorAll("[data-password-toggle]").forEach((toggleButton) => {
+  // The password input lives in the same field wrapper. Support the actual markup
+  // (.auth-password) plus older (.password-field), and fall back to the nearest input.
+  const field = toggleButton.closest(".auth-password, .password-field");
+  const input =
+    field?.querySelector("input") ||
+    toggleButton.parentElement?.querySelector("input");
+
+  if (!input) {
+    return;
+  }
+
+  const label = toggleButton.querySelector(".password-toggle-text");
+  // Capture the localized "Show" strings rendered by the server; read the "Hide"
+  // counterparts from data-* (also localized) with English fallbacks.
+  const showText = label?.textContent?.trim() || "Show";
+  const hideText = toggleButton.dataset.hideText || "Hide";
+  const showLabel = toggleButton.getAttribute("aria-label") || "Show password";
+  const hideLabel = toggleButton.dataset.hideLabel || "Hide password";
+
   toggleButton.addEventListener("click", () => {
-    const field = toggleButton.closest(".password-field");
-    const input = field?.querySelector("input");
-
-    if (!input) {
-      return;
-    }
-
-    const showPassword = input.type === "password";
-    input.type = showPassword ? "text" : "password";
-    toggleButton.setAttribute("aria-pressed", showPassword ? "true" : "false");
-    toggleButton.setAttribute("aria-label", showPassword ? "Hide password" : "Show password");
-
-    const label = toggleButton.querySelector(".password-toggle-text");
+    const reveal = input.type === "password";
+    input.type = reveal ? "text" : "password";
+    toggleButton.setAttribute("aria-pressed", reveal ? "true" : "false");
+    toggleButton.setAttribute("aria-label", reveal ? hideLabel : showLabel);
     if (label) {
-      label.textContent = showPassword ? "Hide" : "Show";
+      label.textContent = reveal ? hideText : showText;
     }
   });
 });

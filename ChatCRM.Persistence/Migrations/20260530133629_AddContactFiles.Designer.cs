@@ -4,6 +4,7 @@ using ChatCRM.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ChatCRM.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260530133629_AddContactFiles")]
+    partial class AddContactFiles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -466,30 +469,6 @@ namespace ChatCRM.Persistence.Migrations
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint");
 
-                    b.Property<int>("TranscriptionAttemptCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("TranscriptionError")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("TranscriptionLanguage")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime?>("TranscriptionNextAttemptUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("TranscriptionProvider")
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
-
-                    b.Property<byte>("TranscriptionStatus")
-                        .HasColumnType("tinyint");
-
-                    b.Property<string>("TranscriptionText")
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AuthorAgentId");
@@ -503,8 +482,6 @@ namespace ChatCRM.Persistence.Migrations
                         .HasFilter("[ExternalId] IS NOT NULL");
 
                     b.HasIndex("SentAt");
-
-                    b.HasIndex("TranscriptionStatus");
 
                     b.ToTable("Messages");
                 });

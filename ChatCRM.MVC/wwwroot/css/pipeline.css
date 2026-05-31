@@ -1,0 +1,428 @@
+/* Kanban pipeline board — minimalist, premium. Soft neutral surface, restrained per-stage
+   accents, transform-based motion for smooth 60fps drag interactions. */
+
+.pipeline-page {
+    flex: 1 1 0;
+    /* min-width:0 is essential: without it a flex item keeps its content's intrinsic width,
+       so the page would grow to fit all columns and #plBoard would never overflow/scroll. */
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-page);
+    overflow: hidden;
+}
+
+/* ── Top bar ──────────────────────────────────────────────────────────── */
+.pl-topbar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 26px 12px;
+    flex-shrink: 0;
+}
+.pl-topbar-left { flex: 0 0 auto; }
+.pl-topbar-right { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+
+.pl-pipeline-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-panel);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Fraunces', serif;
+    cursor: pointer;
+}
+.pl-pipeline-select:hover { background: var(--bg-soft); }
+
+.pl-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--bg-soft);
+}
+.pl-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: none;
+    border-radius: 9px;
+    background: none;
+    color: var(--text-muted);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .15s, color .15s, box-shadow .15s;
+}
+.pl-tab:hover { color: var(--text); }
+.pl-tab.is-active {
+    background: var(--bg-panel);
+    color: var(--brand-text);
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.pl-tab.is-disabled { opacity: .45; cursor: not-allowed; }
+
+.pl-search { min-width: 220px; max-width: 300px; }
+.pl-newlead { white-space: nowrap; }
+
+/* ── Filter chips ─────────────────────────────────────────────────────── */
+.pl-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 26px 14px;
+    flex-shrink: 0;
+}
+.pl-chip {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-panel);
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+}
+.pl-chip:hover { border-color: var(--brand-ring, #cdd9cf); color: var(--text); }
+.pl-chip.is-active {
+    background: var(--brand, #5a7d63);
+    border-color: var(--brand, #5a7d63);
+    color: #fff;
+}
+
+/* ── Board ────────────────────────────────────────────────────────────── */
+/* The wrap clips; the board is absolutely sized to it so its width is the available width
+   (never the columns' total width) — that's what guarantees overflow-x actually scrolls. */
+.pl-board-wrap {
+    position: relative;
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+.pl-board {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    gap: 14px;
+    padding: 4px 26px 22px;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* Scroll arrows — guaranteed way to reach off-screen columns (click or hold). */
+.pl-scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border, #e0e3df);
+    border-radius: 50%;
+    background: var(--bg-panel, #fff);
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(16,20,18,.14);
+    transition: opacity .15s, background .15s;
+}
+.pl-scroll-btn:hover { background: var(--bg-soft, #f4f5f2); }
+.pl-scroll-btn-left  { left: 10px; }
+.pl-scroll-btn-right { right: 10px; }
+.pl-scroll-btn[hidden] { display: none; }
+
+.pl-col {
+    --acc: #94a3b8;
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 286px;
+    width: 286px;
+    max-height: 100%;
+    border-radius: 14px;
+    background: var(--bg-soft, #f6f7f5);
+    border: 1px solid var(--border-soft, #eef0ec);
+    scroll-snap-align: start;
+    transition: background .15s, box-shadow .15s, border-color .15s;
+}
+.pl-col-gray    { --acc: #94a3b8; }
+.pl-col-red     { --acc: #ef4444; }
+.pl-col-blue    { --acc: #3b82f6; }
+.pl-col-yellow  { --acc: #eab308; }
+.pl-col-purple  { --acc: #8b5cf6; }
+.pl-col-orange  { --acc: #f59e0b; }
+.pl-col-teal    { --acc: #14b8a6; }
+.pl-col-indigo  { --acc: #6366f1; }
+.pl-col-green   { --acc: #22c55e; }
+.pl-col-amber   { --acc: #f59e0b; }
+.pl-col-emerald { --acc: #10b981; }
+
+.pl-col.is-dropzone {
+    background: color-mix(in srgb, var(--acc) 8%, var(--bg-panel));
+    border-color: var(--acc);
+    box-shadow: 0 0 0 1px var(--acc) inset;
+}
+
+.pl-col-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 14px 10px;
+    flex-shrink: 0;
+}
+.pl-col-accent {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--acc);
+    flex-shrink: 0;
+}
+.pl-col-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pl-col-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--bg-panel);
+    color: var(--text-muted);
+    font-size: 11.5px;
+    font-weight: 700;
+}
+.pl-col-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px; height: 24px;
+    border: none; border-radius: 6px;
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+.pl-col-menu:hover { background: var(--bg-panel); color: var(--text-muted); }
+
+.pl-col-list {
+    flex: 1;
+    min-height: 40px;
+    overflow-y: auto;
+    padding: 2px 10px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.pl-col-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 4px 10px 12px;
+    padding: 9px;
+    border: 1px dashed var(--border, #dfe2dd);
+    border-radius: 10px;
+    background: none;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background .15s, color .15s, border-color .15s;
+}
+.pl-col-add:hover { background: var(--bg-panel); color: var(--brand-text); border-color: var(--brand-ring, #cdd9cf); }
+
+/* ── Card ─────────────────────────────────────────────────────────────── */
+.pl-card {
+    position: relative;
+    background: var(--bg-panel, #fff);
+    border: 1px solid var(--border-soft, #eef0ec);
+    border-left: 3px solid var(--acc);
+    border-radius: 11px;
+    padding: 11px 12px;
+    cursor: grab;
+    box-shadow: 0 1px 2px rgba(16,20,18,.04);
+    transition: transform .14s ease, box-shadow .14s ease, border-color .14s;
+    will-change: transform;
+    /* Pointer-driven drag: stop the browser from hijacking the gesture for scroll/selection. */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.pl-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16,20,18,.10); }
+.pl-card:focus-visible { outline: 2px solid var(--brand, #5a7d63); outline-offset: 2px; }
+.pl-card:active { cursor: grabbing; }
+
+/* The original card left behind while its ghost is dragged — a faded placeholder in place. */
+.pl-card.is-dragging {
+    opacity: .35;
+    box-shadow: none;
+    pointer-events: none; /* so elementFromPoint sees the column underneath */
+}
+.pl-card.is-dragging:hover { transform: none; }
+
+/* The floating clone that follows the cursor. */
+.pl-card-ghost {
+    position: fixed;
+    top: 0;
+    left: 0;
+    margin: 0;
+    z-index: 1600;
+    pointer-events: none;
+    width: auto;
+    cursor: grabbing;
+    opacity: .96;
+    box-shadow: 0 16px 34px rgba(16,20,18,.22);
+    transition: none !important;
+    will-change: transform;
+}
+.pl-card-ghost:hover { transform: none; }
+
+body.pl-dragging { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+@keyframes pl-drop-in {
+    0%   { transform: scale(.96); box-shadow: 0 12px 26px rgba(16,20,18,.18); }
+    100% { transform: scale(1); }
+}
+.pl-card.just-dropped { animation: pl-drop-in .3s ease; }
+
+.pl-card-top { display: flex; align-items: flex-start; gap: 9px; }
+.pl-card-avatar {
+    width: 34px; height: 34px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    object-fit: cover;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--brand-100, #e9efe7);
+    color: var(--brand-text, #3f6b4a);
+    font-weight: 700;
+    font-size: 14px;
+}
+.pl-card-id { flex: 1; min-width: 0; }
+.pl-card-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pl-card-company {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pl-card-channels { display: inline-flex; gap: 3px; flex-shrink: 0; }
+.pl-ch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    background: var(--bg-soft, #f4f5f2);
+    color: var(--text-muted);
+}
+
+.pl-card-foot {
+    margin-top: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.pl-card-last { font-size: 11px; color: var(--text-dim, #9ca3af); }
+
+.pl-card-tags { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; }
+.pl-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--tag, #6b7280);
+    background: color-mix(in srgb, var(--tag) 14%, transparent);
+}
+
+/* ── States ───────────────────────────────────────────────────────────── */
+.pl-board-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--bg-page) 70%, transparent);
+}
+.spinner {
+    width: 28px; height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--brand);
+    border-radius: 50%;
+    animation: pl-spin .7s linear infinite;
+}
+@keyframes pl-spin { to { transform: rotate(360deg); } }
+
+.pl-board-error { padding: 40px; color: var(--danger, #b91c1c); font-size: 14px; }
+
+/* ── Confetti overlay ─────────────────────────────────────────────────── */
+.pl-confetti {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1400;
+}
+
+/* ── Toasts ───────────────────────────────────────────────────────────── */
+.toast-stack {
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1500;
+}
+.toast {
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: var(--text);
+    color: var(--bg-panel);
+    font-size: 13px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.18);
+    transition: opacity .2s, transform .2s;
+}
+.toast-error { background: var(--danger, #dc2626); color: #fff; }
+.toast-out { opacity: 0; transform: translateY(8px); }
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+    .pl-topbar { flex-wrap: wrap; gap: 10px; padding: 12px 14px 8px; }
+    .pl-tabs { order: 3; width: 100%; justify-content: flex-start; overflow-x: auto; }
+    .pl-topbar-right { flex-basis: 100%; justify-content: space-between; }
+    .pl-search { flex: 1; max-width: none; }
+    .pl-filters { padding: 0 14px 12px; }
+    .pl-board { padding: 4px 14px 18px; scroll-snap-type: x mandatory; }
+    .pl-col { flex-basis: 84vw; width: 84vw; }
+}
