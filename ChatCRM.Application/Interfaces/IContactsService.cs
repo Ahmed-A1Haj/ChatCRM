@@ -20,6 +20,13 @@ namespace ChatCRM.Application.Interfaces
         /// </summary>
         Task<ContactDetailsDto?> GetDetailsAsync(int contactId, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// Builds the Kanban pipeline board: contacts grouped into one column per lifecycle stage,
+        /// filtered by search / assignee / recency. Cards per column are capped (the column total
+        /// still reflects the full count).
+        /// </summary>
+        Task<PipelineBoardDto> GetBoardAsync(PipelineBoardQuery query, CancellationToken cancellationToken = default);
+
         Task SetLifecycleAsync(int contactId, byte stage, CancellationToken cancellationToken = default);
         Task SetAssigneeAsync(int contactId, string? userId, CancellationToken cancellationToken = default);
         Task SetStatusAsync(int contactId, byte status, CancellationToken cancellationToken = default);

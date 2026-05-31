@@ -114,6 +114,12 @@ namespace ChatCRM.Infrastructure.Services.Ai
             {
                 // already exists — fine.
             }
+            catch (RedisConnectionException ex)
+            {
+                // Redis isn't reachable (AI is optional). Don't let this crash the host — the
+                // read loop catches the same exception and retries, recreating the group later.
+                _logger.LogWarning(ex, "[AI-OUTBOX] redis unavailable at startup — group creation deferred");
+            }
         }
 
         private async Task DispatchAsync(StreamEntry entry, CancellationToken cancellationToken)

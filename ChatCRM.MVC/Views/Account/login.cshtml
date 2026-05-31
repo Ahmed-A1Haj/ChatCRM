@@ -49,7 +49,7 @@
         <label asp-for="Password" class="auth-label">@Html.DisplayNameFor(m => m.Password)</label>
         <div class="auth-password">
             <input asp-for="Password" class="auth-input" autocomplete="current-password" placeholder="@T["Auth.Login.PasswordPlaceholder"]" />
-            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" aria-pressed="false">
+            <button type="button" class="auth-password-toggle" data-password-toggle aria-label="@T["Auth.Login.ShowPassword"]" data-hide-label="@T["Auth.Login.HidePassword"]" data-hide-text="@T["Auth.Login.Hide"]" aria-pressed="false">
                 <span class="password-toggle-text">@T["Auth.Login.Show"]</span>
             </button>
         </div>

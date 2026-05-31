@@ -3,6 +3,7 @@ using ChatCRM.Application.Contacts.DTOs;
 using ChatCRM.Application.Contacts.Import;
 using ChatCRM.Application.Interfaces;
 using ChatCRM.Domain.Entities;
+using ChatCRM.Infrastructure.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -15,8 +16,12 @@ namespace ChatCRM.MVC.Controllers
         private readonly IContactsService _service;
         private readonly IChatService _chatService;
         private readonly IContactImportService _import;
+        private readonly IContactFileService _files;
         private readonly UserManager<User> _userManager;
         private readonly ILogger<ContactsController> _logger;
+
+        // Per-file cap is enforced in the service (25 MB); the request cap allows a small batch.
+        private const long MaxFilesRequestBytes = 60 * 1024 * 1024;
 
         // Upload safety net — Excel files past this size are almost always wrong-file mistakes
         // (.csv exported as .xls, a database dump, etc). Kestrel's default request limit is
@@ -27,12 +32,14 @@ namespace ChatCRM.MVC.Controllers
             IContactsService service,
             IChatService chatService,
             IContactImportService import,
+            IContactFileService files,
             UserManager<User> userManager,
             ILogger<ContactsController> logger)
         {
             _service = service;
             _chatService = chatService;
             _import = import;
+            _files = files;
             _userManager = userManager;
             _logger = logger;
         }
@@ -46,6 +53,24 @@ namespace ChatCRM.MVC.Controllers
             ViewBag.TeamMembers = team;
             ViewBag.CurrentUserId = _userManager.GetUserId(User);
             return View();
+        }
+
+        // ── Kanban pipeline board ───────────────────────────────────────
+
+        [HttpGet("/dashboard/pipeline")]
+        public async Task<IActionResult> Pipeline(CancellationToken cancellationToken)
+        {
+            var team = await _chatService.GetTeamMembersAsync(cancellationToken);
+            ViewBag.TeamMembers = team;
+            ViewBag.CurrentUserId = _userManager.GetUserId(User);
+            return View();
+        }
+
+        [HttpGet("/api/contacts/board")]
+        public async Task<IActionResult> Board([FromQuery] PipelineBoardQuery q, CancellationToken cancellationToken)
+        {
+            var board = await _service.GetBoardAsync(q, cancellationToken);
+            return Json(board);
         }
 
         // ── REST ────────────────────────────────────────────────────────
@@ -214,8 +239,101 @@ namespace ChatCRM.MVC.Controllers
             return File(bytes, XlsxMime, fileName);
         }
 
+        // ── Private contact files (internal-only) ───────────────────────
+        // Every endpoint is permission-gated: ContactsView to read, ContactsEdit to mutate.
+        // Files are stored in private storage (App_Data) and only ever streamed back here —
+        // they are never given a public URL and never enter any outbound contact communication.
+
+        [HttpGet("/api/contacts/{id:int}/files")]
+        [RequirePermission(Permissions.ContactsView)]
+        public async Task<IActionResult> ListFiles(int id, CancellationToken cancellationToken)
+        {
+            var files = await _files.ListAsync(id, cancellationToken);
+            return Ok(files);
+        }
+
+        [HttpPost("/api/contacts/{id:int}/files")]
+        [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.ContactsEdit)]
+        [RequestSizeLimit(MaxFilesRequestBytes)]
+        public async Task<IActionResult> UploadFiles(int id, [FromForm] List<IFormFile> files, CancellationToken cancellationToken)
+        {
+            if (files is null || files.Count == 0)
+                return BadRequest(new { error = "Select at least one file to upload." });
+
+            var userId = _userManager.GetUserId(User);
+            var uploaded = new List<ContactFileDto>();
+            var errors = new List<object>();
+
+            foreach (var file in files)
+            {
+                if (file is null || file.Length == 0) continue;
+                try
+                {
+                    using var ms = new MemoryStream();
+                    await file.CopyToAsync(ms, cancellationToken);
+                    var dto = await _files.UploadAsync(id, ms.ToArray(), file.FileName, file.ContentType ?? "", userId, cancellationToken);
+                    uploaded.Add(dto);
+                }
+                catch (KeyNotFoundException)
+                {
+                    return NotFound(new { error = "Contact not found." });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    errors.Add(new { file = file.FileName, error = ex.Message });
+                }
+            }
+
+            return Ok(new { uploaded, errors });
+        }
+
+        [HttpGet("/api/contacts/{id:int}/files/{fileId:int}/download")]
+        [RequirePermission(Permissions.ContactsView)]
+        public async Task<IActionResult> DownloadFile(int id, int fileId, [FromQuery] bool inline, CancellationToken cancellationToken)
+        {
+            var content = await _files.OpenAsync(id, fileId, cancellationToken);
+            if (content is null) return NotFound();
+
+            // Don't let browsers MIME-sniff our private files into something executable.
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+
+            if (inline)
+            {
+                // Inline preview (images / PDFs). Only allow-listed, non-scriptable types reach here.
+                var cd = new System.Net.Mime.ContentDisposition { FileName = content.DownloadName, Inline = true };
+                Response.Headers["Content-Disposition"] = cd.ToString();
+                return File(content.Stream, content.ContentType);
+            }
+
+            // Default: force a download (attachment).
+            return File(content.Stream, content.ContentType, content.DownloadName);
+        }
+
+        [HttpPost("/api/contacts/{id:int}/files/{fileId:int}/rename")]
+        [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.ContactsEdit)]
+        public async Task<IActionResult> RenameFile(int id, int fileId, [FromBody] RenameFileBody body, CancellationToken cancellationToken)
+        {
+            if (body is null || string.IsNullOrWhiteSpace(body.Name))
+                return BadRequest(new { error = "A new name is required." });
+
+            var dto = await _files.RenameAsync(id, fileId, body.Name, cancellationToken);
+            return dto is null ? NotFound() : Ok(dto);
+        }
+
+        [HttpDelete("/api/contacts/{id:int}/files/{fileId:int}")]
+        [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.ContactsEdit)]
+        public async Task<IActionResult> DeleteFile(int id, int fileId, CancellationToken cancellationToken)
+        {
+            var ok = await _files.DeleteAsync(id, fileId, cancellationToken);
+            return ok ? Ok(new { deleted = true }) : NotFound();
+        }
+
         // ── Tiny request bodies ─────────────────────────────────────────
 
+        public class RenameFileBody           { public string? Name { get; set; } }
         public class SetLifecycleStageBody    { public byte Stage { get; set; } }
         public class AssignContactBody        { public string? UserId { get; set; } }
         public class SetContactStatusBody     { public byte Status { get; set; } }

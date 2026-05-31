@@ -3,6 +3,7 @@ using ChatCRM.Application.Users.DTOS;
 using ChatCRM.Domain.Entities;
 using ChatCRM.Infrastructure.Services;
 using ChatCRM.Infrastructure.Services.Ai;
+using ChatCRM.Infrastructure.Services.Transcription;
 using ChatCRM.MVC.Localization;
 using ChatCRM.MVC.Services;
 using ChatCRM.Persistence;
@@ -122,6 +123,7 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IWhatsAppInstanceService, WhatsAppInstanceService>();
 builder.Services.AddScoped<IContactsService, ContactsService>();
 builder.Services.AddScoped<IContactImportService, ContactImportService>();
+builder.Services.AddScoped<IContactFileService, ContactFileService>();
 
 // Billing — pricing engine (phase 1) + wallet read/admin surface (phase 2) + Stripe top-up
 // flow (phase 3) + per-message billing gate (phase 4: reserve → send → commit/release).
@@ -170,12 +172,43 @@ builder.Services.Configure<AiOptions>(builder.Configuration.GetSection("Ai"));
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
     var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiOptions>>().Value;
-    return ConnectionMultiplexer.Connect(opts.RedisUrl);
+    // AI/Redis is optional (see README). Disable abort-on-connect-fail so a missing Redis
+    // doesn't crash startup — the multiplexer connects in the background and the AI workers
+    // retry once Redis becomes reachable.
+    var redisConfig = ConfigurationOptions.Parse(opts.RedisUrl);
+    redisConfig.AbortOnConnectFail = false;
+    return ConnectionMultiplexer.Connect(redisConfig);
 });
 builder.Services.AddScoped<IAiAgentClient, AiAgentClient>();
 builder.Services.AddScoped<IAiReplyDispatcher, AiReplyDispatcher>();
 builder.Services.AddHostedService<AiOutboxPublisher>();
 builder.Services.AddHostedService<AiOutboundConsumer>();
+
+// ── Audio transcription (speech-to-text) ─────────────────────────────────
+// Swappable provider chosen by config (Transcription:Driver). Keys come from env /
+// appsettings.Development.json only. Default "mock" runs with no keys; switch to "groq"
+// (free tier) for real transcription. A background worker drains queued audio off-thread.
+builder.Services.Configure<TranscriptionOptions>(builder.Configuration.GetSection("Transcription"));
+var transcriptionDriver = (builder.Configuration["Transcription:Driver"] ?? "mock").Trim().ToLowerInvariant();
+switch (transcriptionDriver)
+{
+    case "groq":
+        builder.Services.AddHttpClient<ITranscriptionService, GroqWhisperTranscriptionService>(
+            c => c.Timeout = TimeSpan.FromMinutes(3));
+        break;
+    case "whisperapi":
+        builder.Services.AddHttpClient<ITranscriptionService, WhisperApiTranscriptionService>(
+            c => c.Timeout = TimeSpan.FromMinutes(3));
+        break;
+    case "local":
+        builder.Services.AddHttpClient<ITranscriptionService, LocalWhisperTranscriptionService>(
+            c => c.Timeout = TimeSpan.FromMinutes(5));
+        break;
+    default:
+        builder.Services.AddScoped<ITranscriptionService, MockTranscriptionService>();
+        break;
+}
+builder.Services.AddHostedService<TranscriptionWorker>();
 
 // Stripe configuration — keys live in environment / appsettings.Development.json.
 // The provider self-checks IsConfigured before any Stripe API call so missing keys

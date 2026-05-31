@@ -1,0 +1,162 @@
+@model ChatCRM.Application.Chats.DTOs.MediaGalleryViewModel
+@using System.Globalization
+@inject Microsoft.Extensions.Localization.IStringLocalizer T
+@inject ChatCRM.MVC.Localization.JsonStringLocalizer.ResourceCache LocalizationCache
+@{
+    ViewData["Title"] = T["Media.Title"].Value;
+    Layout = null;
+
+    // Ship the active culture's strings to the browser so chat-media.js can call t(...).
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var translations = LocalizationCache.Load(culture) ?? LocalizationCache.Load("en") ?? new Dictionary<string, string>();
+    var translationsJson = System.Text.Json.JsonSerializer.Serialize(translations);
+    var htmlLang = culture;
+    var htmlDir = (culture is "ar" or "he" or "fa" or "ur") ? "rtl" : "ltr";
+
+    var initials = string.IsNullOrWhiteSpace(Model.ContactName)
+        ? "?"
+        : string.Concat(Model.ContactName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2).Select(p => char.ToUpperInvariant(p[0])));
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@T["Media.Title"] — ChatCRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/instances.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inbox.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/chat-media.css" asp-append-version="true" />
+    <script>
+        window.__i18n__ = @Html.Raw(translationsJson);
+        window.__i18nCulture__ = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture));
+        window.__mediaGallery__ = {
+            conversationId: @Model.ConversationId,
+            instanceId: @Model.InstanceId,
+            culture: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(culture))
+        };
+    </script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
+</head>
+<body class="inbox-shell">
+
+@await Html.PartialAsync("_DashboardRail", "inbox")
+
+<main class="media-page">
+
+    <header class="media-header">
+        <a class="media-back" href="/dashboard/chats?instance=@Model.InstanceId" title="@T["Media.BackToChat"]" aria-label="@T["Media.BackToChat"]">
+            @await Html.PartialAsync("_Icon", new IconModel("arrow-left", size: 18))
+        </a>
+        <div class="media-header-avatar" aria-hidden="true">
+            @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+            {
+                <img src="@Model.AvatarUrl" alt="" />
+            }
+            else
+            {
+                <span>@initials</span>
+            }
+        </div>
+        <div class="media-header-info">
+            <h1 class="media-title">@T["Media.Title"]</h1>
+            <p class="media-sub">
+                <strong>@(string.IsNullOrWhiteSpace(Model.ContactName) ? Model.ContactPhone : Model.ContactName)</strong>
+                @if (!string.IsNullOrWhiteSpace(Model.ContactName) && !string.IsNullOrWhiteSpace(Model.ContactPhone))
+                {
+                    <span class="media-sub-phone">@Model.ContactPhone</span>
+                }
+            </p>
+        </div>
+    </header>
+
+    @* Tabs — Images / Files / Links *@
+    <nav class="media-tabs" role="tablist">
+        <button class="media-tab active" role="tab" data-tab="images" aria-selected="true">
+            @await Html.PartialAsync("_Icon", new IconModel("image", size: 15))
+            <span>@T["Media.Tab.Images"]</span>
+            <span class="media-tab-count" data-count="images">@Model.ImageCount</span>
+        </button>
+        <button class="media-tab" role="tab" data-tab="files" aria-selected="false">
+            @await Html.PartialAsync("_Icon", new IconModel("paperclip", size: 15))
+            <span>@T["Media.Tab.Files"]</span>
+            <span class="media-tab-count" data-count="files">@Model.FileCount</span>
+        </button>
+        <button class="media-tab" role="tab" data-tab="links" aria-selected="false">
+            @await Html.PartialAsync("_Icon", new IconModel("link", size: 15))
+            <span>@T["Media.Tab.Links"]</span>
+            <span class="media-tab-count" data-count="links">@Model.LinkCount</span>
+        </button>
+    </nav>
+
+    @* Toolbar — search + date range + sender filter *@
+    <section class="media-toolbar">
+        <div class="filter-search media-search">
+            @await Html.PartialAsync("_Icon", new IconModel("search", size: 14, cssClass: "filter-search-icon"))
+            <input type="search" id="mediaSearch" placeholder="@T["Media.SearchPlaceholder"]" autocomplete="off" />
+        </div>
+        <div class="media-filter-group">
+            <label class="media-filter-label" for="mediaFrom">@T["Media.Filter.From"]</label>
+            <input type="date" id="mediaFrom" class="filter-select media-date" />
+        </div>
+        <div class="media-filter-group">
+            <label class="media-filter-label" for="mediaTo">@T["Media.Filter.To"]</label>
+            <input type="date" id="mediaTo" class="filter-select media-date" />
+        </div>
+        <select id="mediaSender" class="filter-select" aria-label="@T["Media.Filter.Sender"]">
+            <option value="">@T["Media.Filter.AllSenders"]</option>
+            <option value="incoming">@T["Media.Filter.Incoming"]</option>
+            <option value="outgoing">@T["Media.Filter.Outgoing"]</option>
+        </select>
+        <button type="button" id="mediaClearFilters" class="btn-primary-soft has-icon media-clear d-none">
+            @await Html.PartialAsync("_Icon", new IconModel("x", size: 14))
+            <span>@T["Media.Filter.Clear"]</span>
+        </button>
+    </section>
+
+    @* Result surfaces — one per tab; JS toggles visibility. *@
+    <section class="media-body">
+        <div class="media-grid d-none" id="mediaImagesGrid" role="list" aria-label="@T["Media.Tab.Images"]"></div>
+        <div class="media-list d-none" id="mediaFilesList" role="list" aria-label="@T["Media.Tab.Files"]"></div>
+        <div class="media-list d-none" id="mediaLinksList" role="list" aria-label="@T["Media.Tab.Links"]"></div>
+
+        <div class="media-loading" id="mediaLoading">
+            <div class="spinner"></div>
+        </div>
+
+        <div class="media-empty d-none" id="mediaEmpty">
+            @await Html.PartialAsync("_Icon", new IconModel("inbox", size: 32))
+            <p>@T["Media.Empty"]</p>
+        </div>
+
+        <div class="media-loadmore-wrap d-none" id="mediaLoadMoreWrap">
+            <button type="button" id="mediaLoadMore" class="btn-primary-soft">@T["Media.LoadMore"]</button>
+        </div>
+    </section>
+
+</main>
+
+@* Lightbox overlay for full-size image preview. *@
+<div class="media-lightbox d-none" id="mediaLightbox" role="dialog" aria-modal="true" aria-label="@T["Media.Tab.Images"]">
+    <button type="button" class="media-lightbox-close" id="mediaLightboxClose" aria-label="@T["Common.Close"]">
+        @await Html.PartialAsync("_Icon", new IconModel("x", size: 22))
+    </button>
+    <a class="media-lightbox-download" id="mediaLightboxDownload" download title="@T["Media.Download"]" aria-label="@T["Media.Download"]">
+        @await Html.PartialAsync("_Icon", new IconModel("download", size: 20))
+    </a>
+    <figure class="media-lightbox-figure">
+        <img id="mediaLightboxImg" src="" alt="" />
+        <figcaption id="mediaLightboxCaption"></figcaption>
+    </figure>
+</div>
+
+<div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
+
+<script src="~/js/chat-media.js" asp-append-version="true"></script>
+</body>
+</html>

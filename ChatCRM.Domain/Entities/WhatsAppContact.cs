@@ -46,5 +46,11 @@ namespace ChatCRM.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
+
+        /// <summary>
+        /// Private, internal-only files attached to this contact (see <see cref="ContactFile"/>).
+        /// Never exposed to the contact; managed only through authorized dashboard endpoints.
+        /// </summary>
+        public ICollection<ContactFile> Files { get; set; } = new List<ContactFile>();
     }
 }

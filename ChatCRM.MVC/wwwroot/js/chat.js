@@ -63,6 +63,12 @@ connection.on('MessageDeleted', ({ conversationId, messageId }) => {
     if (conversationId === activeConversationId) applyMessageDelete(messageId);
 });
 
+connection.on('MessageTranscribed', ({ conversationId, messageId, status, text, language, provider }) => {
+    if (conversationId === activeConversationId) {
+        applyTranscription(messageId, { status, text, language, provider });
+    }
+});
+
 connection.on('InstanceStatusChanged', ({ id, status }) => {
     if (id === activeInstanceId) {
         location.reload();
@@ -193,6 +199,26 @@ function toggleStatus() {
 document.addEventListener('click', (e) => {
     if (!e.target.closest('#assignWrap')) document.getElementById('assignMenu')?.classList.add('d-none');
     if (!e.target.closest('#statusWrap')) document.getElementById('statusMenu')?.classList.add('d-none');
+
+    // Close the contact details panel when clicking outside it. Ignore clicks on the panel
+    // itself, its open-triggers, the agent-picker popover it anchors (rendered outside it),
+    // and the conversation list — selecting a conversation auto-opens the panel, so a sidebar
+    // click must not immediately close it.
+    const panel = document.getElementById('contactPanel');
+    if (panel &&
+        !e.target.closest('#contactPanel') &&
+        !e.target.closest('#contactToggle') &&
+        !e.target.closest('#chatHeaderTarget') &&
+        !e.target.closest('#agentPickerPopover') &&
+        !e.target.closest('#chatSidebar')) {
+        const mobile = window.innerWidth <= 1100;
+        const isOpen = mobile ? panel.classList.contains('show') : !panel.classList.contains('d-none');
+        if (isOpen) {
+            // Mirror toggleContactPanel(): 'show' drives the mobile overlay, 'd-none' the desktop column.
+            panel.classList.remove('show');
+            panel.classList.add('d-none');
+        }
+    }
 });
 
 async function assignTo(userId) {
@@ -255,6 +281,15 @@ function applyStatusToHeader(status) {
 }
 
 /* ─── Contact panel ─────────────────────────────────────────────────── */
+// Navigate to the Shared Media & Files gallery for the open conversation.
+function openMediaGallery() {
+    if (!activeConversationId) {
+        showToast(t('Toast.SelectConversation'), 'error');
+        return;
+    }
+    window.location.href = `/dashboard/chats/${activeConversationId}/media`;
+}
+
 function toggleContactPanel() {
     const p = document.getElementById('contactPanel');
     if (!p) return;
@@ -294,10 +329,165 @@ async function loadContactDetails(conversationId) {
         applyLifecycleToHeader(d.lifecycleStage ?? 0);
         applyServiceWindow(d);    // 24h window pill + composer state (phase 5)
         renderAssignedAgent(d);   // AI agent assignment + popover (phase 13)
+        loadConversationFiles(d.contactId);  // internal private files
     } catch (e) {
         console.error('Contact details load failed:', e);
     }
 }
+
+/* ─── Internal (private) contact files ──────────────────────────────────
+   Team-only files stored in private server storage, reachable only via the
+   authorized /api/contacts/{id}/files endpoints. The contact never sees them. */
+const _canEditContacts = () => window.__canEditContacts__ === true || window.__canEditContacts__ === 'true';
+let _cpFilesContactId = null;
+
+function fmtFileSize(bytes) {
+    if (bytes == null) return '';
+    if (bytes < 1024) return bytes + ' B';
+    const units = ['KB', 'MB', 'GB'];
+    let v = bytes / 1024, i = 0;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return (v < 10 ? v.toFixed(1) : Math.round(v)) + ' ' + units[i];
+}
+
+function fmtFileDate(iso) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); }
+    catch (e) { return ''; }
+}
+
+async function loadConversationFiles(contactId) {
+    _cpFilesContactId = contactId || null;
+    const card = document.getElementById('cpFilesCard');
+    if (!card) return;
+
+    const upload = document.getElementById('cpFilesUpload');
+    if (upload) upload.classList.toggle('d-none', !_canEditContacts());
+
+    const list = document.getElementById('cpFilesList');
+    const empty = document.getElementById('cpFilesEmpty');
+    if (!_cpFilesContactId) { card.classList.add('d-none'); return; }
+    card.classList.remove('d-none');
+    list.innerHTML = `<div class="cp-files-loading">${escapeHtml(t('Action.Loading'))}</div>`;
+    empty.classList.add('d-none');
+
+    try {
+        const res = await fetch(`/api/contacts/${_cpFilesContactId}/files`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        renderConversationFiles(await res.json());
+    } catch (e) {
+        list.innerHTML = `<div class="cp-files-loading">${escapeHtml(t('ContactFiles.LoadError'))}</div>`;
+    }
+}
+
+function renderConversationFiles(files) {
+    const list = document.getElementById('cpFilesList');
+    const empty = document.getElementById('cpFilesEmpty');
+    if (!list) return;
+
+    if (!files || files.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('d-none');
+        return;
+    }
+    empty.classList.add('d-none');
+
+    const canEdit = _canEditContacts();
+    const cid = _cpFilesContactId;
+    list.innerHTML = files.map(f => {
+        const dl = `/api/contacts/${cid}/files/${f.id}/download`;
+        const ext = (f.fileName || 'file').split('.').pop().toUpperCase().slice(0, 4);
+        const sub = [escapeHtml(fmtFileSize(f.sizeBytes)), escapeHtml(fmtFileDate(f.uploadedAtUtc))].filter(Boolean).join(' · ');
+        const editBtns = canEdit ? `
+            <button type="button" class="cp-file-btn" title="${escapeHtml(t('ContactFiles.Rename'))}" data-file-rename="${f.id}" data-file-name="${escapeHtml(f.fileName)}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button type="button" class="cp-file-btn cp-file-btn-danger" title="${escapeHtml(t('ContactFiles.Delete'))}" data-file-delete="${f.id}" data-file-name="${escapeHtml(f.fileName)}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            </button>` : '';
+        return `<div class="cp-file-row">
+            <span class="cp-file-ext" aria-hidden="true">${escapeHtml(ext)}</span>
+            <div class="cp-file-main">
+                <a class="cp-file-name" href="${dl}?inline=1" target="_blank" rel="noopener" title="${escapeHtml(t('ContactFiles.View'))}">${escapeHtml(f.fileName)}</a>
+                <span class="cp-file-sub">${sub}</span>
+            </div>
+            <div class="cp-file-actions">
+                <a class="cp-file-btn" href="${dl}" title="${escapeHtml(t('ContactFiles.Download'))}" download>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </a>
+                ${editBtns}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function uploadConversationFiles(fileList) {
+    if (!_cpFilesContactId || !fileList || fileList.length === 0) return;
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const fd = new FormData();
+    for (const f of fileList) fd.append('files', f);
+    try {
+        const res = await fetch(`/api/contacts/${_cpFilesContactId}/files`, {
+            method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd
+        });
+        if (res.status === 403) { showToast(t('ContactFiles.Forbidden'), 'error'); return; }
+        if (!res.ok) { showToast(t('ContactFiles.UploadError'), 'error'); return; }
+        const data = await res.json();
+        (data.errors || []).forEach(er => showToast(`${er.file}: ${er.error}`, 'error'));
+        if (data.uploaded && data.uploaded.length) showToast(t('ContactFiles.Uploaded', data.uploaded.length), 'success');
+        loadConversationFiles(_cpFilesContactId);
+    } catch (e) {
+        showToast(t('ContactFiles.UploadError'), 'error');
+    }
+}
+
+async function renameConversationFile(fileId, currentName) {
+    const next = window.prompt(t('ContactFiles.RenamePrompt'), currentName || '');
+    if (next == null) return;
+    const name = next.trim();
+    if (!name || name === currentName) return;
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    try {
+        const res = await fetch(`/api/contacts/${_cpFilesContactId}/files/${fileId}/rename`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) { showToast(t('ContactFiles.RenameError'), 'error'); return; }
+        loadConversationFiles(_cpFilesContactId);
+    } catch (e) { showToast(t('ContactFiles.RenameError'), 'error'); }
+}
+
+async function deleteConversationFile(fileId, name) {
+    if (!window.confirm(t('ContactFiles.DeleteConfirm', name || ''))) return;
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    try {
+        const res = await fetch(`/api/contacts/${_cpFilesContactId}/files/${fileId}`, {
+            method: 'DELETE', headers: { 'RequestVerificationToken': token }
+        });
+        if (!res.ok) { showToast(t('ContactFiles.DeleteError'), 'error'); return; }
+        showToast(t('ContactFiles.Deleted'), 'success');
+        loadConversationFiles(_cpFilesContactId);
+    } catch (e) { showToast(t('ContactFiles.DeleteError'), 'error'); }
+}
+
+// Wire the upload button + delegated row actions once (panel markup is always present).
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('cpFilesUploadBtn');
+    const input = document.getElementById('cpFilesInput');
+    if (btn && input) {
+        btn.addEventListener('click', () => input.click());
+        input.addEventListener('change', () => { uploadConversationFiles(input.files); input.value = ''; });
+    }
+    const list = document.getElementById('cpFilesList');
+    if (list) {
+        list.addEventListener('click', (e) => {
+            const ren = e.target.closest('[data-file-rename]');
+            if (ren) { renameConversationFile(parseInt(ren.dataset.fileRename, 10), ren.dataset.fileName); return; }
+            const del = e.target.closest('[data-file-delete]');
+            if (del) { deleteConversationFile(parseInt(del.dataset.fileDelete, 10), del.dataset.fileName); return; }
+        });
+    }
+});
 
 /* ─── 24h customer-service window (phase 5) ─────────────────────────────
    The pill in the chat header says "Service window active — Xh left" while we're inside
@@ -440,6 +630,8 @@ async function loadMessages(conversationId) {
         });
 
         scrollToBottom(false);
+        // Keep any still-processing transcriptions updating without a manual refresh.
+        ensureTranscriptPolling();
     } catch (err) {
         feed.innerHTML = '<div style="text-align:center;color:#e74c3c;padding:40px 0;">Failed to load messages.</div>';
         console.error(err);
@@ -492,6 +684,96 @@ async function sendMessage(event) {
 /* ─── DOM helpers ───────────────────────────────────────────────────── */
 /* Message kinds — must mirror ChatCRM.Domain.Entities.MessageKind */
 const MSG_KIND = { TEXT: 0, IMAGE: 1, VIDEO: 2, AUDIO: 3, DOCUMENT: 4, STICKER: 5 };
+
+/* Transcription status — mirrors ChatCRM.Domain.Entities.TranscriptionStatus */
+const TRANSCRIPT = { NONE: 0, PENDING: 1, PROCESSING: 2, DONE: 3, FAILED: 4 };
+
+// Read-only transcription panel rendered under an audio player. Returns inner HTML for the
+// .msg-transcript-wrap container, keyed off the message's transcription fields.
+function transcriptionHtml(msg) {
+    const status = msg.transcriptionStatus ?? TRANSCRIPT.NONE;
+    if (status === TRANSCRIPT.NONE) return '';
+
+    if (status === TRANSCRIPT.PENDING || status === TRANSCRIPT.PROCESSING) {
+        return `<div class="msg-transcript msg-transcript-loading">`
+            + `<span class="msg-transcript-spinner" aria-hidden="true"></span>`
+            + `<span>${escapeHtml(t('Transcription.InProgress'))}</span></div>`;
+    }
+    if (status === TRANSCRIPT.FAILED) {
+        const errTitle = msg.transcriptionError ? ` title="${escapeHtml(msg.transcriptionError)}"` : '';
+        return `<div class="msg-transcript msg-transcript-failed"${errTitle}>`
+            + `<span class="msg-transcript-failicon" aria-hidden="true">⚠</span>`
+            + `<span>${escapeHtml(t('Transcription.Failed'))}</span>`
+            + `<button type="button" class="msg-transcript-retry" data-transcript-retry="${msg.id}">${escapeHtml(t('Transcription.Retry'))}</button>`
+            + `</div>`;
+    }
+    // Done
+    const meta = [msg.transcriptionLanguage, msg.transcriptionProvider].filter(Boolean).map(escapeHtml).join(' · ');
+    return `<div class="msg-transcript msg-transcript-done">`
+        + `<div class="msg-transcript-head">`
+        + `<span class="msg-transcript-label">${escapeHtml(t('Transcription.Label'))}</span>`
+        + (meta ? `<span class="msg-transcript-meta">${meta}</span>` : '')
+        + `</div>`
+        + `<div class="msg-transcript-text">${escapeHtml(msg.transcriptionText || '')}</div>`
+        + `</div>`;
+}
+
+// Live-update an already-rendered transcription panel (SignalR push or retry).
+function applyTranscription(messageId, data) {
+    const wrap = document.querySelector(`.msg-transcript-wrap[data-transcript-msg="${messageId}"]`);
+    if (!wrap) return;
+    wrap.innerHTML = transcriptionHtml({
+        id: messageId,
+        transcriptionStatus: data.status,
+        transcriptionText: data.text,
+        transcriptionLanguage: data.language,
+        transcriptionProvider: data.provider,
+        transcriptionError: data.error
+    });
+}
+
+// Polling fallback: while any audio bubble is still "Transcribing…", poll its transcription
+// endpoint until it resolves. This guarantees the text appears live even if the SignalR push
+// is missed (tab backgrounded, reconnect gap, etc.). Self-stops when nothing is pending.
+let _transcriptPollTimer = null;
+function ensureTranscriptPolling() {
+    if (_transcriptPollTimer) return;
+    _transcriptPollTimer = setInterval(async () => {
+        const loading = Array.from(document.querySelectorAll('.msg-transcript-wrap'))
+            .filter(w => w.querySelector('.msg-transcript-loading'));
+        if (loading.length === 0) { clearInterval(_transcriptPollTimer); _transcriptPollTimer = null; return; }
+        for (const w of loading) {
+            const id = parseInt(w.dataset.transcriptMsg, 10);
+            try {
+                const res = await fetch(`/dashboard/chats/messages/${id}/transcription`);
+                if (!res.ok) continue;
+                const d = await res.json();
+                if (d.status >= TRANSCRIPT.DONE) {
+                    applyTranscription(id, { status: d.status, text: d.text, language: d.language, provider: d.provider, error: d.error });
+                }
+            } catch (e) { /* keep polling */ }
+        }
+    }, 4000);
+}
+
+// Delegated retry — re-queues a failed transcription.
+document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-transcript-retry]');
+    if (!btn) return;
+    const messageId = parseInt(btn.dataset.transcriptRetry, 10);
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    applyTranscription(messageId, { status: TRANSCRIPT.PROCESSING });
+    ensureTranscriptPolling();
+    try {
+        const res = await fetch(`/dashboard/chats/messages/${messageId}/transcribe`, {
+            method: 'POST', headers: { 'RequestVerificationToken': token }
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+    } catch (err) {
+        applyTranscription(messageId, { status: TRANSCRIPT.FAILED });
+        showToast(t('Transcription.RetryError'), 'error');
+    }
+});
 
 function buildBubble(msg) {
     const direction = msg.direction;
@@ -562,6 +844,12 @@ function buildBubble(msg) {
         a.preload = 'metadata';
         a.src = mediaUrl;
         bubble.appendChild(a);
+        // Read-only speech-to-text panel under the player.
+        const tc = document.createElement('div');
+        tc.className = 'msg-transcript-wrap';
+        tc.dataset.transcriptMsg = msg.id;
+        tc.innerHTML = transcriptionHtml(msg);
+        bubble.appendChild(tc);
     } else if (kind === MSG_KIND.DOCUMENT) {
         bubble.classList.add('msg-bubble-doc');
         const link = document.createElement('a');
@@ -1008,6 +1296,8 @@ function appendMessage(msg) {
     if (placeholder) placeholder.remove();
 
     feed.appendChild(buildBubble(msg));
+    // If this bubble is an audio still being transcribed, make sure the poller is running.
+    ensureTranscriptPolling();
 }
 
 function makeDateSeparator(isoDate) {
