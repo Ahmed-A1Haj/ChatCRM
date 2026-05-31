@@ -1,4 +1,9 @@
 {
+  "Transcription.Label": "Transcription",
+  "Transcription.InProgress": "Transcribing…",
+  "Transcription.Failed": "Transcription failed",
+  "Transcription.Retry": "Retry",
+  "Transcription.RetryError": "Couldn't re-queue transcription.",
   "Rail.Pipeline": "Pipeline",
   "Pipeline.Title": "Pipeline",
   "Pipeline.DefaultName": "Main Sales Pipeline",

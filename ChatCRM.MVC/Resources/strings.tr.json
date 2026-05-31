@@ -1,4 +1,9 @@
 {
+  "Transcription.Label": "Transkripsiyon",
+  "Transcription.InProgress": "Yazıya dökülüyor…",
+  "Transcription.Failed": "Transkripsiyon başarısız",
+  "Transcription.Retry": "Yeniden dene",
+  "Transcription.RetryError": "Transkripsiyon yeniden kuyruğa alınamadı.",
   "Rail.Pipeline": "Satış Hattı",
   "Pipeline.Title": "Satış Hattı",
   "Pipeline.DefaultName": "Ana Satış Hattı",

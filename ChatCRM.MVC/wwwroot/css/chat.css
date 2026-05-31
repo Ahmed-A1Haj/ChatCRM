@@ -1152,3 +1152,70 @@ body.chat-shell {
 }
 .cp-file-btn:hover { background: var(--brand-100, #e9efe7); color: var(--brand-text, #3f6b4a); }
 .cp-file-btn-danger:hover { background: var(--danger-bg, #fee2e2); color: var(--danger-text, #b91c1c); }
+
+/* ─── Audio transcription panel (read-only) ─────────────────────────── */
+.msg-transcript-wrap { margin-top: 6px; }
+.msg-transcript {
+    font-size: 12.5px;
+    line-height: 1.45;
+    border-radius: 9px;
+    padding: 8px 10px;
+    background: var(--bg-soft, rgba(0,0,0,.035));
+    border: 1px solid var(--border-soft, rgba(0,0,0,.06));
+}
+.msg-transcript-loading,
+.msg-transcript-failed {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-muted, #6b7280);
+}
+.msg-transcript-spinner {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    border: 2px solid var(--border, #d1d5db);
+    border-top-color: var(--brand, #5a7d63);
+    border-radius: 50%;
+    animation: msg-transcript-spin .7s linear infinite;
+}
+@keyframes msg-transcript-spin { to { transform: rotate(360deg); } }
+
+.msg-transcript-failicon { color: var(--warn-text, #b45309); }
+.msg-transcript-retry {
+    margin-left: auto;
+    padding: 2px 9px;
+    border: 1px solid var(--border, #d1d5db);
+    border-radius: 7px;
+    background: var(--bg-panel, #fff);
+    color: var(--text);
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+}
+.msg-transcript-retry:hover { background: var(--bg-soft, #f4f5f2); border-color: var(--brand-ring, #cdd9cf); }
+
+.msg-transcript-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+.msg-transcript-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--brand-text, #3f6b4a);
+}
+.msg-transcript-meta {
+    font-size: 10px;
+    color: var(--text-dim, #9ca3af);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+.msg-transcript-text {
+    color: var(--text, #1f2937);
+    white-space: pre-wrap;
+    word-break: break-word;
+}

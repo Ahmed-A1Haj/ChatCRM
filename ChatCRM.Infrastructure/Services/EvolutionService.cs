@@ -500,6 +500,9 @@ namespace ChatCRM.Infrastructure.Services
                 if (mediaUrl is not null)
                 {
                     message.MediaUrl = mediaUrl;
+                    // Queue audio for background speech-to-text once the file is on disk.
+                    if (kind == MessageKind.Audio)
+                        message.TranscriptionStatus = TranscriptionStatus.Pending;
                     await _db.SaveChangesAsync(cancellationToken);
                 }
             }
@@ -531,7 +534,8 @@ namespace ChatCRM.Infrastructure.Services
                         kind = (int)message.Kind,
                         mediaUrl = message.MediaUrl,
                         mediaMimeType = message.MediaMimeType,
-                        mediaFileName = message.MediaFileName
+                        mediaFileName = message.MediaFileName,
+                        transcriptionStatus = (byte)message.TranscriptionStatus
                     },
                     unreadCount = conversation.UnreadCount
                 }, cancellationToken);

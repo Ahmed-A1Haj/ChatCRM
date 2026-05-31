@@ -1,4 +1,9 @@
 {
+  "Transcription.Label": "Transcriere",
+  "Transcription.InProgress": "Se transcrie…",
+  "Transcription.Failed": "Transcrierea a eșuat",
+  "Transcription.Retry": "Reîncearcă",
+  "Transcription.RetryError": "Transcrierea nu a putut fi reprogramată.",
   "Rail.Pipeline": "Flux",
   "Pipeline.Title": "Flux de vânzări",
   "Pipeline.DefaultName": "Flux principal de vânzări",

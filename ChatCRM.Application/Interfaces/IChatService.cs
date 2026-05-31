@@ -33,6 +33,12 @@ namespace ChatCRM.Application.Interfaces
         Task<MessageDto> SendMediaMessageAsync(int conversationId, byte[] data, string fileName, string mimeType, string? caption, string actingUserId, CancellationToken cancellationToken = default);
         Task<MessageDto> SendVoiceNoteAsync(int conversationId, byte[] data, string mimeType, string actingUserId, CancellationToken cancellationToken = default);
 
+        /// <summary>Read-only transcription for one audio message. Null if the message doesn't exist.</summary>
+        Task<ChatCRM.Application.Transcription.MessageTranscriptionDto?> GetTranscriptionAsync(int messageId, CancellationToken cancellationToken = default);
+
+        /// <summary>Re-queues a message for transcription (resets attempts). Returns false if not an audio message.</summary>
+        Task<bool> RetryTranscriptionAsync(int messageId, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Send an approved WhatsApp template. <paramref name="variables"/> are the values for
         /// {{1}}, {{2}}, … in template order. Bills against the template's category, not Service.

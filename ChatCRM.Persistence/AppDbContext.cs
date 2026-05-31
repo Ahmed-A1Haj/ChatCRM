@@ -153,6 +153,13 @@ namespace ChatCRM.Persistence
                 builder.HasIndex(x => x.ConversationId);
                 builder.HasIndex(x => x.SentAt);
                 builder.HasIndex(x => x.AuthorAgentId);
+
+                // Transcription columns. TranscriptionText can be long → nvarchar(max) (default).
+                builder.Property(x => x.TranscriptionLanguage).HasMaxLength(20);
+                builder.Property(x => x.TranscriptionProvider).HasMaxLength(40);
+                builder.Property(x => x.TranscriptionError).HasMaxLength(1000);
+                // The worker scans by status; index it so the poll query stays cheap.
+                builder.HasIndex(x => x.TranscriptionStatus);
             });
 
             modelBuilder.Entity<Tag>(builder =>

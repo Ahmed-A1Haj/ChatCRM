@@ -63,6 +63,12 @@ connection.on('MessageDeleted', ({ conversationId, messageId }) => {
     if (conversationId === activeConversationId) applyMessageDelete(messageId);
 });
 
+connection.on('MessageTranscribed', ({ conversationId, messageId, status, text, language, provider }) => {
+    if (conversationId === activeConversationId) {
+        applyTranscription(messageId, { status, text, language, provider });
+    }
+});
+
 connection.on('InstanceStatusChanged', ({ id, status }) => {
     if (id === activeInstanceId) {
         location.reload();
@@ -624,6 +630,8 @@ async function loadMessages(conversationId) {
         });
 
         scrollToBottom(false);
+        // Keep any still-processing transcriptions updating without a manual refresh.
+        ensureTranscriptPolling();
     } catch (err) {
         feed.innerHTML = '<div style="text-align:center;color:#e74c3c;padding:40px 0;">Failed to load messages.</div>';
         console.error(err);
@@ -676,6 +684,96 @@ async function sendMessage(event) {
 /* ─── DOM helpers ───────────────────────────────────────────────────── */
 /* Message kinds — must mirror ChatCRM.Domain.Entities.MessageKind */
 const MSG_KIND = { TEXT: 0, IMAGE: 1, VIDEO: 2, AUDIO: 3, DOCUMENT: 4, STICKER: 5 };
+
+/* Transcription status — mirrors ChatCRM.Domain.Entities.TranscriptionStatus */
+const TRANSCRIPT = { NONE: 0, PENDING: 1, PROCESSING: 2, DONE: 3, FAILED: 4 };
+
+// Read-only transcription panel rendered under an audio player. Returns inner HTML for the
+// .msg-transcript-wrap container, keyed off the message's transcription fields.
+function transcriptionHtml(msg) {
+    const status = msg.transcriptionStatus ?? TRANSCRIPT.NONE;
+    if (status === TRANSCRIPT.NONE) return '';
+
+    if (status === TRANSCRIPT.PENDING || status === TRANSCRIPT.PROCESSING) {
+        return `<div class="msg-transcript msg-transcript-loading">`
+            + `<span class="msg-transcript-spinner" aria-hidden="true"></span>`
+            + `<span>${escapeHtml(t('Transcription.InProgress'))}</span></div>`;
+    }
+    if (status === TRANSCRIPT.FAILED) {
+        const errTitle = msg.transcriptionError ? ` title="${escapeHtml(msg.transcriptionError)}"` : '';
+        return `<div class="msg-transcript msg-transcript-failed"${errTitle}>`
+            + `<span class="msg-transcript-failicon" aria-hidden="true">⚠</span>`
+            + `<span>${escapeHtml(t('Transcription.Failed'))}</span>`
+            + `<button type="button" class="msg-transcript-retry" data-transcript-retry="${msg.id}">${escapeHtml(t('Transcription.Retry'))}</button>`
+            + `</div>`;
+    }
+    // Done
+    const meta = [msg.transcriptionLanguage, msg.transcriptionProvider].filter(Boolean).map(escapeHtml).join(' · ');
+    return `<div class="msg-transcript msg-transcript-done">`
+        + `<div class="msg-transcript-head">`
+        + `<span class="msg-transcript-label">${escapeHtml(t('Transcription.Label'))}</span>`
+        + (meta ? `<span class="msg-transcript-meta">${meta}</span>` : '')
+        + `</div>`
+        + `<div class="msg-transcript-text">${escapeHtml(msg.transcriptionText || '')}</div>`
+        + `</div>`;
+}
+
+// Live-update an already-rendered transcription panel (SignalR push or retry).
+function applyTranscription(messageId, data) {
+    const wrap = document.querySelector(`.msg-transcript-wrap[data-transcript-msg="${messageId}"]`);
+    if (!wrap) return;
+    wrap.innerHTML = transcriptionHtml({
+        id: messageId,
+        transcriptionStatus: data.status,
+        transcriptionText: data.text,
+        transcriptionLanguage: data.language,
+        transcriptionProvider: data.provider,
+        transcriptionError: data.error
+    });
+}
+
+// Polling fallback: while any audio bubble is still "Transcribing…", poll its transcription
+// endpoint until it resolves. This guarantees the text appears live even if the SignalR push
+// is missed (tab backgrounded, reconnect gap, etc.). Self-stops when nothing is pending.
+let _transcriptPollTimer = null;
+function ensureTranscriptPolling() {
+    if (_transcriptPollTimer) return;
+    _transcriptPollTimer = setInterval(async () => {
+        const loading = Array.from(document.querySelectorAll('.msg-transcript-wrap'))
+            .filter(w => w.querySelector('.msg-transcript-loading'));
+        if (loading.length === 0) { clearInterval(_transcriptPollTimer); _transcriptPollTimer = null; return; }
+        for (const w of loading) {
+            const id = parseInt(w.dataset.transcriptMsg, 10);
+            try {
+                const res = await fetch(`/dashboard/chats/messages/${id}/transcription`);
+                if (!res.ok) continue;
+                const d = await res.json();
+                if (d.status >= TRANSCRIPT.DONE) {
+                    applyTranscription(id, { status: d.status, text: d.text, language: d.language, provider: d.provider, error: d.error });
+                }
+            } catch (e) { /* keep polling */ }
+        }
+    }, 4000);
+}
+
+// Delegated retry — re-queues a failed transcription.
+document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-transcript-retry]');
+    if (!btn) return;
+    const messageId = parseInt(btn.dataset.transcriptRetry, 10);
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    applyTranscription(messageId, { status: TRANSCRIPT.PROCESSING });
+    ensureTranscriptPolling();
+    try {
+        const res = await fetch(`/dashboard/chats/messages/${messageId}/transcribe`, {
+            method: 'POST', headers: { 'RequestVerificationToken': token }
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+    } catch (err) {
+        applyTranscription(messageId, { status: TRANSCRIPT.FAILED });
+        showToast(t('Transcription.RetryError'), 'error');
+    }
+});
 
 function buildBubble(msg) {
     const direction = msg.direction;
@@ -746,6 +844,12 @@ function buildBubble(msg) {
         a.preload = 'metadata';
         a.src = mediaUrl;
         bubble.appendChild(a);
+        // Read-only speech-to-text panel under the player.
+        const tc = document.createElement('div');
+        tc.className = 'msg-transcript-wrap';
+        tc.dataset.transcriptMsg = msg.id;
+        tc.innerHTML = transcriptionHtml(msg);
+        bubble.appendChild(tc);
     } else if (kind === MSG_KIND.DOCUMENT) {
         bubble.classList.add('msg-bubble-doc');
         const link = document.createElement('a');
@@ -1192,6 +1296,8 @@ function appendMessage(msg) {
     if (placeholder) placeholder.remove();
 
     feed.appendChild(buildBubble(msg));
+    // If this bubble is an audio still being transcribed, make sure the poller is running.
+    ensureTranscriptPolling();
 }
 
 function makeDateSeparator(isoDate) {

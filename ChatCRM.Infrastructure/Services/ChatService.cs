@@ -1,5 +1,6 @@
 using ChatCRM.Application.Chats.DTOs;
 using ChatCRM.Application.Interfaces;
+using ChatCRM.Application.Transcription;
 using ChatCRM.Domain.Entities;
 using ChatCRM.Persistence;
 using Microsoft.AspNetCore.Hosting;
@@ -129,7 +130,11 @@ namespace ChatCRM.Infrastructure.Services
                     IsDeleted = m.IsDeleted,
                     AuthorName = m.AuthorUser != null
                         ? (string.IsNullOrWhiteSpace(m.AuthorUser.FirstName) ? m.AuthorUser.Email : m.AuthorUser.FirstName + " " + m.AuthorUser.LastName)
-                        : null
+                        : null,
+                    TranscriptionStatus = (byte)m.TranscriptionStatus,
+                    TranscriptionText = m.TranscriptionText,
+                    TranscriptionLanguage = m.TranscriptionLanguage,
+                    TranscriptionProvider = m.TranscriptionProvider
                 })
                 .ToListAsync(cancellationToken);
         }
@@ -779,7 +784,9 @@ namespace ChatCRM.Infrastructure.Services
                 Kind = kind,
                 MediaUrl = $"/media/{diskName}",
                 MediaMimeType = mimeType,
-                MediaFileName = kind == MessageKind.Document ? fileName : null
+                MediaFileName = kind == MessageKind.Document ? fileName : null,
+                // Queue audio uploads for background speech-to-text.
+                TranscriptionStatus = kind == MessageKind.Audio ? TranscriptionStatus.Pending : TranscriptionStatus.None
             };
 
             _db.Messages.Add(message);
@@ -865,7 +872,9 @@ namespace ChatCRM.Infrastructure.Services
                 AuthorUserId = actingUserId,
                 Kind = MessageKind.Audio,
                 MediaUrl = $"/media/{diskName}",
-                MediaMimeType = mimeType
+                MediaMimeType = mimeType,
+                // Voice notes are audio — queue them for background speech-to-text.
+                TranscriptionStatus = TranscriptionStatus.Pending
             };
 
             _db.Messages.Add(message);
@@ -1012,6 +1021,37 @@ namespace ChatCRM.Infrastructure.Services
             return rendered;
         }
 
+        public async Task<MessageTranscriptionDto?> GetTranscriptionAsync(int messageId, CancellationToken cancellationToken = default)
+        {
+            return await _db.Messages
+                .Where(m => m.Id == messageId)
+                .Select(m => new MessageTranscriptionDto
+                {
+                    MessageId = m.Id,
+                    Status = (byte)m.TranscriptionStatus,
+                    Text = m.TranscriptionText,
+                    Language = m.TranscriptionLanguage,
+                    Provider = m.TranscriptionProvider,
+                    Error = m.TranscriptionError
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<bool> RetryTranscriptionAsync(int messageId, CancellationToken cancellationToken = default)
+        {
+            var message = await _db.Messages.FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
+            if (message is null || message.Kind != MessageKind.Audio || message.MediaUrl is null)
+                return false;
+
+            // Reset the transcription lifecycle so the worker picks it up again on its next tick.
+            message.TranscriptionStatus = TranscriptionStatus.Pending;
+            message.TranscriptionAttemptCount = 0;
+            message.TranscriptionError = null;
+            message.TranscriptionNextAttemptUtc = null;
+            await _db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
         // ── Helpers ─────────────────────────────────────────────────────────
 
         private async Task BroadcastOutgoingAsync(Conversation conversation, Message message, CancellationToken ct)
@@ -1042,7 +1082,8 @@ namespace ChatCRM.Infrastructure.Services
                         kind = (int)message.Kind,
                         mediaUrl = message.MediaUrl,
                         mediaMimeType = message.MediaMimeType,
-                        mediaFileName = message.MediaFileName
+                        mediaFileName = message.MediaFileName,
+                        transcriptionStatus = (byte)message.TranscriptionStatus
                     },
                     unreadCount = conversation.UnreadCount
                 }, ct);
@@ -1060,7 +1101,11 @@ namespace ChatCRM.Infrastructure.Services
             Kind = m.Kind,
             MediaUrl = m.MediaUrl,
             MediaMimeType = m.MediaMimeType,
-            MediaFileName = m.MediaFileName
+            MediaFileName = m.MediaFileName,
+            TranscriptionStatus = (byte)m.TranscriptionStatus,
+            TranscriptionText = m.TranscriptionText,
+            TranscriptionLanguage = m.TranscriptionLanguage,
+            TranscriptionProvider = m.TranscriptionProvider
         };
 
         private static (MessageKind, string evolutionType) ClassifyMedia(string mime)

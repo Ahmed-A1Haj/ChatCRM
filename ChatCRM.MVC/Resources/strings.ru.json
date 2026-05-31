@@ -1,4 +1,9 @@
 {
+  "Transcription.Label": "Транскрипция",
+  "Transcription.InProgress": "Расшифровка…",
+  "Transcription.Failed": "Ошибка расшифровки",
+  "Transcription.Retry": "Повторить",
+  "Transcription.RetryError": "Не удалось поставить расшифровку в очередь.",
   "Rail.Pipeline": "Воронка",
   "Pipeline.Title": "Воронка",
   "Pipeline.DefaultName": "Основная воронка продаж",

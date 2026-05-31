@@ -489,6 +489,22 @@ namespace ChatCRM.MVC.Controllers
             return details is null ? NotFound() : Json(details);
         }
 
+        // ── Audio transcription (inspection) ────────────────────────────
+        [HttpGet("/dashboard/chats/messages/{messageId:int}/transcription")]
+        public async Task<IActionResult> Transcription(int messageId, CancellationToken cancellationToken)
+        {
+            var dto = await _chatService.GetTranscriptionAsync(messageId, cancellationToken);
+            return dto is null ? NotFound() : Json(dto);
+        }
+
+        [HttpPost("/dashboard/chats/messages/{messageId:int}/transcribe")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RetryTranscription(int messageId, CancellationToken cancellationToken)
+        {
+            var ok = await _chatService.RetryTranscriptionAsync(messageId, cancellationToken);
+            return ok ? Ok(new { queued = true }) : BadRequest(new { error = "Message is not a transcribable audio message." });
+        }
+
         /// <summary>
         /// Shared Media &amp; Files gallery for one conversation — aggregates every image, file and
         /// link exchanged in the thread. Renders the page shell; the grid/list is filled by
